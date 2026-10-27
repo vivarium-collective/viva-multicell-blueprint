@@ -62,3 +62,35 @@ def test_missing_name_is_grammar_error():
 def test_rejects_out_of_grammar(bad):
     with pytest.raises(RateGrammarError):
         evaluate(parse(bad), ctx(const={"x": 1, "y": 1, "z": 1}))
+
+
+@pytest.mark.parametrize("bad", [
+    "9**9**9**9",          # int pow hang -> OverflowError -> grammar error
+    "'a'*10**9",           # string * int allocation
+    "type * 1000000000",   # type is a string too
+    "'a'",                 # bare string literal
+    "(-8)**0.5",           # complex result
+    "(-8)**(1/3)",
+    "1/0",
+    "(" * 5000 + "1" + ")" * 5000,   # pathological nesting
+    "+".join(["1"] * 5000),           # long left-deep chain
+    "1" + " " * 5000,                 # over length cap
+])
+def test_resource_and_fail_closed(bad):
+    with pytest.raises(RateGrammarError):
+        evaluate(parse(bad), ctx())
+
+
+def test_string_compare_still_allowed():
+    assert evaluate(parse("'H' == type"), ctx()) == 1.0
+
+
+def test_hand_built_expr_fails_closed():
+    import ast
+    from viva_multicell_blueprint.mechanism.rate_expr import Expr
+    tree = ast.parse("'a'*1000000000", mode="eval")
+    with pytest.raises(RateGrammarError):
+        evaluate(Expr("x", tree), ctx())
+    tree = ast.parse("(-8)**0.5", mode="eval")
+    with pytest.raises(RateGrammarError):
+        evaluate(Expr("x", tree), ctx())

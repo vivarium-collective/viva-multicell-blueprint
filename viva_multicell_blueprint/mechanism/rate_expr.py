@@ -47,7 +47,7 @@ _BIN = {
     ast.Sub: lambda a, b: a - b,
     ast.Mult: lambda a, b: a * b,
     ast.Div: lambda a, b: a / b,
-    ast.Pow: lambda a, b: a ** b,
+    ast.Pow: lambda a, b: float(a) ** float(b),  # float: no unbounded int pow
 }
 _UNARY = {ast.USub: lambda a: -a, ast.UAdd: lambda a: +a}
 _CMP = {
@@ -60,6 +60,7 @@ _FUNCS = {  # name -> (min_args, max_args or None)
 }
 _TABLES = {"field", "scalar", "const"}  # name['key']
 _NEIGHBOR_TABLES = {"count", "shared_surface"}  # neighbors.<t>['key']
+_MAX_LEN = 2000
 _RESERVED = _TABLES | {"neighbors"} | set(_FUNCS)
 
 
@@ -73,11 +74,22 @@ def _key(node: ast.AST) -> str:
     raise _bad("table key must be a string literal")
 
 
-def _check(node: ast.AST) -> None:
-    """Recursively validate; raises RateGrammarError on anything off-grammar."""
+def _is_strish(node: ast.AST) -> bool:
+    return (isinstance(node, ast.Constant) and isinstance(node.value, str)) or (
+        isinstance(node, ast.Name) and node.id == "type")
+
+
+def _check(node: ast.AST, str_ok: bool = False) -> None:
+    """Recursively validate; raises RateGrammarError on anything off-grammar.
+
+    String-valued nodes (str literals, ``type``) are only allowed as direct
+    operands of a comparison (``str_ok``).
+    """
     if isinstance(node, ast.Constant):
         if isinstance(node.value, bool) or not isinstance(node.value, (int, float, str)):
             raise _bad(f"literal {node.value!r} not allowed")
+        if isinstance(node.value, str) and not str_ok:
+            raise _bad("string literals are only allowed in comparisons")
     elif isinstance(node, ast.BinOp):
         if type(node.op) not in _BIN:
             raise _bad(f"operator {type(node.op).__name__} not allowed")
@@ -90,10 +102,12 @@ def _check(node: ast.AST) -> None:
         if any(type(o) not in _CMP for o in node.ops):
             raise _bad("comparison operator not allowed")
         for n in [node.left, *node.comparators]:
-            _check(n)
+            _check(n, str_ok=True)
     elif isinstance(node, ast.Name):
         if node.id.startswith("_") or node.id in _RESERVED:
             raise _bad(f"name {node.id!r} not allowed here")
+        if node.id == "type" and not str_ok:
+            raise _bad("'type' is only allowed in comparisons")
     elif isinstance(node, ast.Subscript):
         _key(node.slice)
         v = node.value
@@ -123,11 +137,17 @@ def _check(node: ast.AST) -> None:
 def parse(expr: str) -> Expr:
     if not isinstance(expr, str):
         raise _bad("expression must be a string")
+    if len(expr) > _MAX_LEN:
+        raise _bad("expression too long")
     try:
         tree = ast.parse(expr.strip(), mode="eval")
+        _check(tree.body)
+    except RateGrammarError:
+        raise
     except SyntaxError as e:
         raise _bad(f"syntax error: {e.msg}") from e
-    _check(tree.body)
+    except (ValueError, RecursionError, MemoryError) as e:
+        raise _bad(f"cannot parse expression: {type(e).__name__}") from e
     return Expr(expr, tree)
 
 
@@ -138,17 +158,19 @@ def _lookup(table: dict, key: str, what: str) -> Any:
         raise _bad(f"unknown {what} {key!r}") from None
 
 
-def _eval(node: ast.AST, ctx: CellContext) -> Any:
+def _eval(node: ast.AST, ctx: CellContext, str_ok: bool = False) -> Any:
     if isinstance(node, ast.Constant):
+        if isinstance(node.value, str) and not str_ok:
+            raise _bad("string literals are only allowed in comparisons")
         return node.value
     if isinstance(node, ast.BinOp):
         return _BIN[type(node.op)](_eval(node.left, ctx), _eval(node.right, ctx))
     if isinstance(node, ast.UnaryOp):
         return _UNARY[type(node.op)](_eval(node.operand, ctx))
     if isinstance(node, ast.Compare):
-        left = _eval(node.left, ctx)
+        left = _eval(node.left, ctx, True)
         for op, c in zip(node.ops, node.comparators):
-            right = _eval(c, ctx)
+            right = _eval(c, ctx, True)
             if not _CMP[type(op)](left, right):
                 return 0.0
             left = right
@@ -157,6 +179,8 @@ def _eval(node: ast.AST, ctx: CellContext) -> Any:
         if node.id == "size":
             return ctx.size
         if node.id == "type":
+            if not str_ok:
+                raise _bad("'type' is only allowed in comparisons")
             return ctx.type
         return _lookup(ctx.const, node.id, "constant")
     if isinstance(node, ast.Subscript):
@@ -180,8 +204,11 @@ def _eval(node: ast.AST, ctx: CellContext) -> Any:
 def evaluate(expr: Expr, ctx: CellContext) -> float:
     try:
         v = _eval(expr.tree.body, ctx)
-    except (ZeroDivisionError, OverflowError, TypeError) as e:
-        raise _bad(f"cannot evaluate {expr.source!r}: {e}") from e
-    if isinstance(v, str):
-        raise _bad("expression yields a string, not a number")
-    return float(v)
+        if isinstance(v, (str, complex)):
+            raise _bad("expression does not yield a real number")
+        return float(v)
+    except RateGrammarError:
+        raise
+    except (ZeroDivisionError, OverflowError, TypeError, ValueError,
+            RecursionError, MemoryError) as e:
+        raise _bad(f"cannot evaluate {expr.source!r}: {type(e).__name__}: {e}") from e
