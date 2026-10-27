@@ -25,6 +25,13 @@ def dynamics_overlay(runs, bands=None, *, dt_days=1.0, max_points=200, title="Dy
     names = sorted(set().union(*[set(o) for o in obs.values()]))
     fig = make_subplots(rows=len(names), cols=1, shared_xaxes=True, vertical_spacing=0.04,
                         subplot_titles=names)
+    seen = set()  # legend groups already emitted: exactly one entry each, any row
+
+    def once(g):
+        first = g not in seen
+        seen.add(g)
+        return first
+
     for row, name in enumerate(names, start=1):
         bkey = name if name in bands else name.replace(" cells", "")
         if bkey in bands:
@@ -35,7 +42,7 @@ def dynamics_overlay(runs, bands=None, *, dt_days=1.0, max_points=200, title="Dy
                                      showlegend=False, legendgroup="band"), row=row, col=1)
             fig.add_trace(go.Scatter(x=t, y=lo, mode="lines", line=dict(width=0), fill="tonexty",
                                      fillcolor="rgba(120,120,120,0.25)", name="Sego acceptance band",
-                                     legendgroup="band", showlegend=(row == 1),
+                                     legendgroup="band", showlegend=once("band"),
                                      hoverinfo="skip"), row=row, col=1)
         for backend, o in obs.items():
             if name not in o:
@@ -44,7 +51,7 @@ def dynamics_overlay(runs, bands=None, *, dt_days=1.0, max_points=200, title="Dy
             idx = decimate_indices(len(y), max_points)
             fig.add_trace(go.Scatter(x=[round(i * dt_days, 4) for i in idx], y=rnd(y[idx], 4),
                                      mode="lines", name=backend, legendgroup=backend,
-                                     showlegend=(row == 1),
+                                     showlegend=once(backend),
                                      line=dict(color=BACKEND_COLORS.get(backend, "#333"))),
                           row=row, col=1)
         fig.update_yaxes(title_text="count" if name.endswith("cells") else "integral (a.u.)",

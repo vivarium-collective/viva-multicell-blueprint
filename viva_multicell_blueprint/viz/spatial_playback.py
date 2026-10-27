@@ -105,6 +105,12 @@ def spatial_playback(run_cpm, run_vertex, grid_spec, *, max_frames=MAX_FRAMES, b
     mf = max_frames
     while True:
         fig = _spatial_playback(run_cpm, run_vertex, grid_spec, max_frames=mf, **kw)
-        if mf <= 2 or len(fig.to_json()) < budget:
+        size = len(fig.to_json())
+        if size < budget:
+            return fig
+        if mf <= 2:
+            import warnings
+            warnings.warn(f"spatial_playback still {size} B at 2 frames (budget {budget}); "
+                          "figure may exceed the workbench inline cap", RuntimeWarning)
             return fig
         mf = max(2, mf // 2)

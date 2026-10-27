@@ -61,3 +61,24 @@ def test_figure_under_inline_cap():
         size = len(fig.to_html(include_plotlyjs="cdn").encode())
         print("size", size)
         assert size < HTML_CAP
+
+
+def test_legend_entries_exactly_once_regardless_of_row():
+    runs = {"cpm": run(10), "vertex": run(10, 2.0)}
+    bands = {"I cells": [(t, 4.0, 2.0, 6.0) for t in range(10)]}  # band on a non-first row
+    fig = dynamics_overlay(runs, bands)
+    for nm in ("Sego acceptance band", "cpm", "vertex"):
+        assert sum(1 for t in fig.data if t.name == nm and t.showlegend) == 1, nm
+
+
+def test_playback_halving_fallback_and_bottom_out_warns():
+    import warnings
+    a, b = run(40), run(40, 2.0)
+    full = spatial_playback(a, b, GRID, budget=10 ** 9)
+    small = spatial_playback(a, b, GRID, budget=700_000)
+    assert len(small.frames) < len(full.frames) <= MAX_FRAMES
+    assert len(small.to_json()) < 700_000
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        spatial_playback(a, b, GRID, budget=1000)
+    assert any(issubclass(x.category, RuntimeWarning) for x in w)
