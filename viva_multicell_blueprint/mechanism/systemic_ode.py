@@ -24,7 +24,8 @@ ODE_EPITHELIAL_POPULATION = 250000  # tot_ec_ODE (ImmuneModelInputs.py:27)
 # The 10 states actually advanced by the integrator, in vector order.
 INTEGRATED_STATES = ("NB", "N", "T", "X", "A", "B", "P", "W", "G", "O")
 # Nearby well-mixed surrogates carried in the state dict but held constant here
-# (their d/dt = 0 in this process; recruitment maintains them in Task 8.4).
+# (their d/dt = 0 in this process; they are placeholder constants, wired by the
+# compile/integration step).
 NEARBY_SURROGATES = ("M_nb", "K_nb", "E_nb")
 
 # templated homeostatic constants -> homeostatic_pops_ode key (each * s_v)

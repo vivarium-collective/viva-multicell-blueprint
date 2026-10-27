@@ -7,13 +7,13 @@ from viva_multicell_blueprint.core import build_core
 from viva_multicell_blueprint.mechanism.systemic_ode import (
     INTEGRATED_STATES, SystemicODEProcess)
 
-SRC = Path("/Users/eranagmon/code/viva-cpm/viva_cpm_studies/influenza/params.yaml")
+FIXTURE = Path(__file__).parent / "fixtures" / "price_ode_params.yaml"
+VIVA_CPM = Path("/Users/eranagmon/code/viva-cpm/viva_cpm_studies/influenza/params.yaml")
 
 
 def price_params():
-    if not SRC.exists():
-        pytest.skip("viva-cpm params.yaml not available")
-    return yaml.safe_load(SRC.read_text())["price_ode"]
+    assert FIXTURE.exists(), f"missing test fixture {FIXTURE}"
+    return yaml.safe_load(FIXTURE.read_text())["price_ode"]
 
 
 INP = {"H": 200000.0, "I": 20000.0, "M": 5.0, "K": 2.0, "E": 0.0, "DH": 0.0,
@@ -63,3 +63,20 @@ def test_recruit_drivers_emitted():
     # CD8 inflow has no homeostatic baseline: zero when APC P is zero is a pure function
     from viva_multicell_blueprint.mechanism.immune import cd8_inflow
     assert cd8_inflow(0.0, p._consts) == 0.0
+
+
+def test_fixture_matches_viva_cpm_when_available():
+    if not VIVA_CPM.exists():
+        pytest.skip("viva-cpm checkout not available")
+    assert yaml.safe_load(VIVA_CPM.read_text())["price_ode"] == price_params()
+
+
+def test_numerical_regression_pin():
+    p = proc()
+    for _ in range(10):
+        out = p.update(INP, 1)
+    s = out["ode_state"]
+    # pinned from the vendored ODE (LSODA, rtol 1e-6) after 10 x 60 s steps with INP
+    assert s["T"] == pytest.approx(0.005431488482479709, rel=1e-4)
+    assert s["P"] == pytest.approx(2066.214548771649, rel=1e-4)
+    assert s["A"] == pytest.approx(55.86296557524115, rel=1e-4)

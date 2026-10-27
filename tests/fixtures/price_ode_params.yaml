@@ -1,0 +1,369 @@
+# copied from viva-cpm viva_cpm_studies/influenza/params.yaml @ b952eec2
+price_ode:
+  source: ImmuneModel/ImmuneModelLib.py:immune_model_string (lines 45-229)
+  reference_full_ode: ImmuneModel/ImmuneModelLib.py:immune_model_string_ode (lines
+    232-410)
+  model_name: FluODE_20vars
+  integrated_states:
+  - NB
+  - N
+  - T
+  - X
+  - A
+  - B
+  - P
+  - W
+  - G
+  - O
+  integrated_nearby_surrogates:
+  - M_nb
+  - K_nb
+  - E_nb
+  spatialized_states:
+  - H
+  - I
+  - M
+  - E
+  - K
+  - L
+  - C
+  - F
+  - V
+  - DH
+  hill_exponents:
+    h_m: 3
+    h_x: 2
+    h_k: 2
+    h_e: 3
+    h_o: 2
+  integrator:
+    solver: roadrunner_cvode
+    step_size: 1
+    steps_per_mcs: 1
+    seconds_per_mcs: 60
+  scaling:
+    ode_epithelial_population: 250000
+    eta_formula: num_epithelial / 250000
+    eta_at_175: 0.0049
+    eta_at_500_1mm: 0.04
+    theta: 1.6e-07
+    s_t_formula: s_to_mcs/86400
+    cell_volume: 25
+    loc_to_global: s_v/s_l
+  constants:
+    a_11:
+      base: 0.00061091213762049
+      scale: null
+    mu_i:
+      base: 4.05042485998488
+      scale: s_t
+    a_12:
+      base: 1.92792875130612e-05
+      scale: null
+    g_vi:
+      base: 278.068781202644
+      scale: s_t
+    a_21:
+      base: 1.45266909729275
+      scale: s_v
+    g_vh:
+      base: 1.21539069969014e-05
+      scale: s_t/s_l
+    a_22:
+      base: 1478.77349187226
+      scale: s_v
+    g_va:
+      base: 0.00109087356190614
+      scale: s_t/s_v
+    g_1:
+      base: 498.217901666102
+      scale: s_v
+    g_v:
+      base: 197.445019092656
+      scale: s_t
+    g_2:
+      base: 5462.05818489935
+      scale: s_v*s_l
+    a_v:
+      base: 9.33445943442858
+      scale: 1/s_l
+    d_2:
+      base: 428.253164311871
+      scale: s_l
+    mu_v:
+      base: 0.412015488642712
+      scale: s_t
+    b_mc:
+      base: 13620.4859808076
+      scale: s_t*s_v
+    b_fi:
+      base: 0.196756617697923
+      scale: s_t
+    a_mc:
+      base: 574.707608135459
+      scale: s_v
+    b_fp:
+      base: 0.221363566856883
+      scale: s_t*s_l/s_v
+    mu_m:
+      base: 0.242202409519884
+      scale: s_t
+    g_fi:
+      base: 0.00181375452827859
+      scale: s_t/s_l
+    b_m:
+      base: null
+      scale: templated
+      formula: 'homeostatic_pops_ode.macro * eta (Sec.2.5: b_m = hs_macro_ODE * s_v,
+        template {hs_macro})'
+    mu_f:
+      base: 112.230629642229
+      scale: s_t
+    b_t:
+      base: 61.1099298442215
+      scale: s_t
+    a_rf:
+      base: 53.2223922879035
+      scale: s_l
+    k_1:
+      base: 0.919560555407162
+      scale: null
+    b_k:
+      base: null
+      scale: templated
+      formula: 'homeostatic_pops_ode.nk * eta (Sec.2.5: b_k = hs_nk_ODE * s_v, template
+        {hs_nk})'
+    k_2:
+      base: 251.401895880346
+      scale: s_v
+    b_kc:
+      base: 212683.830671333
+      scale: s_t*s_v
+    d_1:
+      base: 57.0468005728478
+      scale: s_v
+    a_kc:
+      base: 1356.29443420953
+      scale: s_v
+    mu_t:
+      base: 559.245454719045
+      scale: s_t
+    g_ki:
+      base: 8.83835904194133e-09
+      scale: s_t/s_v
+    b_l:
+      base: 2.32377371988728
+      scale: s_t
+    mu_k:
+      base: 2.20226570821557
+      scale: s_t
+    mu_l:
+      base: 2.82296559789435
+      scale: s_t
+    b_go:
+      base: 0.00267078457036687
+      scale: s_t
+    b_lh:
+      base: 0.000463779438894315
+      scale: null
+    a_go:
+      base: 0.701154807175855
+      scale: s_v
+    b_c:
+      base: 40.203310453199
+      scale: s_t
+    b_gk:
+      base: 1.61001492527962
+      scale: s_t
+    mu_c:
+      base: 8.99003894588318
+      scale: s_t
+    a_gk:
+      base: 11.3762919738437
+      scale: s_v
+    b_nt:
+      base: 1831199.07978509
+      scale: s_t*s_v
+    mu_g:
+      base: 89.9382159197401
+      scale: s_t
+    a_nt:
+      base: 177.556178464038
+      scale: s_v
+    p_0:
+      base: 6246.50442297409
+      scale: s_t*s_v
+    a_nl:
+      base: 0.0466177133703488
+      scale: null
+    g_pv:
+      base: 52.361340187773
+      scale: null
+    g_nc:
+      base: 1565.77531103506
+      scale: s_t
+    a_pv:
+      base: 953.016291300287
+      scale: s_v
+    a_nc:
+      base: 199.135063775527
+      scale: s_v
+    g_pi:
+      base: 2.16210269485218e-05
+      scale: 1/s_v
+    mu_n:
+      base: 0.776781658388633
+      scale: s_t
+    g_p:
+      base: 0.00973849483459614
+      scale: null
+    b_xn:
+      base: 609.739684621594
+      scale: s_t*s_v
+    b_pg:
+      base: 0.126601176697398
+      scale: null
+    a_xn:
+      base: 27277.1658907811
+      scale: s_v
+    a_pg:
+      base: 902.666448958217
+      scale: s_v
+    g_xi:
+      base: 3.90938622570566e-05
+      scale: s_t/s_v
+    mu_p:
+      base: 0.46572454272428
+      scale: s_t
+    g_xh:
+      base: 4.60945452030246e-07
+      scale: s_t/s_v
+    b_p:
+      base: null
+      scale: templated
+      formula: 'homeostatic_pops_ode.apc * eta (Sec.2.5: b_p = hs_apc_ODE * s_v, template
+        {hs_apc})'
+    mu_x:
+      base: 235.25392576208
+      scale: s_t
+    b_ep:
+      base: 101318.358506851
+      scale: s_t*s_v
+    b_h:
+      base: 8.51174198534486e-05
+      scale: s_t
+    a_ep:
+      base: 14522.3188063909
+      scale: s_v
+    theta:
+      base: 13217.8105366859
+      scale: s_v
+    b_ei:
+      base: 2.87556725383114e-07
+      scale: s_t/s_v
+    g_hv:
+      base: 1.41324585239137e-06
+      scale: s_t/s_l
+    mu_e:
+      base: 0.441073272611722
+      scale: s_t
+    g_hx:
+      base: 29.0380758578089
+      scale: s_t
+    b_op:
+      base: 317070.082528766
+      scale: s_t*s_v
+    a_hx:
+      base: 15.6825240521184
+      scale: s_v
+    a_op:
+      base: 14823.8275674019
+      scale: s_v
+    a_ix:
+      base: 0.0611971734649656
+      scale: s_v
+    mu_o:
+      base: 0.921060461394949
+      scale: s_t
+    g_ix:
+      base: 4.6524853526203
+      scale: s_t
+    b_wo:
+      base: 0.0092284656047177
+      scale: s_t
+    g_ik:
+      base: 3.08183563969158e-05
+      scale: s_t
+    a_wo:
+      base: 1987.31111667007
+      scale: s_v
+    g_ie:
+      base: 0.000984984039016579
+      scale: s_t
+    mu_w:
+      base: 0.936640894395778
+      scale: s_t
+    b_b:
+      base: 9.99860060276184
+      scale: s_t*s_v
+    b_bp:
+      base: 1.05601614882507e-06
+      scale: s_t/s_v/s_v
+    b_0:
+      base: 56777.3326082613
+      scale: s_v
+    mu_b:
+      base: 0.405022167434195
+      scale: s_t
+    b_a:
+      base: 0.00487789881403722
+      scale: s_t*s_v
+    b_ab:
+      base: 0.0685940586330701
+      scale: s_t
+    g_av:
+      base: 0.000159387382062868
+      scale: s_t/s_v
+    mu_a:
+      base: 5.43215036471264
+      scale: s_t
+    V0:
+      base: null
+      scale: templated
+      formula: Virus field total integral at ODE-instance build time (get_field_secretor(Virus).totalFieldIntegral(),
+        template {v_ini})
+  homeostatic_pops_ode:
+    macro: 21347.2655837073
+    nk: 225.999183404974
+    apc: 2064.80195826911
+    neutro_blood: 0
+    neutro: 0
+  initial_conditions:
+    NB: '{hs_neutro_blood}'
+    N: '{hs_neutro}'
+    M: b_m
+    L: b_lh*(1-R)*tot_cell
+    T: 0
+    X: 0
+    A: (b_a + b_ab*B)/mu_a
+    C: 0
+    I: 0
+    H: tot_cell
+    F: b_fp*b_p/mu_f
+    V: V0
+    DH: 0
+    E: b_ep/mu_e * b_p^h_e/(b_p^h_e+a_ep^h_e)
+    B: (b_b + b_bp*b_p*W*b_0)/(b_bp*b_p*W + mu_b)
+    K: b_k
+    P: b_p
+    W: b_p/mu_w * O*b_wo/(O+a_wo)
+    G: (b_go*W/(a_go+W)*O + b_gk*W/(a_gk+W)*K)/mu_g
+    O: b_op/mu_o * b_p^h_o/(b_p^h_o+a_op^h_o)
+    B_ei: 0
+    G_ki: 0
+    M_ratio: 0.0
+    M_nb: 0
+    K_ratio: 0.0
+    K_nb: 0.0
+    E_ratio: 0.0
+    E_nb: 0.0
