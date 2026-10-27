@@ -36,7 +36,7 @@ description: |
   latent pool never changes the infected count. All cells are size 25 (size-9 cells
   dissolve). Parameters stay faithful to Sego 2022 params.yaml @ b952eec2.
 
-  **Runnable artifact.** `viva_multicell_blueprint.composites.sego_crossparadigm`
+  **Runnable artifact.** `viva_multicell_blueprint.composites.sego.sego_crossparadigm`
   (a `@composite_generator`, parameterized by `backend` and `blueprint`) is the
   baseline composite for every study and drives the dashboard Composite Explorer.
 

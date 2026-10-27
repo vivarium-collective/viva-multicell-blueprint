@@ -7,6 +7,12 @@ One generator, parameterized by ``backend`` (``cpm``|``vertex``) and the
 and the mechanics-only adhesion-calibration sheet. It simply ``compile()``s the
 backend-neutral blueprint -- the single source of truth -- so the Explorer shows
 the real shared mechanism + the one backend-specific mechanics node.
+
+Discovery: this lives in ``<pkg>/composites/*.py`` (a package directory, not a
+single ``composites.py`` module) so the workbench's workspace-scope glob
+(``_discover_workspace_generators``) imports it, and the top-level
+``viva_multicell_blueprint/__init__.py`` does ``from . import composites`` so the
+env-worker's ``import <package_path>`` registers it for the live server.
 """
 from __future__ import annotations
 
@@ -14,11 +20,13 @@ from pathlib import Path
 
 from process_bigraph.composite_generator import composite_generator
 
-from .blueprint.model import Blueprint
-from .compile import compile as _compile
-from .core import register_workspace_processes
+from ..blueprint.model import Blueprint
+from ..compile import compile as _compile
+from ..core import register_workspace_processes
 
-_BLUEPRINTS = Path(__file__).resolve().parent.parent / "workspace" / "blueprints"
+# __file__ is <pkg>/composites/sego.py, so the repo root (which holds
+# workspace/blueprints/) is three parents up.
+_BLUEPRINTS = Path(__file__).resolve().parent.parent.parent / "workspace" / "blueprints"
 _SEGO = _BLUEPRINTS / "influenza_sego2022.yaml"
 
 

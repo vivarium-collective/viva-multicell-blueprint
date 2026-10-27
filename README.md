@@ -30,6 +30,7 @@ line with one plain sentence on what this workspace studies._
 
 | Composite | What it is |
 |---|---|
+| `sego_crossparadigm` | Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm\|vertex): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node. |
 <!-- END:composites -->
 
 ### Investigations

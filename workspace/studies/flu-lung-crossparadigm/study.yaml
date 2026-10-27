@@ -85,7 +85,7 @@ key_assumptions:
 
 baseline:
   - name: sego-influenza-crossparadigm
-    composite: viva_multicell_blueprint.composites.sego_crossparadigm
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     description: >
       The Sego 2022 influenza blueprint compiled onto each backend and run for N
       coupled steps; the comparison is computed by viva_multicell_blueprint.compare
