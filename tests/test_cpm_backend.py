@@ -75,7 +75,7 @@ def test_cpm_emits_port_shape():
     b = _make(cells, backend_params={"dims": [20, 20, 1], "mcs_per_update": 1})
 
     assert isinstance(b, MechanicsBackend)
-    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths"}
+    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths", "activations"}
     assert set(b.outputs()) == set(OUTPUT_PORTS)
 
     out = b.update({}, 1.0)
@@ -183,6 +183,46 @@ def test_cpm_seed_from_labels_id_follows_first_appearance_not_sorted():
     out = b.update({}, 1.0)
     assert out["sizes"]["5"] == pytest.approx(6.0) and out["sizes"]["9"] == pytest.approx(9.0)
     assert out["types"] == {"5": "epithelium", "9": "immune"}
+
+
+def _latent_pool():
+    """Three LATENT macrophage cells (type ``M_latent``) spaced on a 16x16 lattice."""
+    return [
+        {"id": 1, "type": "M_latent", "centroid": [4.0, 4.0], "size": 25.0},
+        {"id": 2, "type": "M_latent", "centroid": [11.0, 4.0], "size": 25.0},
+        {"id": 3, "type": "M_latent", "centroid": [4.0, 11.0], "size": 25.0},
+    ]
+
+
+def test_cpm_activation_changes_latent_to_active():
+    """Task 20: the ``activations`` input activates a pre-placed LATENT pool --
+    ``{M: 2}`` turns exactly 2 ``M_latent`` cells into ``M`` (a TYPE CHANGE via the
+    same set_cell_type path), and the latent pool is respected (never over-activated)."""
+    cells = _latent_pool()
+    b = _make(
+        cells,
+        cell_types=[{"name": "M"}, {"name": "M_latent"}],
+        backend_params={"dims": [16, 16, 1], "mcs_per_update": 0},
+    )
+    # start: three latent, no active M.
+    out0 = b.update({}, 1.0)
+    assert sum(t == "M_latent" for t in out0["types"].values()) == 3
+    assert sum(t == "M" for t in out0["types"].values()) == 0
+
+    # activate 2 -> exactly 2 become M, 1 latent remains; type change is real.
+    out1 = b.update({"activations": {"M": 2}}, 1.0)
+    assert sum(t == "M" for t in out1["types"].values()) == 2
+    assert sum(t == "M_latent" for t in out1["types"].values()) == 1
+    # selection is deterministic (first two ids in order).
+    assert out1["types"]["1"] == "M" and out1["types"]["2"] == "M"
+    assert out1["types"]["3"] == "M_latent"
+
+    # pool respected: request 5 but only 1 latent is left -> clamp to 1, total M = 3.
+    out2 = b.update({"activations": {"M": 5}}, 1.0)
+    assert sum(t == "M" for t in out2["types"].values()) == 3
+    assert sum(t == "M_latent" for t in out2["types"].values()) == 0
+    # activated cells are alive immune cells now (not latent, still alive).
+    assert all(out2["alive"].values())
 
 
 def test_cpm_contact_area_by_type():

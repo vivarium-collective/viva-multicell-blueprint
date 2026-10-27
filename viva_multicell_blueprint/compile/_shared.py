@@ -201,6 +201,10 @@ def _shared_store_defaults(blueprint) -> dict:
         "field_grid": {},
         # rules -> mechanics
         "fates": {}, "scalar": {}, "divisions": [], "deaths": [],
+        # immune recruitment -> mechanics (Task 20): active_type -> count to activate.
+        # Always present: the MechanicsBackend ``activations`` input is wired on every
+        # compile (via INPUT_PORTS), so the store must exist even with no immune node.
+        "activations": {},
     }
     if blueprint.systemic_ode is not None:
         stores.update({"ode_state": {}, "recruit_drivers": {}, "sig_1": 0.0})
@@ -308,11 +312,11 @@ def _immune_node(blueprint) -> dict:
         "address": IMMUNE_ADDR,
         "config": config,
         "inputs": {"recruit_drivers": ["recruit_drivers"]},
-        # FOLLOW-UP (not wired in v1): `spawns` is emitted into the shared store but
-        # the MechanicsBackend port (Tasks 5/10/11) has no `spawns` input and the
-        # backends implement no recruited-cell placement, so spawn events are not
-        # consumed yet. Placement needs an additive backend port extension.
-        "outputs": {"spawns": ["spawns"]},
+        # ``spawns`` stays for provenance/lineage; ``activations`` (Task 20) is the
+        # per-type activation-count map the MechanicsBackend ``activations`` input
+        # consumes to activate pre-placed LATENT cells -- this closes the T13-GAP where
+        # spawns were emitted but no backend port consumed them.
+        "outputs": {"spawns": ["spawns"], "activations": ["activations"]},
     }
 
 

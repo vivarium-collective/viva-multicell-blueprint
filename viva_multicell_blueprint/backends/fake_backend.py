@@ -10,7 +10,13 @@ from __future__ import annotations
 
 import math
 
-from viva_multicell_blueprint.compile.base import MechanicsBackend, no_footprint
+from viva_multicell_blueprint.compile.base import (
+    GENERIC_LATENT,
+    MechanicsBackend,
+    latent_pool_types,
+    no_footprint,
+    sorted_cell_ids,
+)
 
 
 class FakeBackend(MechanicsBackend):
@@ -50,6 +56,25 @@ class FakeBackend(MechanicsBackend):
         for cid, new_type in (inputs.get("fates") or {}).items():
             if str(cid) in self._cells:
                 self._cells[str(cid)]["type"] = new_type
+        # activations (Task 20): activate N latent cells per active type, deterministic.
+        bp = self.config.get("backend_params") or {}
+        latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
+        generic = str(bp.get("latent_generic", GENERIC_LATENT))
+        consumed: set = set()
+        activations = inputs.get("activations") or {}
+        for active_type in sorted(activations):
+            count = int(activations.get(active_type, 0) or 0)
+            pool = latent_pool_types(active_type, latent_map, generic)
+            picked = 0
+            for cid in sorted_cell_ids(self._cells):
+                if picked >= count:
+                    break
+                c = self._cells[cid]
+                if cid in consumed or not c["alive"] or c["type"] not in pool:
+                    continue
+                c["type"] = active_type
+                consumed.add(cid)
+                picked += 1
         for ev in inputs.get("deaths") or []:
             cid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
             if cid in self._cells:

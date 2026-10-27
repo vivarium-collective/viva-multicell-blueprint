@@ -58,7 +58,7 @@ def test_vertex_emits_port_shape():
     cells = _grid_cells()
     b = _make(cells)
     assert isinstance(b, MechanicsBackend)
-    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths"}
+    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths", "activations"}
     assert set(b.outputs()) == set(OUTPUT_PORTS)
 
     out = b.update({}, 1.0)
@@ -164,6 +164,27 @@ def test_migration_director_moves_cell_up_gradient():
     assert abs(dx_ctrl) < 0.05
     assert abs(dy_field) < 0.1
     assert dx_field > 5 * abs(dx_ctrl) + 0.2
+
+
+def test_vertex_activation_changes_latent_to_active():
+    """Task 20: the ``activations`` input activates a pre-placed LATENT pool on the
+    vertex backend -- ``{M: 3}`` turns exactly 3 ``M_latent`` faces into ``M`` via the
+    same differentiation behavior fates use, and the pool is never over-activated."""
+    cells = _grid_cells(types=["M_latent"] * 9)
+    b = _make(cells)
+    out0 = b.update({}, 1.0)
+    assert sum(t == "M_latent" for t in out0["types"].values()) == 9
+    assert sum(t == "M" for t in out0["types"].values()) == 0
+
+    # activate 3 -> exactly 3 become M (type change), 6 latent remain.
+    out1 = b.update({"activations": {"M": 3}}, 1.0)
+    assert sum(t == "M" for t in out1["types"].values()) == 3
+    assert sum(t == "M_latent" for t in out1["types"].values()) == 6
+
+    # pool respected: request far more than remain -> clamp to the 6 left.
+    out2 = b.update({"activations": {"M": 100}}, 1.0)
+    assert sum(t == "M" for t in out2["types"].values()) == 9
+    assert sum(t == "M_latent" for t in out2["types"].values()) == 0
 
 
 def test_all_one_type_degenerate():

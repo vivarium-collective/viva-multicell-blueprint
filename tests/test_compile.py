@@ -204,6 +204,41 @@ def test_fates_propagate_through_overwrite_map_store(tmp_path):
     assert comp.state["alive"]["1"] is True
 
 
+def test_compiler_wires_recruitment_to_activation(tmp_path):
+    """Task 20: the ImmuneRecruitmentProcess ``activations`` output must reach the
+    MechanicsBackend ``activations`` input store on both backends (closing the
+    T13-GAP where ``spawns`` was emitted but never consumed), and a compiled
+    composite must build + run with that wiring live."""
+    from viva_multicell_blueprint.core import build_core as _bc
+    from viva_multicell_blueprint.mechanism.immune import ImmuneRecruitmentProcess
+
+    bp = _full_blueprint(tmp_path)
+    for backend in ("cpm", "vertex"):
+        state = compile_blueprint(bp, backend=backend)["state"]
+        # immune node emits per-type activation COUNTS into the shared store ...
+        assert state["immune"]["outputs"]["activations"] == ["activations"]
+        # ... and the mechanics node reads them back as its activation input.
+        assert state["mechanics"]["inputs"]["activations"] == ["activations"]
+        # the shared store is pre-seeded (identical across backends).
+        assert "activations" in state
+
+        comp = Composite({"state": state}, core=build_core())
+        comp.run(1.0)
+        assert isinstance(comp.state["activations"], dict)
+
+    # the activation path is real: non-zero recruit drivers -> non-zero activation
+    # counts, and those counts equal the number of spawn events for each type.
+    proc = ImmuneRecruitmentProcess(
+        {"seed": 1, "types": {"macrophage_inflow": "M", "cd8_inflow": "CD8"},
+         "max_per_step": 50}, core=_bc())
+    out = proc.update({"recruit_drivers": {"macrophage_inflow": 4.0, "cd8_inflow": 3.0}}, 1)
+    acts = out["activations"]
+    assert sum(acts.values()) > 0
+    from collections import Counter
+    by_type = Counter(e["type"] for e in out["spawns"])
+    assert {k: v for k, v in acts.items() if v} == dict(by_type)
+
+
 # --------------------------------------------------------------------------- #
 # Rule validation hook
 # --------------------------------------------------------------------------- #

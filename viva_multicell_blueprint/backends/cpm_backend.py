@@ -36,7 +36,13 @@ import numpy as np
 from viva_cpm.schema import load_world
 
 from viva_multicell_blueprint.compile.adhesion import to_cpm_contact
-from viva_multicell_blueprint.compile.base import MechanicsBackend, no_footprint
+from viva_multicell_blueprint.compile.base import (
+    GENERIC_LATENT,
+    MechanicsBackend,
+    latent_pool_types,
+    no_footprint,
+    sorted_cell_ids,
+)
 
 MEDIUM = "medium"
 
@@ -60,6 +66,11 @@ class CPMBackend(MechanicsBackend):
     def initialize(self, config):
         bp = config.get("backend_params") or {}
         self._mcs = int(bp.get("mcs_per_update", 10))
+
+        # Immune-recruitment-as-activation (Task 20): which latent pool each active
+        # immune type draws from. Explicit per-type map + generic latent name.
+        self._latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
+        self._latent_generic = str(bp.get("latent_generic", GENERIC_LATENT))
 
         cells = config.get("initial_state") or []
         self._all_ids = [str(c["id"]) for c in cells]
@@ -298,6 +309,7 @@ class CPMBackend(MechanicsBackend):
         field_grid = inputs.get("field_grid") or {}
         divisions = inputs.get("divisions") or []
         deaths = inputs.get("deaths") or []
+        activations = inputs.get("activations") or {}
 
         # (a) fates: hard cell-type switches (port values are type NAMES).
         for cid, new_type in fates.items():
@@ -307,6 +319,11 @@ class CPMBackend(MechanicsBackend):
                 self._cell_meta[str(cid)]["type"] = (
                     new_type if isinstance(new_type, str) else self._type_name.get(int(new_type), str(new_type))
                 )
+
+        # (a2) activations (immune recruitment): activate N currently-LATENT cells of
+        #      each requested active type, in deterministic id order, via the SAME
+        #      set_cell_type path as fates. Clamped to the available latent pool.
+        self._apply_activations(activations)
 
         # (b) deaths: remove the cell from the lattice, mark it not-alive.
         for ev in deaths:
@@ -337,6 +354,42 @@ class CPMBackend(MechanicsBackend):
         # (e) advance the Metropolis flips.
         self._world.step(self._mcs)
         return self._emit()
+
+    def _apply_activations(self, activations) -> None:
+        """Activate latent cells into active immune types (Task 20). For each
+        ``active_type -> count``, pick up to ``count`` currently-alive cells whose
+        type is in that type's latent pool (deterministic id order) and ``set_cell_type``
+        them to the active type. Clamped to the pool; a cell is consumed at most once
+        per step (so two active types cannot both claim the same latent cell)."""
+        if not activations:
+            return
+        types_now = list(self._world.cell_types())
+        consumed: set = set()
+
+        def current_name(bid):
+            cpm = self._cpm_id.get(bid)
+            if cpm is None or not self._alive.get(bid, False) or cpm >= len(types_now):
+                return None
+            return self._type_name.get(int(types_now[cpm]), None)
+
+        for active_type in sorted(activations):
+            count = int(activations.get(active_type, 0) or 0)
+            if count <= 0 or active_type not in self._type_ids:
+                continue
+            pool = latent_pool_types(active_type, self._latent_map, self._latent_generic)
+            picked = 0
+            for bid in sorted_cell_ids(self._all_ids):
+                if picked >= count:
+                    break
+                if bid in consumed or current_name(bid) not in pool:
+                    continue
+                cpm = self._cpm_id.get(bid)
+                if cpm is None:
+                    continue
+                self._world.set_cell_type(cpm, self._tag(active_type))
+                self._cell_meta[bid]["type"] = active_type
+                consumed.add(bid)
+                picked += 1
 
     # -- read-back ----------------------------------------------------------- #
     def _emit(self):

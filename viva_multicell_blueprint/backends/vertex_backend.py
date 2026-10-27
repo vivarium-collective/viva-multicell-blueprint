@@ -34,7 +34,13 @@ from pathlib import Path
 
 import numpy as np
 
-from viva_multicell_blueprint.compile.base import MechanicsBackend, no_footprint
+from viva_multicell_blueprint.compile.base import (
+    GENERIC_LATENT,
+    MechanicsBackend,
+    latent_pool_types,
+    no_footprint,
+    sorted_cell_ids,
+)
 
 # Default sheet mechanics. ActiveMigration is the motility effector the field
 # drives; FaceAreaElasticity + LineTension keep cells bounded so a strong
@@ -144,6 +150,9 @@ class VertexBackend(MechanicsBackend):
         self._migration_scale = float(bp.get("migration_scale", 0.4))
         self._chemotaxis = list(bp.get("chemotaxis") or [])
         self._guard_factor = float(bp.get("guard_factor", 2.0))
+        # Immune-recruitment-as-activation (Task 20): latent pool resolution.
+        self._latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
+        self._latent_generic = str(bp.get("latent_generic", GENERIC_LATENT))
 
         self._t = 0.0
         self._alive: dict[str, bool] = {}
@@ -321,11 +330,53 @@ class VertexBackend(MechanicsBackend):
             },
         }]
 
+    def _activation_behaviors(self, activations) -> list:
+        """Activate latent cells into active immune types (Task 20). For each
+        ``active_type -> count``, pick up to ``count`` currently-alive cells whose
+        current face ``cell_type`` is in that type's latent pool (deterministic id
+        order) and emit a ``differentiation`` behavior to the active type. Clamped to
+        the pool; each latent cell is consumed at most once per step."""
+        if not activations:
+            return []
+        fd = self._solver.eptm.face_df
+        out = []
+        consumed: set = set()
+
+        def current_name(bid):
+            uid = self._uid.get(bid)
+            if uid is None or not self._alive.get(bid, False):
+                return None
+            lab = self._face_label(uid)
+            if lab is None:
+                return None
+            return str(fd.loc[lab, "cell_type"])
+
+        for active_type in sorted(activations):
+            count = int(activations.get(active_type, 0) or 0)
+            if count <= 0:
+                continue
+            pool = latent_pool_types(active_type, self._latent_map, self._latent_generic)
+            picked = 0
+            for bid in sorted_cell_ids(self._all_ids):
+                if picked >= count:
+                    break
+                if bid in consumed or current_name(bid) not in pool:
+                    continue
+                out.append({
+                    "func": "differentiation",
+                    "cell_uid": self._uid[bid],
+                    "new_type": str(active_type),
+                })
+                consumed.add(bid)
+                picked += 1
+        return out
+
     def update(self, inputs, interval):
         fates = inputs.get("fates") or {}
         field_grid = inputs.get("field_grid") or {}
         divisions = inputs.get("divisions") or []
         deaths = inputs.get("deaths") or []
+        activations = inputs.get("activations") or {}
 
         behaviors = []
         # (a) fates -> relabel cell_type via the differentiation behavior
@@ -335,6 +386,9 @@ class VertexBackend(MechanicsBackend):
                 behaviors.append({
                     "func": "differentiation", "cell_uid": uid, "new_type": str(new_type),
                 })
+        # (a2) activations (immune recruitment) -> activate N currently-LATENT cells
+        #      of each requested active type via the SAME differentiation behavior.
+        behaviors.extend(self._activation_behaviors(activations))
         # (b) field gradient -> migration directors via apply_gradient
         behaviors.extend(self._migration_behaviors(field_grid))
         # (c) deaths -> mark not-alive (is_alive=0 stops migration + flags the port)

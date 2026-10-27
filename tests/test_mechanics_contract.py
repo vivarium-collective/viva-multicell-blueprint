@@ -31,7 +31,7 @@ def test_fake_backend_emits_port_shape(make):
     b = make()
     assert isinstance(b, MechanicsBackend)
     assert set(b.outputs()) == set(OUTPUT_PORTS)
-    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths"}
+    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths", "activations"}
     out = b.update({}, 1.0)
     assert set(out) == set(OUTPUT_PORTS)
     assert out["positions"]["1"] == [0.0, 0.0]

@@ -204,15 +204,25 @@ class ImmuneRecruitmentProcess(Process):
         return {"recruit_drivers": "map[float]"}
 
     def outputs(self):
-        return {"spawns": "list[node]"}
+        # ``spawns``: per-event list (kept for provenance / lineage).
+        # ``activations``: active_type -> count to ACTIVATE this step. The MechanicsBackend
+        # ``activations`` input consumes this to activate that many pre-placed LATENT cells
+        # (Task 20), closing the T13-GAP where ``spawns`` was emitted but never consumed.
+        # ``overwrite`` so the full count map atomically REPLACES the shared store each
+        # step (a bare map apply would merge-and-leave stale counts); the backend reads a
+        # plain ``map[integer]`` input, matching the mechanics overwrite<->plain pattern.
+        return {"spawns": "list[node]", "activations": "overwrite[map[integer]]"}
 
     def update(self, inputs, interval=1):
         drivers = inputs.get("recruit_drivers") or {}
         spawns = []
+        activations: dict[str, int] = {}
         for key in sorted(self._types):
             n = min(poisson_inflow_count(float(drivers.get(key, 0.0)), self._rng), self._cap)
+            active_type = self._types[key]
+            activations[active_type] = activations.get(active_type, 0) + n
             for _ in range(n):
                 spawns.append({"cell_id": f"{self._prefix}{self._next}",
-                               "type": self._types[key], "parent": None})
+                               "type": active_type, "parent": None})
                 self._next += 1
-        return {"spawns": spawns}
+        return {"spawns": spawns, "activations": activations}

@@ -17,7 +17,43 @@ INPUT_PORTS = {
     "field_grid": "map[node]",        # name -> grid (from FieldProcess)
     "divisions": "list[node]",        # lineage events (from RulesProcess)
     "deaths": "list[node]",           # lineage events (from RulesProcess)
+    # immune RECRUITMENT as activation of a pre-placed LATENT pool (Task 20):
+    # active_immune_type -> count to ACTIVATE this step (from ImmuneRecruitmentProcess).
+    # The backend picks that many currently-LATENT cells (deterministic order) and
+    # changes their type to the active type via the SAME fate mechanism -- no topology
+    # insertion. Clamped to the available latent pool. Absent / no latent cells -> no-op.
+    "activations": "map[integer]",
 }
+
+# How a LATENT pool is named. Activating ``M`` draws from cells whose current type is
+# the per-type latent name (``M`` + ``_latent`` by default, or an explicit backend_params
+# ``latent_types`` entry) OR the shared generic latent type (``latent``). Backends read
+# ``backend_params.latent_types`` / ``backend_params.latent_generic`` to override.
+LATENT_SUFFIX = "_latent"
+GENERIC_LATENT = "latent"
+
+
+def latent_pool_types(active_type: str, latent_map=None, generic: str = GENERIC_LATENT) -> set:
+    """The set of cell-type names a latent cell may hold to be eligible for
+    activation into ``active_type``: the per-type latent name (explicit map entry or
+    ``<active_type>_latent``) plus the shared ``generic`` latent type (if set)."""
+    pool = set()
+    if latent_map and active_type in latent_map:
+        pool.add(str(latent_map[active_type]))
+    else:
+        pool.add(f"{active_type}{LATENT_SUFFIX}")
+    if generic:
+        pool.add(str(generic))
+    return pool
+
+
+def sorted_cell_ids(ids):
+    """Deterministic blueprint-id order for latent selection: numeric ids ascending,
+    then any non-numeric ids lexicographically (stable, backend-independent)."""
+    def key(s):
+        t = str(s)
+        return (0, int(t)) if t.lstrip("-").isdigit() else (1, t)
+    return sorted((str(i) for i in ids), key=key)
 
 # Each port is a per-step SNAPSHOT of the whole cell cohort, so it is wrapped in
 # ``overwrite[...]``: emitting the full map atomically REPLACES the shared store.
