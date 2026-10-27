@@ -56,6 +56,25 @@ def _to_grid(xy, frame_meta, res):
     return um / float(res)  # (x, y) in fractional pixel units; col=x, row=y
 
 
+def frame_from_backend(out, frame_meta=None) -> dict:
+    """Turn a MechanicsBackend output dict into a rasterize frame: split the
+    ``footprints`` port into ``polygons`` / ``occupancy`` (empty/none footprints
+    are dropped so those cells fall back to the disc)."""
+    frame = {k: v for k, v in out.items() if k != "footprints"}
+    polys, occ = {}, {}
+    for cid, fp in (out.get("footprints") or {}).items():
+        if not fp.get("xy"):
+            continue
+        if fp.get("kind") == "polygon":
+            polys[cid] = fp["xy"]
+        elif fp.get("kind") == "occupancy":
+            occ[cid] = fp["xy"]
+    frame["polygons"], frame["occupancy"] = polys, occ
+    if frame_meta is not None:
+        frame["frame"] = frame_meta
+    return frame
+
+
 def rasterize(run_frame, grid_spec) -> np.ndarray:
     ny, nx = grid_shape(grid_spec)
     out = np.full((ny, nx), EMPTY, dtype=np.int32)

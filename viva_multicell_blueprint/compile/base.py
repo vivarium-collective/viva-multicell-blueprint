@@ -32,7 +32,15 @@ OUTPUT_PORTS = {
     "shared_surface_by_type": "overwrite[map[map[float]]]",  # cell_id -> {type -> float}
     "neighbors": "overwrite[map[list[string]]]",
     "alive": "overwrite[map[boolean]]",
+    # cell_id -> {"kind": "occupancy"|"polygon"|"none", "xy": [[x, y], ...]} in the
+    # backend's NATIVE coords. occupancy (CPM): lattice voxel indices the cell owns.
+    # polygon (vertex): the face's vertices in boundary order. none/[]: dead or no
+    # footprint (rasterize falls back to the area-equivalent disc). Every cell id
+    # gets an entry. ``compare.raster.frame_from_backend`` splits this into the
+    # ``polygons`` / ``occupancy`` keys ``rasterize`` consumes.
+    "footprints": "overwrite[map[node]]",
 }
+NO_FOOTPRINT = {"kind": "none", "xy": []}
 
 
 class MechanicsBackend(Process):

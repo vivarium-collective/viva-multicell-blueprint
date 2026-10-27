@@ -36,7 +36,7 @@ import numpy as np
 from viva_cpm.schema import load_world
 
 from viva_multicell_blueprint.compile.adhesion import to_cpm_contact
-from viva_multicell_blueprint.compile.base import MechanicsBackend
+from viva_multicell_blueprint.compile.base import NO_FOOTPRINT, MechanicsBackend
 
 MEDIUM = "medium"
 
@@ -347,6 +347,8 @@ class CPMBackend(MechanicsBackend):
 
         positions, sizes, out_types, alive, neighbors, shared = {}, {}, {}, {}, {}, {}
         nbr_ids = self._neighbor_ids()
+        footprints = {}
+        occ = self._occupancy()
         for bid in self._all_ids:
             cpm = self._cpm_id.get(bid)
             is_alive = bool(self._alive.get(bid, False)) and cpm is not None \
@@ -360,7 +362,9 @@ class CPMBackend(MechanicsBackend):
                 alive[bid] = False
                 neighbors[bid] = []
                 shared[bid] = {}
+                footprints[bid] = dict(NO_FOOTPRINT)
                 continue
+            footprints[bid] = {"kind": "occupancy", "xy": occ.get(cpm, [])}
             com = coms[cpm]
             pos = [float(com[0]), float(com[1])] if nz <= 1 else [float(v) for v in com]
             size = float(volumes[cpm])
@@ -388,7 +392,27 @@ class CPMBackend(MechanicsBackend):
             "shared_surface_by_type": shared,
             "neighbors": neighbors,
             "alive": alive,
+            "footprints": footprints,
         }
+
+    def _occupancy(self) -> dict:
+        """cpm id -> list of [x, y(, z)] voxel indices it owns, in ONE pass over
+        the lattice snapshot (stable argsort groups voxels by owner)."""
+        nx, ny, nz = self._dims
+        lab = np.asarray(self._world.snapshot()).reshape((nx, ny, nz), order="F")
+        flat = lab.ravel()
+        idx = np.flatnonzero(flat)
+        order = idx[np.argsort(flat[idx], kind="stable")]
+        owners = flat[order]
+        coords = np.stack(np.unravel_index(order, lab.shape), axis=1)
+        if nz <= 1:
+            coords = coords[:, :2]
+        cuts = np.flatnonzero(np.diff(owners)) + 1
+        out = {}
+        for o, grp in zip(np.split(owners, cuts), np.split(coords, cuts)):
+            if len(o):
+                out[int(o[0])] = grp.astype(float).tolist()
+        return out
 
     def _neighbor_ids(self) -> dict:
         """Map cpm cell id -> set of adjacent cpm cell ids, from the lattice

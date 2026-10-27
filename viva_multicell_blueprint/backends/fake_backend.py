@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 
-from viva_multicell_blueprint.compile.base import MechanicsBackend
+from viva_multicell_blueprint.compile.base import NO_FOOTPRINT, MechanicsBackend
 
 
 class FakeBackend(MechanicsBackend):
@@ -43,6 +43,7 @@ class FakeBackend(MechanicsBackend):
             "shared_surface_by_type": shared,
             "neighbors": neighbors,
             "alive": {i: c["alive"] for i, c in self._cells.items()},
+            "footprints": {i: dict(NO_FOOTPRINT) for i in self._cells},
         }
 
     def update(self, inputs, interval):

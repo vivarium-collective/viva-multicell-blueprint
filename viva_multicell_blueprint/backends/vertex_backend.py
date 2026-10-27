@@ -34,7 +34,7 @@ from pathlib import Path
 
 import numpy as np
 
-from viva_multicell_blueprint.compile.base import MechanicsBackend
+from viva_multicell_blueprint.compile.base import NO_FOOTPRINT, MechanicsBackend
 
 # Default sheet mechanics. ActiveMigration is the motility effector the field
 # drives; FaceAreaElasticity + LineTension keep cells bounded so a strong
@@ -374,6 +374,8 @@ class VertexBackend(MechanicsBackend):
         label_by_uid = {int(u): lab for lab, u in fd["unique_id"].items()}
 
         positions, sizes, types, alive, neighbors, shared = {}, {}, {}, {}, {}, {}
+        footprints = {}
+        polys = self._face_polygons()
         for bid in self._all_ids:
             uid = self._uid.get(bid)
             if uid is None:
@@ -386,6 +388,7 @@ class VertexBackend(MechanicsBackend):
                 alive[bid] = False
                 neighbors[bid] = []
                 shared[bid] = {}
+                footprints[bid] = dict(NO_FOOTPRINT)
                 continue
             lab = label_by_uid.get(uid)
             if lab is None:
@@ -397,7 +400,9 @@ class VertexBackend(MechanicsBackend):
                 alive[bid] = False
                 neighbors[bid] = []
                 shared[bid] = {}
+                footprints[bid] = dict(NO_FOOTPRINT)
                 continue
+            footprints[bid] = {"kind": "polygon", "xy": polys.get(lab, [])}
             pos = [float(fd.loc[lab, "x"]), float(fd.loc[lab, "y"])]
             size = float(fd.loc[lab, "area"])
             ctype = str(fd.loc[lab, "cell_type"])
@@ -434,4 +439,26 @@ class VertexBackend(MechanicsBackend):
             "shared_surface_by_type": shared,
             "neighbors": neighbors,
             "alive": alive,
+            "footprints": footprints,
         }
+
+    def _face_polygons(self) -> dict:
+        """face label -> ordered [[x, y], ...] boundary vertices, walking each
+        face's half-edges srce -> trgt (tyssue edges of a face form a closed loop).
+        Computed for every face; only mapped interior faces are emitted."""
+        eptm = self._solver.eptm
+        ed = eptm.edge_df
+        vx = eptm.vert_df["x"].to_dict()
+        vy = eptm.vert_df["y"].to_dict()
+        out = {}
+        for lab, grp in ed.groupby("face"):
+            nxt = dict(zip(grp["srce"].tolist(), grp["trgt"].tolist()))
+            start = next(iter(nxt))
+            ring, v = [], start
+            while v in nxt and len(ring) <= len(nxt):
+                ring.append([float(vx[v]), float(vy[v])])
+                v = nxt[v]
+                if v == start:
+                    break
+            out[lab] = ring
+        return out
