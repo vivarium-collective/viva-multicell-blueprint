@@ -2,7 +2,7 @@
 
 This wraps ``vivarium_tyssue``'s :class:`EulerSolver` (spec section 5, the vertex
 substrate) without changing it. The blueprint's backend-neutral cell list is
-materialized as a **domain-clipped Voronoi tessellation** of the cell centroids,
+materialized as a **guard-ring-bounded Voronoi tessellation** of the cell centroids,
 written to the ``.hf5`` the solver loads, with per-face ``cell_type`` and
 ``prefered_area = size``. Vertex *motility* comes from the fork's
 ``ActiveMigration`` effector: each step the field gradient is sampled at every
@@ -44,7 +44,7 @@ _MIGRATION_COLS = ("mx", "my", "mz", "migration_strength")
 
 
 def _voronoi_sheet(centroids: np.ndarray, guard_factor: float = 2.0):
-    """Build a flat-3D tyssue :class:`Sheet` from a domain-clipped Voronoi
+    """Build a flat-3D tyssue :class:`Sheet` from a guard-ring-bounded Voronoi
     tessellation of ``centroids``.
 
     A rectangular **guard ring** of dummy generators ~``guard_factor`` cell-widths
@@ -144,7 +144,6 @@ class VertexBackend(MechanicsBackend):
         self._migration_scale = float(bp.get("migration_scale", 0.4))
         self._chemotaxis = list(bp.get("chemotaxis") or [])
         self._guard_factor = float(bp.get("guard_factor", 2.0))
-        self._domain = config.get("domain") or {}
 
         self._t = 0.0
         self._alive: dict[str, bool] = {}
@@ -174,11 +173,29 @@ class VertexBackend(MechanicsBackend):
         sheet.face_df["cell_type"] = "guard"
         sheet.face_df["prefered_area"] = sheet.face_df["area"].to_numpy()
 
+        # Every blueprint id is a port citizen regardless of mesh fidelity. Keep
+        # its blueprint pos/size/type so an unmapped cell still emits a real
+        # placeholder (never dropped -> the "every cell in every port" contract
+        # holds even when the section 9.2 residual is non-zero).
+        self._all_ids = list(ids)
+        self._cell_meta = {
+            ids[i]: {
+                "pos": [float(centroids[i, 0]), float(centroids[i, 1])],
+                "size": sizes[i],
+                "type": types[i],
+            }
+            for i in range(len(ids))
+        }
         self._uid: dict[str, int] = {}  # blueprint id -> stable tyssue unique_id
+        unmapped = []
         assigned_faces = set()
         for i, lab in enumerate(face_of_cell):
             if lab < 0 or lab in assigned_faces:
-                continue  # unassigned or contested (keep the first claimant only)
+                # unassigned or contested (a later centroid colliding onto an
+                # already-claimed face). Record it; it still emits as not-alive.
+                unmapped.append(ids[i])
+                self._alive[ids[i]] = False
+                continue
             assigned_faces.add(int(lab))
             sheet.face_df.loc[lab, "cell_type"] = types[i]
             sheet.face_df.loc[lab, "prefered_area"] = sizes[i]
@@ -186,6 +203,7 @@ class VertexBackend(MechanicsBackend):
             self._alive[ids[i]] = True
 
         report["n_guard_faces"] = int((sheet.face_df["cell_type"] == "guard").sum())
+        report["unmapped_ids"] = unmapped
         self.residual_report = report
         self.identity = dict(self._uid)
         self._uid_to_bid = {u: b for b, u in self._uid.items()}
@@ -195,8 +213,10 @@ class VertexBackend(MechanicsBackend):
         if "viscosity" not in sheet.vert_df.columns:
             sheet.vert_df["viscosity"] = 1.0
 
-        self._tmpdir = tempfile.mkdtemp(prefix="vertex_backend_")
-        hf5 = str(Path(self._tmpdir) / "mesh.hf5")
+        # Held on the instance so its finalizer removes the scratch mesh dir when
+        # the backend is collected / at interpreter exit (no orphaned temp dirs).
+        self._tmpdir_obj = tempfile.TemporaryDirectory(prefix="vertex_backend_")
+        hf5 = str(Path(self._tmpdir_obj.name) / "mesh.hf5")
         save_datasets(hf5, sheet)
         self._solver = self._make_solver(hf5)
 
@@ -354,7 +374,19 @@ class VertexBackend(MechanicsBackend):
         label_by_uid = {int(u): lab for lab, u in fd["unique_id"].items()}
 
         positions, sizes, types, alive, neighbors, shared = {}, {}, {}, {}, {}, {}
-        for bid, uid in self._uid.items():
+        for bid in self._all_ids:
+            uid = self._uid.get(bid)
+            if uid is None:
+                # unmapped at build (contested / no interior face): still a port
+                # citizen -> blueprint-placeholder geometry, not alive, no contacts
+                meta = self._cell_meta.get(bid, {})
+                positions[bid] = list(meta.get("pos", [0.0, 0.0]))
+                sizes[bid] = meta.get("size", 0.0)
+                types[bid] = meta.get("type", "")
+                alive[bid] = False
+                neighbors[bid] = []
+                shared[bid] = {}
+                continue
             lab = label_by_uid.get(uid)
             if lab is None:
                 # face vanished (extrusion / T2): report last-known state, not alive

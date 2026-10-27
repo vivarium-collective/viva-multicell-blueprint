@@ -82,30 +82,88 @@ def test_vertex_emits_port_shape():
     # the center cell (id 5) has interior neighbors on all sides
     assert len(out["neighbors"]["5"]) >= 3
 
+    # shared-edge-by-type is load-bearing (feeds the kill rule), so check it for
+    # real. The 3x3 grid alternates A/B; the center cell (id 5) is type A and its
+    # four orthogonal neighbors (ids 2,4,6,8) are all B. So its shared surface is
+    # keyed ONLY by "B" (it touches no A), and that B total is ~its own perimeter
+    # (an interior cell is fully surrounded, so every edge is a shared edge).
+    assert set(out["types"]["5"]) and out["types"]["5"] == "A"
+    center_shared = out["shared_surface_by_type"]["5"]
+    assert set(center_shared) == {"B"}  # no "A" entry: it touches no same-type cell
+    import math as _m
+    # reconstruct the center face perimeter from the solver and compare
+    fd = b._solver.eptm.face_df
+    lab = fd.index[fd["unique_id"] == b.identity["5"]][0]
+    perim = float(fd.loc[lab, "perimeter"])
+    assert center_shared["B"] == pytest.approx(perim, rel=1e-6)
+    assert center_shared["B"] > 0
+
+
+def test_contested_centroid_still_emitted_as_dead():
+    # two centroids close enough to collide onto one Voronoi face (plus a few
+    # spread-out cells so the mesh is well-formed). The loser is dropped from the
+    # identity map but MUST still appear in every port, alive=False.
+    cells = [
+        {"id": 1, "type": "A", "centroid": [0.0, 0.0], "size": 1.0},
+        {"id": 2, "type": "A", "centroid": [0.02, 0.0], "size": 1.0},  # collides w/ 1
+        {"id": 3, "type": "A", "centroid": [3.0, 0.0], "size": 1.0},
+        {"id": 4, "type": "A", "centroid": [0.0, 3.0], "size": 1.0},
+        {"id": 5, "type": "A", "centroid": [3.0, 3.0], "size": 1.0},
+    ]
+    b = _make(cells)
+    rep = b.residual_report
+    assert rep["n_collision"] >= 1
+    assert rep["unmapped_ids"]  # non-empty
+    unmapped = set(rep["unmapped_ids"])
+    out = b.update({}, 1.0)
+    ids = {str(c["id"]) for c in cells}
+    # contract holds despite a non-zero residual: every cell in every port
+    for port in OUTPUT_PORTS:
+        assert set(out[port]) == ids
+    for cid in unmapped:
+        assert out["alive"][cid] is False
+        assert out["neighbors"][cid] == []
+        assert out["shared_surface_by_type"][cid] == {}
+        assert len(out["positions"][cid]) == 2  # real placeholder, not missing
+    # a mapped cell is still alive
+    mapped = ids - unmapped
+    assert any(out["alive"][c] for c in mapped)
+
 
 def test_migration_director_moves_cell_up_gradient():
-    cells = _grid_cells()
-    b = _make(
-        cells,
-        backend_params={
-            "chemotaxis": [{"field": "chemo", "strength": 1.0}],
-            "migration_scale": 0.4,
-            "max_displacement": 0.1,
-        },
-    )
+    bp = {
+        "chemotaxis": [{"field": "chemo", "strength": 1.0}],
+        "migration_scale": 0.4,
+        "max_displacement": 0.1,
+    }
     # a field that increases in +x: gradient points +x everywhere
     nx, ny = 4, 4
     ramp = np.tile(np.arange(nx, dtype=float)[:, None], (1, ny))
     field_grid = {"chemo": ramp}
 
-    x0 = float(np.mean([p[0] for p in b.update({}, 1.0)["positions"].values()]))
-    out = None
-    for t in range(20):
-        out = b.update({"field_grid": field_grid}, 1.0)
-    x1 = float(np.mean([p[0] for p in out["positions"].values()]))
-    assert np.isfinite(x1)
+    def _run(fg):
+        b = _make(_grid_cells(), backend_params=bp)
+        p0 = b.update({}, 1.0)["positions"]
+        x0 = float(np.mean([p[0] for p in p0.values()]))
+        y0 = float(np.mean([p[1] for p in p0.values()]))
+        out = None
+        for _ in range(20):
+            out = b.update(({"field_grid": fg} if fg else {}), 1.0)
+        x1 = float(np.mean([p[0] for p in out["positions"].values()]))
+        y1 = float(np.mean([p[1] for p in out["positions"].values()]))
+        return x1 - x0, y1 - y0
+
+    dx_field, dy_field = _run(field_grid)
+    dx_ctrl, dy_ctrl = _run({})  # control: no field -> no active migration
+
+    assert np.isfinite(dx_field) and np.isfinite(dy_field)
     # cells migrate up-gradient (+x) by a clear, non-trivial amount
-    assert x1 - x0 > 0.3
+    assert dx_field > 0.3
+    # the +x drift is attributable to ActiveMigration, not relaxation/asymmetry:
+    # no field -> near-zero x-drift, and under a pure +x ramp y stays near zero
+    assert abs(dx_ctrl) < 0.05
+    assert abs(dy_field) < 0.1
+    assert dx_field > 5 * abs(dx_ctrl) + 0.2
 
 
 def test_all_one_type_degenerate():
@@ -117,7 +175,12 @@ def test_all_one_type_degenerate():
     # shared-surface-by-type only ever mentions the single real type
     seen_types = {t for m in out["shared_surface_by_type"].values() for t in m}
     assert seen_types <= {"A"}
-    # the center cell still has real contacts
-    assert out["shared_surface_by_type"]["5"] == {"A": pytest.approx(
-        sum(out["shared_surface_by_type"]["5"].values()))}
+    # the center cell has a real, perimeter-sized contact with its A neighbors
+    center_shared = out["shared_surface_by_type"]["5"]
+    assert set(center_shared) == {"A"}
+    fd = b._solver.eptm.face_df
+    lab = fd.index[fd["unique_id"] == b.identity["5"]][0]
+    perim = float(fd.loc[lab, "perimeter"])
+    assert center_shared["A"] == pytest.approx(perim, rel=1e-6)
+    assert center_shared["A"] > 0
     assert len(out["positions"]) == 9
