@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vivarium-collective.github.io/viva-template/schemas/multicell_blueprint.schema.json",
+  "title": "multicell blueprint (backend-neutral)",
+  "description": "Backend-neutral multi-cell model document (spec section 7). Compiled to a CPM or vertex mechanics backend; rule rate_expr strings are parsed by the rate grammar, not validated here.",
+  "type": "object",
+  "required": ["domain", "cell_types", "initial_state"],
+  "additionalProperties": false,
+  "properties": {
+    "domain": {
+      "type": "object",
+      "required": ["extent_um", "grid_resolution_um"],
+      "properties": {
+        "extent_um": {"type": "array", "minItems": 2, "maxItems": 3, "items": {"type": "number", "exclusiveMinimum": 0}},
+        "grid_resolution_um": {"type": "number", "exclusiveMinimum": 0},
+        "boundary": {"enum": ["noflux", "periodic"]}
+      }
+    },
+    "cell_types": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "target_size"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "target_size": {"type": "number", "exclusiveMinimum": 0},
+          "mechanics": {"type": "object"},
+          "mobile": {"type": "boolean"}
+        }
+      }
+    },
+    "adhesion": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["a", "b", "strength"],
+        "properties": {
+          "a": {"type": "string"},
+          "b": {"type": "string"},
+          "strength": {"type": "number"}
+        }
+      }
+    },
+    "initial_state": {
+      "type": "object",
+      "oneOf": [
+        {
+          "required": ["kind"],
+          "properties": {"kind": {"enum": ["blocks", "voronoi"]}}
+        },
+        {
+          "required": ["from_data"],
+          "properties": {
+            "from_data": {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "label_image": {"type": "string"},
+                "cell_table": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "D", "decay"],
+        "properties": {
+          "name": {"type": "string"},
+          "D": {"type": "number", "minimum": 0},
+          "decay": {"type": "number", "minimum": 0},
+          "secretion": {"type": "array", "items": {"type": "object", "required": ["type", "rate"]}},
+          "uptake": {"type": "array", "items": {"type": "object", "required": ["type", "rate"]}},
+          "chemotaxis": {"type": "array", "items": {"type": "object", "required": ["type", "strength"]}},
+          "dynamics": {"type": "object"}
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {"enum": ["transition", "kill", "allee", "resistance", "recovery"]},
+          "rate_expr": {"type": "string", "minLength": 1}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"type": {"const": "transition"}}},
+            "then": {"required": ["from", "to", "rate_expr"]}
+          }
+        ]
+      }
+    },
+    "immune": {"type": ["object", "array"]},
+    "systemic_ode": {
+      "type": "object",
+      "required": ["model_ref"],
+      "properties": {
+        "model_ref": {"type": "string"},
+        "coupling": {"type": "object"}
+      }
+    },
+    "mechanics_mapping": {"type": "object"}
+  }
+}

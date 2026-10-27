@@ -1,0 +1,155 @@
+schema_version: 2
+name: influenza-crossparadigm
+title: "Influenza cross-paradigm — one Sego 2022 blueprint, two mechanical substrates"
+created: "2026-10-27"
+status: running
+lead: eran
+
+question: >
+  Can ONE backend-neutral blueprint express the whole Sego 2022 influenza model
+  (ViralInfectionVTM) and run it faithfully on two different mechanical substrates
+  — a Cellular Potts model (viva-cpm) and a vertex model (vivarium-tyssue) — and
+  where do the two substrates agree vs diverge when the shared mechanism is driven
+  live?
+
+hypothesis: >
+  Because the field / rules / systemic-ODE / latent-pool recruitment mechanism is
+  compiled BYTE-FOR-BYTE identically onto both backends and only the single
+  mechanics node differs, cell-FATE dynamics should be nearly backend-independent,
+  while SPATIAL morphology should diverge — each substrate samples the shared field
+  at its own cell centroid and measures cell-cell contact through its own geometry.
+  Divergence is therefore expected and is a finding about the substrate, not a bug.
+
+description: |
+  This investigation is the capstone of the `viva-multicell-blueprint` build: it
+  ties together the backend-neutral blueprint (Task 17), the `compile(blueprint,
+  backend)` compiler (Task 13), both real backends running the full model (fields
+  Task 6, rules Task 7, systemic ODE fed live by CellCountStep Task 21, immune
+  recruitment via latent-pool activation Task 20, real footprints Task 19), the
+  comparison layer (`viva_multicell_blueprint.compare` — identity, raster, metrics)
+  and the three interactive figures (`viva_multicell_blueprint.viz`).
+
+  **Blueprint update.** The recruitment design (Task 20) activates a PRE-PLACED
+  LATENT immune pool, so the Sego blueprint's `initial_state` now pre-places 12
+  size-25 latent immune cells (M/NK/CD8_latent) at the tissue margins via
+  `extra_blocks`; the `infected_seed` is scoped to the main epithelial block so the
+  latent pool never changes the infected count. All cells are size 25 (size-9 cells
+  dissolve). Parameters stay faithful to Sego 2022 params.yaml @ b952eec2.
+
+  **Runnable artifact.** `viva_multicell_blueprint.composites.sego_crossparadigm`
+  (a `@composite_generator`, parameterized by `backend` and `blueprint`) is the
+  baseline composite for every study and drives the dashboard Composite Explorer.
+
+  **Reduced scale.** Every study runs at a TRACTABLE reduced scale (a 50x50-site
+  patch, a 6x6 epithelial block) so the runs actually complete; this is a
+  demonstration, not paper scale. The comparison is reproducible (fixed seeds).
+
+  **Anti-goal respected.** No parameter is tuned to force the two backends to
+  agree. Honest divergence is reported.
+
+studies:
+  - adhesion-calibration
+  - initial-state-fidelity
+  - flu-lung-crossparadigm
+  - dose-response-crossparadigm
+
+at_a_glance:
+  - study: adhesion-calibration
+    role: >
+      §9.1. Mechanics-only sheet on both backends; sweep the neutral adhesion ->
+      (CPM J, vertex tension). Comparable shape stats (mean area 23.6 CPM / 34.9
+      vertex, CV 0.10 / 0.06); the J<->tension mapping is DIRECTIONAL, not pinned
+      (vertex CV spread < 0.01 across scale). tension_scale = 1.0 retained.
+  - study: initial-state-fidelity
+    role: >
+      §9.2. Both backends reproduce the blueprint t=0 state. CPM exact (centroid
+      RMS 0.000 um); vertex clean 1:1 (fraction_clean 1.0, 0 unmapped) with a
+      sub-cell residual (RMS 1.21 um). 48/48 type match on both.
+  - study: flu-lung-crossparadigm
+    role: >
+      §9.3 CAPSTONE. Full Sego model on both backends; three comparison families +
+      three figures, judged against a NULL CONTROL (same-backend seed-to-seed spread).
+      Headline: on fate + patch LOCATION the cross-backend difference falls inside the
+      same-backend seed spread (cross fate 0.942 vs CPM 0.934 / vertex 0.943; vertex
+      100% inside the CPM envelope) → we FAIL TO REJECT a substrate effect at this
+      scale/seed count (null, not equality). The one exception: raw occupancy IoU
+      trends ~25-35% below both baselines (0.165 vs 0.249/0.212) — a candidate weak
+      signal to test at larger scale / more vertex seeds.
+  - study: dose-response-crossparadigm
+    role: >
+      §9 stretch. Sweep initial viral load over seeds; both substrates agree on the
+      STRICT DIRECTION — the highest dose ends with more infection than the lowest on
+      every backend and seed (CPM 1->7/1->2, vertex 0->5/1->6). Directional, not a
+      dose-response curve.
+
+acceptance_criteria:
+  - study: adhesion-calibration
+    behavior: >
+      A mechanics-only sheet reaches comparable cell-shape statistics on both
+      backends, and the neutral-adhesion -> (J, tension) mapping is recorded
+      (directional at this scale).
+  - study: initial-state-fidelity
+    behavior: >
+      Both backends reproduce the t=0 centroids/sizes/types; the vertex 1:1 residual
+      is reported and is clean (fraction_clean = 1.0).
+  - study: flu-lung-crossparadigm
+    behavior: >
+      The full Sego blueprint runs on BOTH backends at reduced scale; per-cell
+      agreement, dynamics-with-band, and spatial-pattern + occupancy IoU are all
+      computed, the three figures render under the inline cap, and the agree/diverge
+      result is reported honestly.
+  - study: dose-response-crossparadigm
+    behavior: >
+      Both backends agree on the monotone direction of infection vs initial viral
+      load.
+
+executive:
+  what_is_this: >
+    The capstone cross-paradigm demonstration: one backend-neutral Sego 2022
+    influenza blueprint, compiled and run on both a Cellular Potts and a vertex
+    substrate, with a full three-family comparison and three interactive figures.
+  verdict: >
+    The architecture holds. One blueprint runs the FULL Sego model (fields, rules,
+    live systemic ODE, latent-pool recruitment) on both backends, and because the
+    mechanism is shared byte-for-byte the mechanical substrate is the only possible
+    source of cross-paradigm difference. Judged against a NULL CONTROL (same-backend
+    seed-to-seed spread), on cell fate and infected-patch LOCATION the cross-backend
+    difference falls inside the same-backend seed spread, so we FAIL TO REJECT a
+    substrate effect at this scale and seed count (a null result, NOT proof of
+    equality): cross-backend fate agreement 0.942 (N=400), within the same-backend
+    baselines (CPM 0.934, vertex 0.943; equal 0.987 at CI scale); patch location 6.1
+    um cross vs 5.4 um same-backend; vertex trajectory inside the CPM 3-seed envelope
+    at 100% of steps. Final cell areas match (24.7 vs 24.5), so the spatial comparison
+    is not representation-confounded. The ONE exception: raw infected-patch occupancy
+    IoU trends ~25-35% below BOTH same-backend baselines (0.165 vs CPM 0.249 / vertex
+    0.212) — flagged as a candidate weak substrate signal to test at larger scale /
+    more vertex seeds, not attributed to seed noise without evidence. Dose-response
+    direction is strict on both backends across seeds. Initial-state fidelity is exact
+    on CPM and a clean 1:1 on vertex; the adhesion J<->tension mapping is directional.
+    The earlier "fate agrees, morphology diverges" reading was an artifact of
+    comparing a single seed-pair to zero. This is preliminary (reduced scale): the
+    headline N=400 numbers use 3 CPM x 3 vertex seeds (9 cross pairs), and the vertex
+    side is near-degenerate across seeds at this scale (the slow epidemic gives
+    ~identical vertex I-counts; vertex-vs-vertex sd 0.006), so more vertex seeds barely
+    move the result; the lighter CI test uses CPM {0,1,2} vs vertex seed 0. A substrate
+    effect could emerge at larger scale, where the vertex seeds would no longer be
+    degenerate. Known limits: the recruitment latent-pool
+    approximation (T20-RECRUIT), the reduced scale, the producer-less ODE inputs
+    V/L/C/F (Task 21), and the directional adhesion calibration.
+  verdict_status: preliminary
+  decisions_needed:
+    - "Raw infected-patch occupancy IoU trends ~25-35% below both same-backend baselines (cross 0.165 vs CPM 0.249 / vertex 0.212) — a CANDIDATE weak substrate signal. Test it at a LARGER scale (where the vertex side is no longer near-degenerate across seeds) before calling it signal or noise."
+    - "ODE inputs V/L/C/F have no producer (Task 21) — the immune arm is barely exercised at this scale; land the producers to drive recruitment."
+    - "Immune recruitment is a latent-pool approximation (T20-RECRUIT) — confirm this is the intended mechanism or replace with topology insertion."
+    - "Sego acceptance bands are the CPM stochastic envelope, not digitized Sego 2022 figures — digitize the paper curves for a literature band."
+    - "The J<->tension calibration is directional, not pinned — decide whether a sharper calibration (larger sheet) is worth it."
+
+glossary:
+  - term: cross-paradigm
+    definition: Running the same model on two different mechanical substrates (CPM voxel vs vertex polygon) and comparing.
+  - term: latent pool
+    definition: Pre-placed resting immune cells (M/NK/CD8_latent) at the tissue margin that recruitment activates in place (type switch), rather than inserting new topology.
+  - term: per-cell agreement
+    definition: Fraction of the t0 cohort in the same state (type, or alive-vs-dead) at each step across the two backends.
+  - term: occupancy IoU
+    definition: Intersection-over-union of the two backends' rasterized cell footprints (CPM voxel occupancy vs vertex face polygons).

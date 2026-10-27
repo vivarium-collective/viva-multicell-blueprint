@@ -1,0 +1,30 @@
+# Mechanics-only neutral sheet for the adhesion-calibration study (spec §9.1).
+#
+# A single homogeneous epithelial cell type with ONLY neutral adhesion -- no fields,
+# no rules, no systemic ODE, no immune. Compiling this onto each backend exercises
+# the pure mechanical relaxation, so the adhesion-calibration study can sweep the
+# neutral strength -> (CPM J, vertex line-tension) mapping and compare cell-shape
+# statistics without any reaction-diffusion or fate dynamics confounding them.
+#
+# UNITS: 1 grid unit = 1 lattice site = 1 um (grid_resolution_um = 1), target_size 25
+# (a 5x5 cell); size-9 cells dissolve, so 25 is load-bearing (same as the Sego sheet).
+
+domain:
+  extent_um: [30, 30]
+  grid_resolution_um: 1
+  boundary: noflux
+
+cell_types:
+  - {name: H, target_size: 25}
+
+# Neutral adhesion: the two Sego-collapsed epithelial values (epithelial-epithelial 5,
+# epithelial-medium 25). to_cpm_contact lowers these DIRECTLY to J; to_vertex_tension
+# lowers them to line tension scaled by mechanics_mapping.tension_scale (the knob the
+# adhesion-calibration study sweeps).
+adhesion:
+  - {a: H, b: H, strength: 5}
+  - {a: H, b: medium, strength: 25}
+
+initial_state:
+  kind: blocks
+  block: {type: H, origin: [6, 6], shape: [4, 4], spacing: 5, size: 25}

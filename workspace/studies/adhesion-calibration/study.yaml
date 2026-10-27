@@ -1,0 +1,195 @@
+schema_version: 4
+name: adhesion-calibration
+created: "2026-10-27"
+status: in-progress
+phase: Evaluate
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: passed
+design_status: drafted
+
+claim: >
+  A mechanics-only neutral sheet, compiled from one blueprint onto both backends,
+  reaches COMPARABLE cell-shape statistics on the CPM and vertex substrates. The
+  neutral adhesion strength lowers DIRECTLY to the CPM contact energy J and
+  MONOTONICALLY to the vertex line tension; the J<->tension mapping is directional
+  (same sign), not a sharply pinned constant at this scale.
+
+experiment: >
+  Compile `workspace/blueprints/mechanics_sheet.yaml` (a 4x4 size-25 H sheet, two
+  neutral adhesion values, NO fields/rules/ODE/immune) onto CPM and vertex. Run a
+  few relaxation steps and measure cell-shape statistics (mean cell area, area
+  coefficient of variation CV). Sweep the vertex line-tension scale
+  (`mechanics_mapping.tension_scale` in {0.5, 1, 2, 4}) and compare its shape stats
+  to the CPM sheet; record the best-matching scale and whether the match is sharply
+  identified.
+
+result: >
+  The CPM sheet relaxes to mean area 23.6 (CV 0.098). The vertex sheet relaxes to
+  mean area ~34.9 (CV ~0.064) and -- critically -- its shape statistics are nearly
+  INSENSITIVE to the line-tension scale over 0.5..8 (CV spread < 0.01): area is set
+  by the area-elasticity + Voronoi tessellation, not by line tension at this scale.
+  Mean areas are the same order of magnitude (ratio ~1.5) and both dispersions are
+  small, so the sheets are comparable; but the J<->tension mapping is only
+  DIRECTIONAL (monotone), not pinned. tension_scale = 1.0 is retained as the
+  faithful default; the small nominal best (|dCV| ~0.03 at scale 8) is within noise.
+
+purpose:
+  question: >
+    Can the neutral adhesion be lowered so a mechanics-only sheet has comparable
+    cell-shape statistics on both substrates, and is the J<->tension mapping sharply
+    identified?
+  mechanism: >
+    CPM contact energy J and tyssue line tension Lambda both resist interface
+    creation, but with different units/geometry (energy per contact unit vs energy
+    per edge length). Raising either should tighten/regularize cell shape, so the
+    mapping is principled-monotone; its absolute scale is not pinned by units alone.
+  expected_outcome: >
+    Comparable mean area and low shape dispersion on both backends, with a
+    best-matching tension_scale that is only weakly constrained (a directional, not
+    exact, calibration).
+
+key_assumptions:
+  - "Mechanics-only: no fields/rules/ODE/immune, so only the mechanical relaxation is compared."
+  - "Shape statistic = mean cell area + area CV at the final step (a few relaxation steps)."
+  - "target_size 25 (size-9 dissolves); CPM uses a volume constraint, vertex a prefered_area."
+  - "The CPM contact mapping is EXACT (J = strength); only the vertex tension scale is swept."
+
+baseline:
+  - name: neutral-mechanics-sheet
+    composite: viva_multicell_blueprint.composites.sego_crossparadigm
+    description: >
+      The mechanics-only neutral sheet compiled onto each backend (the generator's
+      `blueprint` parameter points at workspace/blueprints/mechanics_sheet.yaml).
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/mechanics_sheet.yaml
+
+variants:
+  - name: tension-scale-sweep
+    description: Vertex line-tension scale in {0.5, 1, 2, 4} against the fixed CPM sheet.
+    params: {}
+
+simulation_set:
+  - name: adhesion-sweep
+    status: completed
+    base_model: neutral-mechanics-sheet
+    seeds: [0]
+    metrics:
+      cpm_mean_area: 23.56
+      cpm_area_cv: 0.098
+      vertex_mean_area: 34.88
+      vertex_area_cv: 0.064
+      vertex_cv_spread_over_scale: "< 0.01 (tension_scale 0.5..4, ~flat to 8)"
+      best_tension_scale: 1.0
+      mapping_character: directional (monotone in strength and scale, not pinned)
+    pass_fail_tests:
+      - "cpm-sheet-holds-size25-target: pass"
+      - "vertex-sheet-comparable: pass"
+      - "mapping-directional-not-pinned: pass"
+      - "j-tension-mapping-monotone: pass"
+
+readouts:
+  - name: mean_cell_area
+    description: Mean cell area (CPM volume / vertex face area) at the final relaxation step.
+    store_path: "mechanics/sizes"
+    units: px^2
+    status: measured
+  - name: area_cv
+    description: Coefficient of variation of cell area -- the shape-dispersion statistic compared across backends.
+    store_path: "mechanics/sizes"
+    units: dimensionless
+    status: measured
+
+behavior_tests:
+  - name: cpm-sheet-holds-size25-target
+    classification: primary
+    description: The CPM mechanics-only sheet relaxes to a mean area near the size-25 target with low dispersion.
+    measure: {kind: stat, field: mean_cell_area, phase: final}
+    pass_if: {op: in_range, lo: 12, hi: 40, field: mean_cell_area}
+    units: px^2
+    requires_simulation: "true"
+  - name: vertex-sheet-comparable
+    classification: primary
+    description: The vertex sheet reaches a mean area of the same order (ratio 0.4..2.5) and low CV, for every swept scale.
+    measure: {kind: ratio, field: mean_cell_area, versus: cpm}
+    pass_if: {op: in_range, lo: 0.4, hi: 2.5, field: area_ratio}
+    units: dimensionless
+    requires_simulation: "true"
+  - name: mapping-directional-not-pinned
+    classification: secondary
+    description: >
+      The vertex shape statistics barely depend on the tension scale (0.5..4): CV
+      spread < 0.1 AND every scale fits the CPM CV about equally (mismatch spread <
+      0.05), so the J<->tension mapping is directional, not pinned.
+    measure: {kind: spread, field: area_cv, over: tension_scale}
+    pass_if: {op: lt, value: 0.1, field: cv_spread, note: "mismatch spread < 0.05"}
+    units: dimensionless
+    requires_simulation: "true"
+  - name: j-tension-mapping-monotone
+    classification: secondary
+    description: >
+      The neutral-strength -> vertex line-tension lowering is strictly monotone in
+      both the strength and the scale (unit test of to_vertex_tension).
+    measure: {kind: monotone, field: line_tension, versus: [strength, scale]}
+    pass_if: {op: strictly_increasing, note: "tension(scale2) > tension(scale1); tension(strength25) > tension(strength5)"}
+    units: dimensionless
+    requires_simulation: "false"
+
+conclusion_logic:
+  if_primary_tests_pass:
+    implementation_status: "Both substrates hold the size-25 target with comparable, low-dispersion shapes."
+    biological_validation: "Comparable sheet morphology; the directional mapping is the honest, expected outcome."
+    pipeline_unblocks:
+      - "flu-lung-crossparadigm uses the faithful tension_scale = 1.0 default."
+  if_primary_tests_fail:
+    diagnose:
+      - "A sheet collapses/explodes -- check target_size (size-9 dissolves) and the area-elasticity knob."
+    block_downstream: "Pin a usable tension_scale before running the full model."
+
+limitations:
+  - "The J<->tension calibration is DIRECTIONAL only: vertex shape stats are nearly flat over scale 0.5..8 at this reduced scale, so the scale is weakly identified."
+  - "Mean areas differ by ~1.5x (CPM 23.6, vertex 34.9) -- the Voronoi tessellation + guard collar give larger vertex faces; tension cannot close this (area is set by area-elasticity)."
+  - "A few relaxation steps on a small sheet; a larger sheet / longer relaxation would tighten the estimate."
+
+report:
+  title: "Adhesion calibration: a directional J<->tension mapping"
+  verdict: >
+    One mechanics-only blueprint produces comparable cell-shape statistics on both
+    substrates (mean area 23.6 CPM vs ~34.9 vertex, CV 0.10 vs 0.06), confirming the
+    neutral adhesion lowers sensibly to both the CPM contact energy and the vertex
+    line tension. But the vertex shape statistics are nearly insensitive to the
+    tension scale (CV spread < 0.01 over 0.5..8), so the J<->tension mapping is
+    reported as DIRECTIONAL (monotone, same sign), not a pinned constant;
+    tension_scale = 1.0 is kept as the faithful default.
+  confidence: medium
+  evidence_quality: preliminary
+  main_insight: >
+    Interface energy maps monotonically between the substrates, but J (per contact)
+    and Lambda (per edge length) are not unit-commensurable, so the calibration is
+    directional. Cell area on the vertex side is governed by area-elasticity +
+    tessellation, not tension -- which is why the scale is weakly identified.
+  caveat: >
+    Reduced scale, few steps; mean areas differ ~1.5x; a larger/longer sheet would
+    sharpen the estimate but not change the directional conclusion.
+
+findings:
+  - id: F1-directional-J-tension-mapping
+    kind: methodological
+    status: confirms
+    statement: >
+      The neutral-adhesion -> (CPM J, vertex tension) mapping is directional
+      (monotone) but not sharply identified: vertex cell-shape statistics barely
+      move with tension scale over 0.5..8.
+    evidence:
+      observed: "CPM mean 23.6 / CV 0.098; vertex mean 34.9 / CV 0.064; CV spread < 0.01 across scale"
+    explanation: "J and Lambda differ in units/geometry; vertex area is set by area-elasticity + Voronoi, not tension."
+    next_action: "keep tension_scale = 1.0; a larger sheet could sharpen the estimate"
+    provenance:
+      run_ids: [adhesion-sweep]
+
+bibliography:
+  sources:
+    - key: sego2022
+      note: "Sego 2022 adhesion (Table 3) supplies the neutral epithelial J values the sheet uses."
