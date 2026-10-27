@@ -337,3 +337,28 @@ def test_backends_and_mechanism_resolve_in_core():
     for name in ("CPMBackend", "VertexBackend", "FieldProcess", "RulesProcess",
                  "SystemicODEProcess", "ImmuneRecruitmentProcess"):
         assert core.link_registry.get(name) is not None, f"local:{name} does not resolve"
+
+
+def test_compiler_wires_counts_to_ode(tmp_path):
+    """Task 21: CellCountStep(types) -> ode_in_* -> SystemicODEProcess, live."""
+    bp = _full_blueprint(tmp_path)
+    for backend in ("cpm", "vertex"):
+        state = compile_blueprint(bp, backend=backend)["state"]
+        assert state["cell_counts"]["inputs"]["types"] == ["types"]
+        assert state["cell_counts"]["outputs"]["H"] == ["ode_in_H"]
+        assert state["systemic_ode"]["inputs"]["H"] == ["ode_in_H"]
+
+    # live: all-H population + certain H->I transition -> the ODE's H input falls and
+    # I input rises as the backend's types change (ODE driven, not stuck at 0).
+    bp = _full_blueprint(tmp_path)
+    bp.initial_state = {"from_data": {"cell_table": _cell_table(tmp_path, _ALL_H_TABLE)}}
+    bp.rules = [{"type": "transition", "from": "H", "to": "I", "rate_expr": "100"}]
+    for backend in ("cpm", "vertex"):
+        comp = Composite({"state": compile_blueprint(bp, backend=backend)["state"]}, core=build_core())
+        comp.run(1.0)
+        h0, i0 = comp.state["ode_in_H"], comp.state["ode_in_I"]
+        assert h0 + i0 == 4.0 and i0 == 0.0
+        comp.run(4.0)
+        assert comp.state["ode_in_I"] > i0 and comp.state["ode_in_H"] < h0
+        assert comp.state["ode_in_H"] + comp.state["ode_in_I"] == 4.0
+        assert comp.state["ode_state"] and comp.state["sig_1"] is not None

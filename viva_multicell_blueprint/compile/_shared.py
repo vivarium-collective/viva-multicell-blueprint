@@ -26,6 +26,7 @@ FIELD_ADDR = "local:FieldProcess"
 RULES_ADDR = "local:RulesProcess"
 ODE_ADDR = "local:SystemicODEProcess"
 IMMUNE_ADDR = "local:ImmuneRecruitmentProcess"
+COUNTS_ADDR = "local:CellCountStep"
 
 # Rule kinds RulesProcess (Task 7) accepts. The blueprint ``rules`` section is
 # untyped (the JSON schema only enumerates the structural-declarative kinds); the
@@ -208,7 +209,8 @@ def _shared_store_defaults(blueprint) -> dict:
     }
     if blueprint.systemic_ode is not None:
         stores.update({"ode_state": {}, "recruit_drivers": {}, "sig_1": 0.0})
-        # scalar counts the ODE consumes (fed by a later counting process / study).
+        # scalar inputs the ODE consumes. H/I/M/K/E/DH are produced each tick by the
+        # CellCountStep (types -> counts); V/L/C/F/G_ki/B_ei still have no producer.
         for k in ("H", "I", "M", "K", "E", "DH", "V", "L", "C", "F", "G_ki", "B_ei"):
             stores[f"ode_in_{k}"] = 0.0
     if blueprint.systemic_ode is not None or blueprint.immune:
@@ -287,15 +289,40 @@ def _ode_node(blueprint) -> dict:
         "_type": "process",
         "address": ODE_ADDR,
         "config": config,
-        # FOLLOW-UP (not wired in v1): the spatialized counts H/I/M/... the ODE
-        # consumes have no producer yet (no counting Step among Tasks 2-12), so
-        # these ode_in_* stores sit at their 0.0 defaults until that Step lands.
+        # H/I/M/K/E/DH are produced by the CellCountStep node (see _counts_node).
+        # FOLLOW-UP: V, L, C, F, G_ki, B_ei (field integrals / infected-load terms)
+        # still have no producer and sit at their 0.0 defaults.
         "inputs": {k: [f"ode_in_{k}"] for k in keys},
         "outputs": {
             "ode_state": ["ode_state"],
             "recruit_drivers": ["recruit_drivers"],
             "sig_1": ["sig_1"],
         },
+    }
+
+
+def _counts_node(blueprint) -> dict:
+    """types -> CellCountStep -> the ODE's H/I/M/K/E/DH ``ode_in_*`` stores."""
+    so = blueprint.systemic_ode or {}
+    cfg = (so.get("coupling") or {}).get("count_map")
+    imm_types = (blueprint.immune or {}).get("types") if isinstance(blueprint.immune, dict) else None
+    config = {}
+    if cfg:
+        config["count_map"] = {k: list(v) for k, v in cfg.items()}
+    elif imm_types:
+        # recruited immune types are the active types the counts must follow
+        # (driver key macrophage/nk/cd8_inflow -> M/K/E).
+        cm = {}
+        for drv, key in (("macrophage_inflow", "M"), ("nk_inflow", "K"), ("cd8_inflow", "E")):
+            if drv in imm_types:
+                cm[key] = [imm_types[drv]]
+        config["count_map"] = cm
+    return {
+        "_type": "step",
+        "address": COUNTS_ADDR,
+        "config": config,
+        "inputs": {"types": ["types"]},
+        "outputs": {k: [f"ode_in_{k}"] for k in ("H", "I", "M", "K", "E", "DH")},
     }
 
 
@@ -327,6 +354,7 @@ def build_mechanism_state(blueprint) -> dict:
     state["field"] = _field_node(blueprint)
     state["rules"] = _rules_node(blueprint)
     if blueprint.systemic_ode is not None:
+        state["cell_counts"] = _counts_node(blueprint)
         state["systemic_ode"] = _ode_node(blueprint)
     if blueprint.systemic_ode is not None or blueprint.immune:
         state["immune"] = _immune_node(blueprint)
