@@ -246,8 +246,8 @@ class CPMBackend(MechanicsBackend):
 
     def _seed_labels_spec(self, spec, cells, bp, label_image):
         """Label-image placement via ``seed_from_labels``. Label value == blueprint
-        cell id; the engine compacts labels to contiguous cpm ids in ascending
-        order, so the cpm id is the label's rank (1..K)."""
+        cell id; the engine compacts labels to contiguous cpm ids 1..K in order of
+        FIRST APPEARANCE in the flat label list (NOT ascending label order)."""
         labels = np.asarray(label_image)
         flat = labels.flatten(order="F").astype(int).tolist()
         types = {int(c["id"]): self._tag(str(c["type"])) for c in cells}
@@ -258,8 +258,14 @@ class CPMBackend(MechanicsBackend):
             "target_volume": float(bp.get("target_volume", 1.0)),
             "lambda_volume": float(bp.get("lambda_volume", _DEFAULT_MECH["lambda_volume"])),
         }
-        ordered = sorted(int(c["id"]) for c in cells)
-        return {str(lbl): rank + 1 for rank, lbl in enumerate(ordered)}
+        wanted = {int(c["id"]) for c in cells}
+        seen: list = []
+        seen_set: set = set()
+        for v in flat:
+            if v in wanted and v not in seen_set:
+                seen_set.add(v)
+                seen.append(v)
+        return {str(lbl): rank + 1 for rank, lbl in enumerate(seen)}
 
     def _contact(self, config, bp) -> list:
         """CPM contact (J) matrix. A pre-lowered ``backend_params.contact`` wins;

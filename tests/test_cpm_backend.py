@@ -129,6 +129,62 @@ def test_cpm_set_field_overwrites_grid():
     assert not np.allclose(fc2, fc)
 
 
+def test_cpm_set_field_layout_nonsquare_asymmetric():
+    """Non-square lattice + a single hot cell at x != y: a transpose (nx/ny swap)
+    would put the value at a different flat index, so this guards field layout."""
+    dims = [12, 7, 1]
+    cells = [{"id": 10, "type": "epithelium", "centroid": [3.0, 3.0], "size": 9.0}]
+    b = _make(cells, backend_params={"dims": dims, "mcs_per_update": 1, "fields": [{"name": "virus"}]})
+    nx, ny, nz = dims
+    x, y = 9, 1
+    grid = np.zeros((nx, ny, nz))
+    grid[x, y, 0] = 7.0
+    b.update({"field_grid": {"virus": grid}}, 1.0)
+    fc = np.asarray(b._world.field_conc(b._field_idx["virus"]))
+    assert fc.size == nx * ny * nz
+    assert np.count_nonzero(fc) == 1
+    assert int(np.argmax(fc)) == x + y * nx == 21
+    assert fc[x + y * nx] == 7.0
+    assert int(np.argmax(fc)) != y + x * ny  # the transposed index (64) must not be hit
+
+
+def _label_backend(order_5_first):
+    nx, ny, nz = 12, 7, 1
+    lab = np.zeros((nx, ny, nz), dtype=int)
+    if order_5_first:   # label 5 appears first in the Fortran-flat scan
+        lab[1:3, 1:4, 0] = 5   # 6 voxels
+        lab[7:10, 2:5, 0] = 9  # 9 voxels
+    else:               # label 9 appears first
+        lab[1:4, 1:4, 0] = 9   # 9 voxels
+        lab[7:9, 2:5, 0] = 5   # 6 voxels
+    cells = [
+        {"id": 9, "type": "immune", "centroid": [2.0, 2.0], "size": 9.0},
+        {"id": 5, "type": "epithelium", "centroid": [7.5, 3.0], "size": 6.0},
+    ]
+    return _make(cells, backend_params={
+        "dims": [nx, ny, nz], "mcs_per_update": 0, "label_image": lab, "target_volume": 1.0,
+    })
+
+
+def test_cpm_seed_from_labels_identity_ascending_case():
+    b = _label_backend(order_5_first=True)
+    assert b.identity == {"5": 1, "9": 2}
+    assert b._world.n_cells() == 2
+    out = b.update({}, 1.0)
+    assert out["sizes"]["5"] == pytest.approx(6.0) and out["sizes"]["9"] == pytest.approx(9.0)
+    assert out["types"] == {"5": "epithelium", "9": "immune"}
+
+
+def test_cpm_seed_from_labels_id_follows_first_appearance_not_sorted():
+    # the engine ids cells by first appearance, so here label 9 -> cpm 1, label 5 -> 2.
+    # sizes/types must still align to the right BLUEPRINT ids.
+    b = _label_backend(order_5_first=False)
+    assert b.identity == {"9": 1, "5": 2}
+    out = b.update({}, 1.0)
+    assert out["sizes"]["5"] == pytest.approx(6.0) and out["sizes"]["9"] == pytest.approx(9.0)
+    assert out["types"] == {"5": "epithelium", "9": "immune"}
+
+
 def test_cpm_contact_area_by_type():
     cells = _two_adjacent()
     # mcs_per_update=0: the world stays at the deterministic seed, so the two
