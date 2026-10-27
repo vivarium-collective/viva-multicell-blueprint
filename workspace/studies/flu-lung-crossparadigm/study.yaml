@@ -75,8 +75,9 @@ purpose:
 
 key_assumptions:
   - "The comparison is baseline-relative: cross-backend is judged against the same-backend seed spread, never against zero."
-  - "Seed provenance: the headline N=400 table (scripts/regen_capstone_metrics.py) builds the same-backend baselines from 3 CPM seeds {0,1,2} AND 3 vertex seeds {0,1,2} and the cross term from all 9 CPM*vertex pairs; the CI behavior test (N=150) pins the relationship with CPM seeds {0,1,2} vs vertex seed 0. The verdict's 'single vertex seed' caveat refers to the vertex side of the CROSS comparison (seed 0), not the vertex-vs-vertex baseline (3 seeds)."
-  - "Reduced scale: a 50x50-site patch with a 6x6 epithelial block (NOT paper scale); headline N=400 (~6.7 h sim), CI test N=150."
+  - "Seed provenance: the headline N=400 table (scripts/regen_capstone_metrics.py) builds the same-backend baselines from 3 CPM seeds {0,1,2} AND 3 vertex seeds {0,1,2}, and the cross term from all 9 CPM*vertex pairs (3x3). The lighter CI behavior test (N=150) pins the same relationship with CPM seeds {0,1,2} vs vertex seed 0."
+  - "Vertex is near-degenerate across rules-seeds at this scale: the slow epidemic yields ~identical vertex I-counts for different seeds (vertex-vs-vertex agreement 0.935-0.949, sd 0.006, vs CPM sd 0.025), so the vertex seed count barely affects the result -- which is why the CI test can use a single vertex seed without changing the conclusion."
+  - "Reduced scale: a 50x50-site patch with a 6x6 epithelial block (NOT paper scale); headline N=400 (= 400 MCS = ~6.7 h of SIMULATED time at 60 s/MCS; ~45 s wall-clock for the full 6-run regen script), CI test N=150."
   - "Immune recruitment is activation of a PRE-PLACED LATENT pool at the tissue margin (ruling T20-RECRUIT), not from-nothing insertion."
   - "The systemic-ODE inputs V/L/C/F have NO producer yet and sit at 0 (Task 21 follow-up), so the ODE recruitment drive is weak and the latent pool is barely activated at this scale."
   - "Sego rates are carried verbatim (no tuning); at faithful rates the infection probability is ~0.004/step, so the epidemic is a slow onset."
@@ -239,9 +240,11 @@ report:
     raw infected-patch occupancy IoU, which trends ~25-35% BELOW both same-backend
     baselines (cross 0.165 vs CPM 0.249 / vertex 0.212) -- a candidate weak substrate
     signal to test at larger scale / more vertex seeds, not attributable to seed noise
-    without evidence. Preliminary: reduced scale, and the CROSS comparison uses a
-    single vertex seed (seed 0) against 3 CPM seeds; a substrate signal could emerge
-    at larger scale or with more vertex seeds.
+    without evidence. Preliminary: reduced scale. The headline N=400 numbers use 3 CPM
+    x 3 vertex seeds (9 cross pairs); the vertex side is near-degenerate across seeds
+    at this scale (slow epidemic), so more vertex seeds barely move the result, and the
+    CI test uses CPM {0,1,2} vs vertex seed 0. A substrate signal could still emerge at
+    larger scale, where the vertex seeds would no longer be degenerate.
   confidence: medium
   evidence_quality: preliminary
   main_insight: >
@@ -253,10 +256,10 @@ report:
     an artifact of comparing a single seed-pair to zero; the correct statement is a
     null result (fail to reject) plus one metric to watch.
   caveat: >
-    A null (fail-to-reject) result at reduced scale, with the CROSS comparison using a
-    single vertex seed; raw IoU is a candidate weak substrate signal, not yet tested;
-    the immune arm is barely exercised (latent-pool + producer-less ODE inputs); the
-    band is the CPM stochastic envelope, not a Sego figure.
+    A null (fail-to-reject) result at reduced scale (headline: 3 CPM x 3 vertex seeds,
+    vertex near-degenerate across seeds); raw IoU is a candidate weak substrate signal,
+    not yet tested; the immune arm is barely exercised (latent-pool + producer-less ODE
+    inputs); the band is the CPM stochastic envelope, not a Sego figure.
 
 findings:
   - id: F1-fail-to-reject-substrate-effect-on-fate-and-location

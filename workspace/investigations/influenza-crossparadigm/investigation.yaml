@@ -127,15 +127,18 @@ executive:
     direction is strict on both backends across seeds. Initial-state fidelity is exact
     on CPM and a clean 1:1 on vertex; the adhesion J<->tension mapping is directional.
     The earlier "fate agrees, morphology diverges" reading was an artifact of
-    comparing a single seed-pair to zero. This is preliminary: reduced scale, and the
-    CROSS comparison uses a single vertex seed (seed 0) against 3 CPM seeds (the
-    vertex-vs-vertex baseline uses 3 vertex seeds); a substrate effect could emerge at
-    larger scale or with more vertex seeds. Known limits: the recruitment latent-pool
+    comparing a single seed-pair to zero. This is preliminary (reduced scale): the
+    headline N=400 numbers use 3 CPM x 3 vertex seeds (9 cross pairs), and the vertex
+    side is near-degenerate across seeds at this scale (the slow epidemic gives
+    ~identical vertex I-counts; vertex-vs-vertex sd 0.006), so more vertex seeds barely
+    move the result; the lighter CI test uses CPM {0,1,2} vs vertex seed 0. A substrate
+    effect could emerge at larger scale, where the vertex seeds would no longer be
+    degenerate. Known limits: the recruitment latent-pool
     approximation (T20-RECRUIT), the reduced scale, the producer-less ODE inputs
     V/L/C/F (Task 21), and the directional adhesion calibration.
   verdict_status: preliminary
   decisions_needed:
-    - "Raw infected-patch occupancy IoU trends ~25-35% below both same-backend baselines (cross 0.165 vs CPM 0.249 / vertex 0.212) — a CANDIDATE weak substrate signal. Test it at larger scale AND with more vertex seeds (the cross comparison currently uses a single vertex seed) before calling it signal or noise."
+    - "Raw infected-patch occupancy IoU trends ~25-35% below both same-backend baselines (cross 0.165 vs CPM 0.249 / vertex 0.212) — a CANDIDATE weak substrate signal. Test it at a LARGER scale (where the vertex side is no longer near-degenerate across seeds) before calling it signal or noise."
     - "ODE inputs V/L/C/F have no producer (Task 21) — the immune arm is barely exercised at this scale; land the producers to drive recruitment."
     - "Immune recruitment is a latent-pool approximation (T20-RECRUIT) — confirm this is the intended mechanism or replace with topology insertion."
     - "Sego acceptance bands are the CPM stochastic envelope, not digitized Sego 2022 figures — digitize the paper curves for a literature band."
