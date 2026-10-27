@@ -7,7 +7,8 @@ Inputs
 - ``vertex_map``: ``{blueprint_id: tyssue_face_id}`` -- only mapped cells
   (``VertexBackend.identity``).
 - ``vertex_residual``: ``VertexBackend.residual_report``; uses ``unmapped_ids``
-  and ``contested_faces`` (ids on those faces are not clean).
+  (blueprint ids, which already include contested cells; the single source for
+  cohort exclusion).
 
 Scoring rule (section 8): primary per-cell cohort = t0 clean shared set; one-sided
 death of a cohort cell is a disagreement; division-born cells are scored by lineage
@@ -25,15 +26,24 @@ class IdentityRegistry:
         self.blueprint_ids = [str(b) for b in blueprint_ids]
         self._cpm = {str(b): c for b, c in cpm_map.items()}
         self._face = {str(b): f for b, f in vertex_map.items()}
-        self._cpm_rev = {c: b for b, c in self._cpm.items()}
-        self._face_rev = {f: b for b, f in self._face.items()}
+        self._cpm_rev = self._invert(self._cpm, "cpm_map")
+        self._face_rev = self._invert(self._face, "vertex_map")
         self.residual = dict(residual or {})
         self._unmapped = {str(i) for i in self.residual.get("unmapped_ids", [])}
-        contested = set(self.residual.get("contested_faces", []))
-        self._contested = {b for b, f in self._face.items() if f in contested}
         self._parent: dict[str, str] = {}
         self._children: dict[str, dict[str, set]] = {}
         self._losses: dict[str, dict[str, str]] = {}  # id -> {backend: cause}
+
+    @staticmethod
+    def _invert(m, name):
+        rev = {}
+        for b, v in m.items():
+            if v in rev:
+                raise ValueError(
+                    f"{name} is not 1:1: value {v!r} maps from both {rev[v]!r} and {b!r}"
+                )
+            rev[v] = b
+        return rev
 
     @classmethod
     def from_backends(cls, blueprint_ids, cpm_map, vertex_map, vertex_residual=None):
@@ -58,7 +68,7 @@ class IdentityRegistry:
         return {
             b for b in self.blueprint_ids
             if b in self._cpm and b in self._face
-            and b not in self._unmapped and b not in self._contested
+            and b not in self._unmapped
         }
 
     # -- lineage ------------------------------------------------------------- #
