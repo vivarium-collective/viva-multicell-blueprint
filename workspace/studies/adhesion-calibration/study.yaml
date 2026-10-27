@@ -74,7 +74,7 @@ variants:
 simulation_set:
   - name: adhesion-sweep
     status: completed
-    base_model: neutral-mechanics-sheet
+    base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     seeds: [0]
     metrics:
       cpm_mean_area: 23.56
@@ -193,3 +193,11 @@ bibliography:
   sources:
     - key: sego2022
       note: "Sego 2022 adhesion (Table 3) supplies the neutral epithelial J values the sheet uses."
+
+visualizations:
+  - name: "J ↔ tension sweep"
+    address: "html:adhesion-sweep.html"
+    config: {title: "Cell-shape statistics across the vertex tension sweep vs CPM"}
+  - name: "Neutral sheet playback — CPM vs vertex"
+    address: "html:neutral-sheet-playback.html"
+    config: {title: "Mechanics-only sheet relaxation, both backends"}

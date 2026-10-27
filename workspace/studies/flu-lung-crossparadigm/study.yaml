@@ -102,7 +102,7 @@ variants:
 simulation_set:
   - name: crossparadigm-nullcontrol-N400
     status: completed
-    base_model: sego-influenza-crossparadigm
+    base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     seeds: [0, 1, 2]
     metrics:
       fate_agreement_cross: "0.942 (0.890-1.000)"
@@ -123,7 +123,7 @@ simulation_set:
       - "vertex-within-cpm-envelope (in-band 1.0): pass"
   - name: crossparadigm-ci-N150
     status: completed
-    base_model: sego-influenza-crossparadigm
+    base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     seeds: [0, 1, 2]
     metrics:
       fate_agreement_cross: 0.987
@@ -312,14 +312,14 @@ findings:
       run_ids: [crossparadigm-nullcontrol-N400]
 
 visualizations:
-  - name: capstone-spatial-playback
-    address: "html:capstone_spatial_playback.html"
+  - name: "Spatial playback — CPM vs vertex"
+    address: "html:spatial-playback.html"
     config: {title: "Spatial playback: CPM | vertex"}
-  - name: capstone-dynamics-overlay
-    address: "html:capstone_dynamics_overlay.html"
+  - name: "Dynamics overlay — CPM vs vertex (I-count band)"
+    address: "html:dynamics-overlay.html"
     config: {title: "Dynamics vs the CPM stochastic-envelope band"}
-  - name: capstone-divergence
-    address: "html:capstone_divergence.html"
+  - name: "Divergence map"
+    address: "html:divergence.html"
     config: {title: "Per-cell agreement + spatial map (vs same-backend baseline)"}
 
 bibliography:

@@ -64,7 +64,7 @@ variants:
 simulation_set:
   - name: dose-response
     status: completed
-    base_model: sego-dose-sweep
+    base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     seeds: [0, 1]
     metrics:
       seed_infected: "1 / 3 / 5"
@@ -156,3 +156,8 @@ bibliography:
   sources:
     - key: sego2022
       note: "Sego 2022 Fig 5/7 dose-response direction (infection vs initial viral load)."
+
+visualizations:
+  - name: "Dose response — initial load → final infection"
+    address: "html:dose-response.html"
+    config: {title: "Final infected count vs initial dose, both backends and seeds"}
