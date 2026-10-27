@@ -25,24 +25,29 @@ _PRICE_PARAMS = yaml.safe_load(
     (Path(__file__).parent / "fixtures" / "price_ode_params.yaml").read_text()
 )["price_ode"]
 
-# A tiny CSV cell table: 4 non-collinear cells, two types (H, I) -> a 2x2 block
-# both backends can materialize (Voronoi needs a non-degenerate point cloud).
-_CELL_TABLE = "id,type,x,y,size\n1,H,5,5,9\n2,H,14,5,9\n3,H,5,14,9\n4,I,14,14,9\n"
+# A small CSV cell table: 4 non-collinear cells, two types (H, I) -> a 2x2 block
+# both backends can materialize (Voronoi needs a non-degenerate point cloud). Cells
+# are size 25 (5x5): small 9-voxel CPM cells are energetically unstable under the
+# default contact energies (a cell fully ringed by medium LOWERS its energy by
+# vanishing), so they dissolve before anything can be observed. 25-voxel cells are
+# stable, so the backend simulates LIVING cells (fine J/lambda tuning is the
+# adhesion-calibration study's job, spec sec 9.1).
+_CELL_TABLE = "id,type,x,y,size\n1,H,6,6,25\n2,H,15,6,25\n3,H,6,15,25\n4,I,15,15,25\n"
 
 
-def _cell_table(tmp_path):
+def _cell_table(tmp_path, text: str = _CELL_TABLE):
     p = tmp_path / "cells.csv"
-    p.write_text(_CELL_TABLE)
+    p.write_text(text)
     return str(p)
 
 
 def _min_blueprint(tmp_path):
     """A few cells, one field, one rule — small enough to run fast on both backends."""
     return Blueprint.from_dict({
-        "domain": {"extent_um": [20, 20], "grid_resolution_um": 1, "boundary": "noflux"},
+        "domain": {"extent_um": [22, 22], "grid_resolution_um": 1, "boundary": "noflux"},
         "cell_types": [
-            {"name": "H", "target_size": 9},
-            {"name": "I", "target_size": 9},
+            {"name": "H", "target_size": 25},
+            {"name": "I", "target_size": 25},
         ],
         "initial_state": {"from_data": {"cell_table": _cell_table(tmp_path)}},
         "fields": [{
@@ -91,7 +96,9 @@ def test_compile_cpm_runs_n_steps(tmp_path):
     assert all(len(p) == 2 for p in pos.values())
     # the shared field engine produced the virus grid, read by both rules + mechanics
     assert "virus" in comp.state["field_grid"]
-    assert set(comp.state["alive"]) == {"1", "2", "3", "4"}
+    # cells are stable (size 25) -> the backend simulates LIVING cells, not a lattice
+    # that instantly dissolved to medium.
+    assert all(comp.state["alive"].values())
 
 
 def test_compile_vertex_runs_n_steps(tmp_path):
@@ -156,30 +163,45 @@ def test_full_blueprint_builds_and_runs(tmp_path, backend):
     assert float(comp.state["global_time"]) == 1.0
 
 
+# EVERY cell is type H -- so observing ANY "I" proves a real H->I transition flowed
+# through the stores (not a pre-seeded I, which made the first version vacuous).
+_ALL_H_TABLE = "id,type,x,y,size\n1,H,6,6,25\n2,H,15,6,25\n3,H,6,15,25\n4,H,15,15,25\n"
+
+
 def test_fates_propagate_through_overwrite_map_store(tmp_path):
-    """Pin the t=0 key-drop fix: a certain-to-fire transition rule must flow
-    fates -> mechanics -> types through the overwrite[map] shared store. If the
-    overwrite wrapping were dropped, the mechanics/field/rules map outputs would
-    be swallowed on the empty t=0 store and types would never change."""
+    """Pin the t=0 key-drop fix with a REAL transition: every cell starts as H, a
+    certain-to-fire ``transition {H->I}`` must flow rules.fates -> mechanics.fates
+    (applied via set_cell_type) -> the shared `types` store (overwrite[map]) so the
+    I-count goes 0 -> >0. If the overwrite wrapping were dropped the map outputs
+    would be swallowed on the empty t=0 store and no cell would ever flip."""
     bp = Blueprint.from_dict({
-        "domain": {"extent_um": [20, 20], "grid_resolution_um": 1, "boundary": "noflux"},
-        "cell_types": [{"name": "H", "target_size": 9}, {"name": "I", "target_size": 9}],
-        "initial_state": {"from_data": {"cell_table": _cell_table(tmp_path)}},
+        "domain": {"extent_um": [22, 22], "grid_resolution_um": 1, "boundary": "noflux"},
+        "cell_types": [{"name": "H", "target_size": 25}, {"name": "I", "target_size": 25}],
+        "initial_state": {"from_data": {"cell_table": _cell_table(tmp_path, _ALL_H_TABLE)}},
         # rate ~100 -> Pr = 1 - exp(-100) ~ 1: every H fires, deterministically.
         "rules": [{"type": "transition", "from": "H", "to": "I", "rate_expr": "100"}],
     })
     doc = compile_blueprint(bp, backend="cpm")
     comp = Composite({"state": doc["state"]}, core=build_core())
-    # all cells seed as H; run enough ticks for fates to round-trip the stores
-    # (t1: mechanics fills types; t2: rules emits fates; t3: mechanics applies).
+
+    # start: not a single I anywhere.
+    assert "I" not in (comp.state.get("types") or {}).values()
+
+    # run enough ticks for fates to round-trip the concurrent stores:
+    # t1 mechanics fills `types`; t2 rules reads `types`, emits `fates`;
+    # t3 mechanics reads `fates`, applies set_cell_type, re-emits `types`.
     comp.run(3.0)
 
     types = comp.state["types"]
     assert set(types) == {"1", "2", "3", "4"}
-    assert "I" in types.values(), (
+    i_cells = [cid for cid, t in types.items() if t == "I"]
+    assert i_cells, (
         "no H->I transition reached the shared `types` store -- fates were dropped "
         "crossing the overwrite[map] store (the t=0 key-drop regression)"
     )
+    # specific-cell flip + count went 0 -> >0, and the flipped cell is alive.
+    assert types["1"] == "I"
+    assert comp.state["alive"]["1"] is True
 
 
 # --------------------------------------------------------------------------- #
