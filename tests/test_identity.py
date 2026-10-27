@@ -4,7 +4,7 @@ IDS = ["c0", "c1", "c2", "c3", "c4"]
 CPM = {i: 100 + n for n, i in enumerate(IDS)}  # exact 1:1
 VERTEX = {"c0": 10, "c1": 11, "c2": 12, "c3": 13}  # c4 unmapped
 RESID = {
-    "unmapped_ids": ["c4"],
+    "unmapped_ids": ["c3", "c4"],  # unmapped + contested blueprint ids,
     "contested_faces": [13],
     "n_clean": 3,
     "fraction_clean": 0.6,
@@ -24,7 +24,7 @@ def test_maps_both_directions():
 
 
 def test_t0_cohort_excludes_collar():
-    # c4 unmapped, c3 sits on a contested face: neither is in the clean cohort;
+    # c4 unmapped, c3 is contested: neither is in the clean cohort;
     # guard faces were never blueprint ids so never appear.
     assert reg().t0_cohort() == {"c0", "c1", "c2"}
     assert reg().residual["n_guard_faces"] == 8
