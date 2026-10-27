@@ -69,9 +69,7 @@ override-dependencies = [
 
 [tool.uv.sources]
 vivarium-workbench = { git = "https://github.com/vivarium-collective/vivarium-workbench.git", branch = "main" }
-# TEMP (ruling PF-2): pinned to the set_field branch so Task 10 can build against
-# World.set_field before PR #95 lands. Re-pin to main @ the merge commit once #95 merges.
-viva-cpm = { git = "https://github.com/vivarium-collective/viva-cpm.git", rev = "566b487534c4ce46d8fb83582100e346b7d2820d" }
+viva-cpm = { git = "https://github.com/vivarium-collective/viva-cpm.git", branch = "main" }
 vivarium-tyssue = { git = "https://github.com/vivarium-collective/vivarium-tyssue.git", branch = "master" }
 # vivarium-tyssue depends on the pandas-3 tyssue fork, but uv only honors
 # [tool.uv.sources] from the TOP-LEVEL project — so the fork pin must live here,
