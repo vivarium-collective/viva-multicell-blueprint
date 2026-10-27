@@ -133,3 +133,85 @@ def field_match(fieldA, fieldB, rtol=1e-6) -> dict:
     rel = float(diff.max() / scale)
     return {"match": rel <= rtol, "max_abs": float(diff.max()), "max_rel": rel,
             "rel_l2": float(np.linalg.norm(a - b) / max(np.linalg.norm(a), 1e-300))}
+
+
+def equivalence_tost(same, cross, margin, alpha=0.05) -> dict:
+    """Two One-Sided Tests (TOST) for backend EQUIVALENCE of a fate-agreement metric.
+
+    The capstone's honest-but-weak claim was "we fail to reject a substrate
+    difference". TOST turns that into a POSITIVE claim: cross-backend agreement
+    is statistically EQUIVALENT to the same-backend (seed-to-seed) baseline,
+    i.e. the mean agreement *lost* going cross-backend is smaller than a
+    pre-declared margin ``epsilon``.
+
+    ``same``  : agreement values between runs of the SAME backend (different
+                seeds) -- the reference/no-substrate-effect spread.
+    ``cross`` : agreement values between CPM and vertex runs.
+    ``margin``: epsilon, the largest agreement loss we'd still call equivalent
+                (absolute units of the agreement metric, e.g. 0.05).
+
+    Equivalence is declared when the (1-2*alpha) CI of ``diff = mean(same) -
+    mean(cross)`` lies entirely within ``(-margin, +margin)`` -- equivalently,
+    both one-sided Welch t-tests reject at ``alpha``. Returns the diff, its CI,
+    the two one-sided p-values, the (larger) TOST p-value, and ``equivalent``.
+    A positive ``diff`` means cross-backend agrees LESS than same-backend.
+    """
+    from scipy import stats
+
+    a = np.asarray(same, float)
+    b = np.asarray(cross, float)
+    na, nb = len(a), len(b)
+    if na < 2 or nb < 2:
+        return {"equivalent": False, "reason": "need >=2 samples per group",
+                "n_same": na, "n_cross": nb}
+    ma, mb = float(a.mean()), float(b.mean())
+    va, vb = float(a.var(ddof=1)), float(b.var(ddof=1))
+    diff = ma - mb
+    se = float(np.sqrt(va / na + vb / nb))
+    if se == 0.0:
+        equivalent = abs(diff) < margin
+        return {"equivalent": bool(equivalent), "diff": diff, "margin": float(margin),
+                "se": 0.0, "ci_low": diff, "ci_high": diff, "p_lower": 0.0, "p_upper": 0.0,
+                "p_tost": 0.0, "n_same": na, "n_cross": nb, "mean_same": ma, "mean_cross": mb,
+                "alpha": alpha}
+    # Welch-Satterthwaite dof
+    df = (va / na + vb / nb) ** 2 / ((va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1))
+    # H0_upper: diff >= +margin  (reject if diff significantly below +margin)
+    t_upper = (diff - margin) / se
+    p_upper = float(stats.t.cdf(t_upper, df))
+    # H0_lower: diff <= -margin  (reject if diff significantly above -margin)
+    t_lower = (diff + margin) / se
+    p_lower = float(stats.t.sf(t_lower, df))
+    p_tost = max(p_upper, p_lower)
+    tcrit = float(stats.t.ppf(1 - alpha, df))         # one-sided -> (1-2a) CI
+    ci_low, ci_high = diff - tcrit * se, diff + tcrit * se
+    equivalent = (ci_low > -margin) and (ci_high < margin)
+    return {"equivalent": bool(equivalent), "diff": float(diff), "margin": float(margin),
+            "se": se, "df": float(df), "ci_low": float(ci_low), "ci_high": float(ci_high),
+            "p_lower": p_lower, "p_upper": p_upper, "p_tost": p_tost,
+            "n_same": na, "n_cross": nb, "mean_same": ma, "mean_cross": mb, "alpha": alpha}
+
+
+def per_cell_spatial_agreement(runA, runB, registry, tol_um=5.0) -> dict:
+    """Spatial analogue of :func:`per_cell_agreement`: the fraction of the t0
+    cohort whose centroids end within ``tol_um`` of each other between the two
+    runs (final shared frame). Sensitive to substrate-driven differences in
+    *where* cells end up -- the discriminating metric for mechanics-dominated
+    regimes (where fate is static) and the cohort-matched form of the capstone's
+    candidate occupancy-IoU signal. A cell dead/absent in either run counts as a
+    spatial disagreement."""
+    ids = sorted(registry.per_cell_scored_ids())
+    n = min(len(runA), len(runB))
+    if n == 0 or not ids:
+        return {"mean": float("nan"), "n_cohort": len(ids), "tol_um": float(tol_um)}
+    fa, fb = runA[n - 1], runB[n - 1]
+    close = 0
+    for i in ids:
+        pa = (fa.get("positions") or {}).get(i)
+        pb = (fb.get("positions") or {}).get(i)
+        alive = (fa.get("alive") or {}).get(i, False) and (fb.get("alive") or {}).get(i, False)
+        if pa is None or pb is None or not alive:
+            continue  # not close -> disagreement
+        if float(np.hypot(pa[0] - pb[0], pa[1] - pb[1])) <= tol_um:
+            close += 1
+    return {"mean": close / len(ids), "n_cohort": len(ids), "tol_um": float(tol_um)}

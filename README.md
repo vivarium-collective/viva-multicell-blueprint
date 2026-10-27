@@ -40,7 +40,7 @@ line with one plain sentence on what this workspace studies._
 
 | Investigation | Research question |
 |---|---|
-| [Influenza cross-paradigm — one Sego 2022 blueprint, two mechanical substrates _(running)_](https://vivarium-collective.github.io/viva-multicell-blueprint/investigations/influenza-crossparadigm.html) | Can ONE backend-neutral blueprint express the whole Sego 2022 influenza model (ViralInfectionVTM) and run it faithfully on two different mechanical substrates — a Cellular Potts model (viva-cpm) and… |
+| [influenza-crossparadigm](https://vivarium-collective.github.io/viva-multicell-blueprint/investigations/influenza-crossparadigm.html) |  |
 <!-- END:investigations -->
 
 ## Run it locally

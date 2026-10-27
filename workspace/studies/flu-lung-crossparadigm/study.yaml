@@ -280,6 +280,7 @@ findings:
       centroid field-sampling + contact-surface, whose effect is not separable from
       seed noise at this scale/seed count.
     next_action: "drive the ODE V/L/C/F producers (Task 21) and re-test at larger scale / more vertex seeds, where a substrate effect could become detectable"
+    seeded_study: crossparadigm-equivalence
     provenance:
       run_ids: [crossparadigm-nullcontrol-N400, crossparadigm-ci-N150]
   - id: F2-raw-iou-candidate-weak-substrate-signal
@@ -295,6 +296,7 @@ findings:
       observed: "final area ratio 0.99; IoU_I cross 0.165 vs same-backend CPM 0.249 / vertex 0.212; centroid 6.1 vs 5.4 um"
     explanation: "Both baselines are low (single-patch scatter), but the cross term sits below both; the vertex Voronoi faces relax to target, ruling out the t0 size confound."
     next_action: "test the IoU gap with more vertex seeds + a larger/longer run before calling it signal or noise; report IoU only with its same-backend baseline"
+    seeded_study: crossparadigm-equivalence
     provenance:
       run_ids: [crossparadigm-nullcontrol-N400]
   - id: F3-slow-epidemic-at-faithful-rates

@@ -1,0 +1,54 @@
+# Mechanics-dominated COUNTERFACTUAL (positive control for the equivalence test).
+#
+# The capstone found CPM and vertex backend-neutral on the Sego model because the
+# dynamics there are driven by the SHARED field/rule mechanism, not by mechanics.
+# This blueprint flips that: it is MECHANICS-ONLY (no rules / ODE / immune), with a
+# regime where the two engines' mechanics genuinely differ --
+#   * strong differential adhesion (A sticky to A, repelled by B) -> CPM's Potts
+#     neighbour-swapping sorts the cells; the vertex tissue cannot swap topology as
+#     freely, so it sorts far less;
+#   * a strong chemoattractant gradient with strong chemotaxis on A -> CPM moves A
+#     by Metropolis bias, the vertex fork moves it by the ActiveMigration director;
+#     the two displace cells differently.
+# So the final spatial pattern should DIVERGE between backends, and the spatial
+# equivalence test should REJECT equivalence -- demonstrating the test has the power
+# to detect a real substrate-driven difference (not just always say "equivalent").
+#
+# NOTE (honesty): nothing here is tuned to hit a number; the knobs are deliberately
+# strong to put the model in a mechanics-dominated regime. The study reports whatever
+# the equivalence test actually returns.
+
+domain:
+  extent_um: [40, 40]
+  grid_resolution_um: 1
+  boundary: noflux
+
+cell_types:
+  - {name: A, target_size: 25}      # migrating / sorting population
+  - {name: B, target_size: 25}      # chemoattractant source + sorting partner
+
+adhesion:
+  # A strongly self-adhesive, strongly repelled by B -> drives sorting (CPM) that
+  # the vertex topology resists.
+  - {a: A, b: A, strength: 2}
+  - {a: B, b: B, strength: 2}
+  - {a: A, b: B, strength: 30}
+  - {a: A, b: medium, strength: 14}
+  - {a: B, b: medium, strength: 14}
+
+fields:
+  - name: chemo
+    D: 0.17
+    decay: 0.0005
+    dynamics: {dt: 0.2, substeps: 5}
+    secretion:
+      - {type: B, rate: 1.5}           # B emits the attractant
+    chemotaxis:
+      - {type: A, strength: 8000}      # A climbs the gradient (strong)
+
+initial_state:
+  kind: blocks
+  # A block at the bottom; a B stripe across the top as the source + sort partner.
+  block: {type: A, origin: [8, 6], shape: [5, 3], spacing: 5, size: 25}
+  extra_blocks:
+    - {type: B, origin: [8, 33], shape: [5, 1], spacing: 5, size: 25}

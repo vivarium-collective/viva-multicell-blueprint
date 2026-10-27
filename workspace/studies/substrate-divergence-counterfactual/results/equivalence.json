@@ -1,0 +1,46 @@
+{
+  "study": "substrate-divergence-counterfactual",
+  "n_steps": 80,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "spatial": {
+    "same": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "cross": [
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2
+    ],
+    "tost": {
+      "equivalent": false,
+      "diff": 0.8,
+      "margin": 0.1,
+      "se": 0.0,
+      "ci_low": 0.8,
+      "ci_high": 0.8,
+      "p_lower": 0.0,
+      "p_upper": 0.0,
+      "p_tost": 0.0,
+      "n_same": 6,
+      "n_cross": 9,
+      "mean_same": 1.0,
+      "mean_cross": 0.2,
+      "alpha": 0.05
+    }
+  }
+}
