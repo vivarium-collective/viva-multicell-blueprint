@@ -81,13 +81,14 @@ simulation_set:
       cpm_area_cv: 0.098
       vertex_mean_area: 34.88
       vertex_area_cv: 0.064
-      vertex_cv_spread_over_scale: "< 0.01 (scale 0.5..8)"
+      vertex_cv_spread_over_scale: "< 0.01 (tension_scale 0.5..4, ~flat to 8)"
       best_tension_scale: 1.0
-      mapping_character: directional (monotone, not pinned)
+      mapping_character: directional (monotone in strength and scale, not pinned)
     pass_fail_tests:
       - "cpm-sheet-holds-size25-target: pass"
       - "vertex-sheet-comparable: pass"
       - "mapping-directional-not-pinned: pass"
+      - "j-tension-mapping-monotone: pass"
 
 readouts:
   - name: mean_cell_area
@@ -118,11 +119,23 @@ behavior_tests:
     requires_simulation: "true"
   - name: mapping-directional-not-pinned
     classification: secondary
-    description: The vertex shape statistics barely depend on the tension scale (CV spread < 0.1), so the J<->tension mapping is directional, not pinned.
+    description: >
+      The vertex shape statistics barely depend on the tension scale (0.5..4): CV
+      spread < 0.1 AND every scale fits the CPM CV about equally (mismatch spread <
+      0.05), so the J<->tension mapping is directional, not pinned.
     measure: {kind: spread, field: area_cv, over: tension_scale}
-    pass_if: {op: lt, value: 0.1, field: cv_spread}
+    pass_if: {op: lt, value: 0.1, field: cv_spread, note: "mismatch spread < 0.05"}
     units: dimensionless
     requires_simulation: "true"
+  - name: j-tension-mapping-monotone
+    classification: secondary
+    description: >
+      The neutral-strength -> vertex line-tension lowering is strictly monotone in
+      both the strength and the scale (unit test of to_vertex_tension).
+    measure: {kind: monotone, field: line_tension, versus: [strength, scale]}
+    pass_if: {op: strictly_increasing, note: "tension(scale2) > tension(scale1); tension(strength25) > tension(strength5)"}
+    units: dimensionless
+    requires_simulation: "false"
 
 conclusion_logic:
   if_primary_tests_pass:

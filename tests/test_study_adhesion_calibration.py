@@ -14,6 +14,7 @@ import copy
 import numpy as np
 
 from viva_multicell_blueprint.blueprint.model import Blueprint
+from viva_multicell_blueprint.compile.adhesion import to_vertex_tension
 from viva_multicell_blueprint.compare.runner import run_backend
 
 MECH = {
@@ -31,28 +32,47 @@ def _area_stats(run):
     return a.mean(), (a.std() / a.mean() if a.mean() else float("nan")), len(a)
 
 
+SWEEP = (0.5, 1.0, 2.0, 4.0)
+
+
 def test_adhesion_calibration_matches_shape_stats_across_backends():
     cpm = run_backend(Blueprint.from_dict(copy.deepcopy(MECH)), "cpm", 6)
     c_mean, c_cv, c_n = _area_stats(cpm)
     assert c_n == 16 and 12 < c_mean < 40 and c_cv < 0.3   # CPM sheet holds the size-25 target
 
-    best = None
     swept = {}
-    for scale in (0.5, 1.0, 2.0, 4.0):
+    for scale in SWEEP:
         d = copy.deepcopy(MECH)
         d["mechanics_mapping"] = {"tension_scale": scale}
         v = run_backend(Blueprint.from_dict(d), "vertex", 6)
         v_mean, v_cv, v_n = _area_stats(v)
         swept[scale] = (v_mean, v_cv)
         assert v_n == 16 and 12 < v_mean < 60 and v_cv < 0.3   # vertex sheet comparable
-        diff = abs(v_cv - c_cv)
-        if best is None or diff < best[1]:
-            best = (scale, diff)
-    # comparable shape statistics: mean areas same order of magnitude, CVs both small
-    for scale, (v_mean, v_cv) in swept.items():
+    # comparable shape statistics: mean areas same order of magnitude on both substrates
+    for scale, (v_mean, _) in swept.items():
         assert 0.4 < v_mean / c_mean < 2.5, (scale, v_mean, c_mean)
-    # the mapping is only directional at this scale (shape stats weakly depend on scale):
-    # the spread of vertex CV across the sweep is small -> calibration is not sharply pinned.
+
+    # The mapping is DIRECTIONAL, not pinned: the vertex shape statistics barely move
+    # across the tension sweep, so no scale is sharply preferred. Quantify: the spread
+    # of the |CV_vtx - CV_cpm| mismatch across scales is tiny (every scale fits about
+    # as well), and the CV spread itself is < 0.1.
     cvs = [cv for _, cv in swept.values()]
     assert max(cvs) - min(cvs) < 0.1
-    assert best is not None   # a best-matching scale exists (recorded in the study)
+    mismatches = [abs(cv - c_cv) for _, cv in swept.values()]
+    assert max(mismatches) - min(mismatches) < 0.05, mismatches   # all scales ~equally good
+
+
+def test_j_tension_mapping_is_monotone():
+    """The neutral-strength -> vertex line-tension lowering is strictly monotone in BOTH
+    the strength and the scale (the J<->tension direction the study records)."""
+    adh = MECH["adhesion"]
+    # monotone in scale: a larger scale gives a larger tension for every pair
+    t1 = to_vertex_tension(adh, scale=1.0)
+    t2 = to_vertex_tension(adh, scale=2.0)
+    assert set(t1) == set(t2)
+    for pair in t1:
+        assert t2[pair] > t1[pair]
+    # monotone in strength: the stronger neutral pair maps to the larger tension
+    hh = to_vertex_tension([{"a": "H", "b": "H", "strength": 5}], scale=1.0)[("H", "H")]
+    hm = to_vertex_tension([{"a": "H", "b": "medium", "strength": 25}], scale=1.0)[("H", "medium")]
+    assert hm > hh
