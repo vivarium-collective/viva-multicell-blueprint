@@ -30,3 +30,25 @@ def test_polygon_scanfill_and_dead_cells():
     m = rasterize(f, g)
     assert 90 <= (m == g["type_codes"]["I"]).sum() <= 121
     assert (m == g["type_codes"]["H"]).sum() == 0  # dead paints nothing
+
+
+def test_nonsquare_domain_shape_matches_array():
+    g = {"extent_um": [40.0, 20.0], "grid_resolution_um": 1.0}
+    f = {"positions": {"a": [35, 5]}, "sizes": {"a": 12.0}, "types": {"a": "I"},
+         "alive": {"a": True}}
+    g["type_codes"] = type_codes(f)
+    m = rasterize(f, g)
+    assert grid_shape(g) == (20, 40) == m.shape  # (ny, nx)
+    assert m[5, 35] == g["type_codes"]["I"]  # row=y, col=x
+
+
+def test_occupancy_voxels_painted_and_missing_alive_is_dead():
+    f = {"positions": {"a": [0, 0], "b": [0, 0]}, "sizes": {"a": 1, "b": 1},
+         "types": {"a": "H", "b": "I"}, "alive": {"a": True},
+         "occupancy": {"a": [[2, 3], [3, 3], [2, 4]], "b": [[9, 9]]},
+         "frame": {"scale": 1.0}}
+    g = dict(GRID, type_codes=type_codes(f))
+    m = rasterize(f, g)
+    code = g["type_codes"]["H"]
+    assert sorted(zip(*np.nonzero(m == code))) == [(3, 2), (3, 3), (4, 2)]  # (row=y, col=x)
+    assert (m > 0).sum() == 3  # b has no alive entry -> dead -> not painted

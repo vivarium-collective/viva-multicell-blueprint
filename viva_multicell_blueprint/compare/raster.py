@@ -8,7 +8,11 @@ blueprint cell id). Native coordinates are mapped to um by an optional
 lattice: scale = voxel size; tyssue continuous: usually scale 1). Sizes are in
 native units^2 (area) and are scaled by ``scale**2``.
 
-Footprints, most precise first:
+A cell missing from ``alive`` is treated as dead (same default as metrics.cell_state).
+
+Footprints, most precise first (the disc fallback is APPROXIMATE: it ignores real
+cell shape, so occupied-pixel IoU/SSIM from disc-filled frames must not be a
+headline number; use it only until backends emit polygons/occupancy):
   ``frame["polygons"][id]``   (N,2) vertex polygon in native coords (vertex
                               backend) -> scan-filled with skimage.draw.polygon
   ``frame["occupancy"][id]``  (M,2) lattice voxel indices (CPM)
@@ -28,8 +32,10 @@ EMPTY = 0
 
 
 def grid_shape(grid_spec) -> tuple:
+    """(ny, nx): the shape of the rasterized array (row=y, col=x). extent_um is (x, y)."""
     extent, res = grid_spec["extent_um"], grid_spec["grid_resolution_um"]
-    return tuple(max(1, int(math.ceil(float(e) / float(res)))) for e in extent[:2])
+    nx, ny = (max(1, int(math.ceil(float(e) / float(res)))) for e in extent[:2])
+    return (ny, nx)
 
 
 def type_codes(*runs_or_frames, extra=()) -> dict:
@@ -51,8 +57,7 @@ def _to_grid(xy, frame_meta, res):
 
 
 def rasterize(run_frame, grid_spec) -> np.ndarray:
-    shape = grid_shape(grid_spec)  # (nx, ny) -> array [row=y, col=x] = (ny, nx)
-    nx, ny = shape
+    ny, nx = grid_shape(grid_spec)
     out = np.full((ny, nx), EMPTY, dtype=np.int32)
     codes = grid_spec.get("type_codes") or type_codes(run_frame)
     res = float(grid_spec["grid_resolution_um"])
@@ -61,7 +66,7 @@ def rasterize(run_frame, grid_spec) -> np.ndarray:
     alive, types = run_frame.get("alive", {}), run_frame.get("types", {})
     polys, occ = run_frame.get("polygons", {}), run_frame.get("occupancy", {})
     for cid in sorted(types, key=str):
-        if not alive.get(cid, True) or str(types[cid]) not in codes:
+        if not alive.get(cid, False) or str(types[cid]) not in codes:
             continue
         code = codes[str(types[cid])]
         if cid in polys:
