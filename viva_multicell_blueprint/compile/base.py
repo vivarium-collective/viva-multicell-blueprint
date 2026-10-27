@@ -34,6 +34,8 @@ class MechanicsBackend(Process):
 
     config: initial_state (list of Cell dicts: id/type/centroid/size),
     cell_types, adhesion (lowered), domain, backend_params.
+    Lineage events (``divisions`` / ``deaths``) are dicts of the shape
+    ``{"cell_id": <id>}`` (a bare id is also accepted).
     Subclasses implement ``update(inputs, interval)`` returning a dict with
     every key in ``OUTPUT_PORTS``.
     """

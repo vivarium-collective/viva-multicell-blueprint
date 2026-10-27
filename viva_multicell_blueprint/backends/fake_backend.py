@@ -2,9 +2,9 @@
 
 Cells stay at their seeded centroids; no mechanics. ``fates`` change a cell's
 type; ``deaths`` mark cells not alive (divisions are ignored). Neighbors are
-cells within ``backend_params.neighbor_radius`` (default 1.5 * min spacing is
-not computed; default radius 1.5) and shared surface per type is 1.0 per
-neighbor of that type -- enough for rules to have something to read.
+live cells within ``backend_params.neighbor_radius`` (default 1.5); shared
+surface per type is 1.0 per neighbor of that type -- enough for rules to have
+something to read.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from viva_multicell_blueprint.compile.base import MechanicsBackend
 class FakeBackend(MechanicsBackend):
     def initialize(self, config):
         self._cells = {}
-        for c in config["initial_state"]:
+        for c in config.get("initial_state") or []:
             self._cells[str(c["id"])] = {
                 "type": c["type"],
                 "pos": [float(v) for v in c["centroid"]],
@@ -25,7 +25,7 @@ class FakeBackend(MechanicsBackend):
             }
 
     def _emit(self):
-        radius = float(self.config["backend_params"].get("neighbor_radius", 1.5))
+        radius = float((self.config.get("backend_params") or {}).get("neighbor_radius", 1.5))
         live = {i: c for i, c in self._cells.items() if c["alive"]}
         neighbors, shared = {}, {}
         for i, c in self._cells.items():

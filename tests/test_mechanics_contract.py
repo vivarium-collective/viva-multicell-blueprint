@@ -2,18 +2,32 @@ from viva_multicell_blueprint.backends.fake_backend import FakeBackend
 from viva_multicell_blueprint.compile.base import MechanicsBackend, OUTPUT_PORTS
 from viva_multicell_blueprint.core import build_core
 
-CELLS = [
-    {"id": 1, "type": "A", "centroid": (0.0, 0.0), "size": 4.0},
-    {"id": 2, "type": "B", "centroid": (1.0, 0.0), "size": 5.0},
-    {"id": 3, "type": "A", "centroid": (10.0, 10.0), "size": 6.0},
-]
+import pytest
+
+from viva_multicell_blueprint.blueprint.data_loading import from_cell_table
+
+TABLE = "id,type,x,y,size\n1,A,0,0,4\n2,B,1,0,5\n3,A,10,10,6\n"
 
 
-def make():
-    return FakeBackend({"initial_state": CELLS}, core=build_core())
+@pytest.fixture
+def cells(tmp_path):
+    p = tmp_path / "cells.csv"
+    p.write_text(TABLE)
+    return from_cell_table(p)  # real loader output (Cell shape)
 
 
-def test_fake_backend_emits_port_shape():
+@pytest.fixture
+def make(cells):
+    return lambda: FakeBackend({"initial_state": cells}, core=build_core())
+
+
+def test_fake_backend_without_backend_params(cells):
+    b = FakeBackend({"initial_state": cells}, core=build_core())
+    b.config.pop("backend_params", None)
+    assert b.update({}, 1.0)["neighbors"]["1"] == ["2"]
+
+
+def test_fake_backend_emits_port_shape(make):
     b = make()
     assert isinstance(b, MechanicsBackend)
     assert set(b.outputs()) == set(OUTPUT_PORTS)
@@ -28,7 +42,7 @@ def test_fake_backend_emits_port_shape():
     assert out["shared_surface_by_type"]["1"] == {"B": 1.0}
 
 
-def test_fake_backend_applies_fates():
+def test_fake_backend_applies_fates(make):
     b = make()
     out = b.update({"fates": {"1": "C"}, "deaths": [{"cell_id": 3}]}, 1.0)
     assert out["types"]["1"] == "C"
