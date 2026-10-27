@@ -9,13 +9,21 @@ invariant (spec section 5) and prove each compiled composite actually builds + r
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
+import yaml
 from process_bigraph import Composite
 
 from viva_multicell_blueprint.blueprint.model import Blueprint
 from viva_multicell_blueprint.compile import compile as compile_blueprint
 from viva_multicell_blueprint.core import build_core
+
+# The canonical Price-2015 params block (copied from viva-cpm), reused so the full
+# blueprint's systemic_ode node is a REAL, buildable ODE rather than a stub.
+_PRICE_PARAMS = yaml.safe_load(
+    (Path(__file__).parent / "fixtures" / "price_ode_params.yaml").read_text()
+)["price_ode"]
 
 # A tiny CSV cell table: 4 non-collinear cells, two types (H, I) -> a 2x2 block
 # both backends can materialize (Voronoi needs a non-degenerate point cloud).
@@ -58,7 +66,11 @@ def _full_blueprint(tmp_path):
         {"a": "H", "b": "I", "strength": 8.0},
     ]
     bp.rules.append({"type": "resistance", "scalar": "resist", "rate_expr": "hill(field['virus'], 2.0)"})
-    bp.systemic_ode = {"model_ref": "price2015", "coupling": {"num_epithelial": 250000}}
+    bp.systemic_ode = {
+        "model_ref": "price2015",
+        "params": _PRICE_PARAMS,
+        "coupling": {"num_epithelial": 250000},
+    }
     bp.immune = {"types": {"macrophage_inflow": "M"}}
     return bp
 
@@ -124,6 +136,50 @@ def test_mechanism_stores_identical_across_backends(tmp_path):
     assert cpm_bp["type_ids"] == {"medium": 0, "H": 1, "I": 2}
     assert any(isinstance(e["a"], int) for e in cpm_bp["contact"])
     assert "tension_by_pair" in vtx_bp and vtx_bp["tension_by_pair"]
+
+
+@pytest.mark.parametrize("backend", ["cpm", "vertex"])
+def test_full_blueprint_builds_and_runs(tmp_path, backend):
+    """The FULL blueprint (adds the ODE + immune nodes) must actually BUILD and
+    advance on both backends -- a port-type/config mismatch in those nodes would
+    slip past the dict-only identical-stores check and only fail here."""
+    bp = _full_blueprint(tmp_path)
+    doc = compile_blueprint(bp, backend=backend)
+    comp = Composite({"state": doc["state"]}, core=build_core())
+    comp.run(1.0)
+
+    # the systemic ODE really integrated its 10 states into the shared store
+    ode = comp.state["ode_state"]
+    assert isinstance(ode, dict) and {"P", "T", "O"} <= set(ode)
+    # the immune recruitment node produced a (possibly empty) spawns list
+    assert isinstance(comp.state["spawns"], list)
+    assert float(comp.state["global_time"]) == 1.0
+
+
+def test_fates_propagate_through_overwrite_map_store(tmp_path):
+    """Pin the t=0 key-drop fix: a certain-to-fire transition rule must flow
+    fates -> mechanics -> types through the overwrite[map] shared store. If the
+    overwrite wrapping were dropped, the mechanics/field/rules map outputs would
+    be swallowed on the empty t=0 store and types would never change."""
+    bp = Blueprint.from_dict({
+        "domain": {"extent_um": [20, 20], "grid_resolution_um": 1, "boundary": "noflux"},
+        "cell_types": [{"name": "H", "target_size": 9}, {"name": "I", "target_size": 9}],
+        "initial_state": {"from_data": {"cell_table": _cell_table(tmp_path)}},
+        # rate ~100 -> Pr = 1 - exp(-100) ~ 1: every H fires, deterministically.
+        "rules": [{"type": "transition", "from": "H", "to": "I", "rate_expr": "100"}],
+    })
+    doc = compile_blueprint(bp, backend="cpm")
+    comp = Composite({"state": doc["state"]}, core=build_core())
+    # all cells seed as H; run enough ticks for fates to round-trip the stores
+    # (t1: mechanics fills types; t2: rules emits fates; t3: mechanics applies).
+    comp.run(3.0)
+
+    types = comp.state["types"]
+    assert set(types) == {"1", "2", "3", "4"}
+    assert "I" in types.values(), (
+        "no H->I transition reached the shared `types` store -- fates were dropped "
+        "crossing the overwrite[map] store (the t=0 key-drop regression)"
+    )
 
 
 # --------------------------------------------------------------------------- #

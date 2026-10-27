@@ -50,7 +50,7 @@ def normalize_rules(rules) -> list[dict]:
     """
     out: list[dict] = []
     for i, r in enumerate(rules or []):
-        kind = r.get("kind", r.get("type", r.get("type_")))
+        kind = r.get("kind", r.get("type"))
         if kind not in _RULE_KINDS:
             raise ValueError(
                 f"rule[{i}]: unknown rule kind {kind!r} "
@@ -233,8 +233,20 @@ def _rules_node(blueprint) -> dict:
 def _ode_node(blueprint) -> dict:
     so = blueprint.systemic_ode or {}
     coupling = so.get("coupling") or {}
+    # The blueprint SELECTS + PARAMETERIZES the registered ODE component (spec §7):
+    # it must supply the price_ode params block (constants/homeostatic_pops_ode/
+    # hill_exponents), which SystemicODEProcess resolves into the per-MCS consts.
+    # A model_ref with no params would build a broken ODE (KeyError '_s_t' deep in
+    # GlobalODE), so fail loud here instead. (A model_ref -> packaged-params registry
+    # is a follow-up; v1 requires explicit params.)
+    params = so.get("params") or coupling.get("params")
+    if not params:
+        raise ValueError(
+            f"systemic_ode (model_ref={so.get('model_ref')!r}) needs a 'params' block "
+            "(the price_ode constants/homeostatic_pops_ode/hill_exponents); none found"
+        )
     config = {
-        "consts": so.get("params") or coupling.get("params") or {},
+        "consts": params,
         "num_epithelial": int(coupling.get("num_epithelial", 250000)),
         "dt_seconds": float(coupling.get("dt_seconds", 60.0)),
         "v0": float(coupling.get("v0", 0.0)),
@@ -244,6 +256,9 @@ def _ode_node(blueprint) -> dict:
         "_type": "process",
         "address": ODE_ADDR,
         "config": config,
+        # FOLLOW-UP (not wired in v1): the spatialized counts H/I/M/... the ODE
+        # consumes have no producer yet (no counting Step among Tasks 2-12), so
+        # these ode_in_* stores sit at their 0.0 defaults until that Step lands.
         "inputs": {k: [f"ode_in_{k}"] for k in keys},
         "outputs": {
             "ode_state": ["ode_state"],
@@ -266,6 +281,10 @@ def _immune_node(blueprint) -> dict:
         "address": IMMUNE_ADDR,
         "config": config,
         "inputs": {"recruit_drivers": ["recruit_drivers"]},
+        # FOLLOW-UP (not wired in v1): `spawns` is emitted into the shared store but
+        # the MechanicsBackend port (Tasks 5/10/11) has no `spawns` input and the
+        # backends implement no recruited-cell placement, so spawn events are not
+        # consumed yet. Placement needs an additive backend port extension.
         "outputs": {"spawns": ["spawns"]},
     }
 
