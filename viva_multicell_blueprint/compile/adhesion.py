@@ -23,6 +23,10 @@ the ``adhesion-calibration`` study (spec §9.1) fits it so mechanics-only
 sheets match in cell-shape statistics on both backends.
 
 Pairs are unordered: a reversed duplicate is merged if equal, else ValueError.
+
+Ordering contract (for the compiler / backends): CPM entries are normalized so
+``a <= b`` by integer tag; vertex tension keys are sorted type-name tuples, so
+look up with ``tuple(sorted((a, b)))`` or ``tension_for(tensions, a, b)``.
 """
 from __future__ import annotations
 
@@ -38,6 +42,12 @@ def _pairs(adhesion) -> dict:
             raise ValueError(f"conflicting strengths for pair {key}: {out[key]} vs {s}")
         out[key] = s
     return out
+
+
+def _tag(type_ids: dict, name) -> int:
+    if name not in type_ids:
+        raise ValueError(f"type {name!r} not in type_ids")
+    return type_ids[name]
 
 
 def to_cpm_contact(adhesion, type_ids: dict | None = None) -> list[dict]:
@@ -56,7 +66,8 @@ def to_cpm_contact(adhesion, type_ids: dict | None = None) -> list[dict]:
             _pairs(adhesion)  # raises on conflict
             continue
         seen.add(key)
-        out.append({"a": type_ids[e["a"]], "b": type_ids[e["b"]], "j": float(e["strength"])})
+        ta, tb = (_tag(type_ids, e["a"]), _tag(type_ids, e["b"]))
+        out.append({"a": min(ta, tb), "b": max(ta, tb), "j": float(e["strength"])})
     _pairs(adhesion)
     return out
 
@@ -64,3 +75,8 @@ def to_cpm_contact(adhesion, type_ids: dict | None = None) -> list[dict]:
 def to_vertex_tension(adhesion, scale: float = 1.0) -> dict:
     """Return ``{(type_a, type_b): line_tension}`` keyed by sorted type-name pair."""
     return {k: scale * s for k, s in _pairs(adhesion).items()}
+
+
+def tension_for(tensions: dict, a, b):
+    """Look up a ``to_vertex_tension`` result for an unordered type pair."""
+    return tensions[tuple(sorted((a, b)))]
