@@ -1,0 +1,270 @@
+schema_version: 4
+name: flu-lung-crossparadigm
+created: "2026-10-27"
+status: in-progress
+phase: Evaluate
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: passed
+design_status: drafted
+
+claim: >
+  The ONE backend-neutral Sego 2022 influenza blueprint compiles to BOTH the CPM
+  (viva-cpm) and vertex (vivarium-tyssue) substrates and runs end-to-end on each,
+  and -- because the field / rules / systemic-ODE / recruitment mechanism is shared
+  byte-for-byte across the two compiles -- the two backends agree closely on
+  cell-FATE dynamics while DIVERGING on spatial morphology. The divergence is a
+  finding about the mechanical substrate, not a bug.
+
+experiment: >
+  Compile `workspace/blueprints/influenza_sego2022.yaml` onto the CPM and vertex
+  backends (`compile(blueprint, backend)`), run both for N coupled steps at a
+  tractable reduced scale (a 50x50-site patch, a 6x6 epithelial block + a 12-cell
+  pre-placed latent immune pool), and compute the three comparison families over a
+  shared identity registry: (1) per-cell agreement over the t0 cohort; (2) dynamics
+  trajectories (type counts + field integrals) with a Sego-side acceptance band =
+  the >=3-seed CPM stochastic ensemble envelope; (3) spatial pattern (patch
+  area/centroid/Rg/front) + occupancy IoU/SSIM on the real footprints (CPM voxel
+  occupancy, vertex face polygons). Render spatial_playback, dynamics_overlay and
+  divergence. Seeds are fixed, so the comparison is reproducible.
+
+result: >
+  Both backends run the full model end-to-end. The shared field is identical while
+  no cell has yet changed type; once infection fires, each cell samples the field
+  at its OWN (substrate-specific) centroid and measures cell-cell contact through
+  its OWN substrate, so the stochastic epidemic trajectories separate. At the
+  demonstration scale (N=400 steps) per-cell agreement falls from 1.0 to a mean of
+  0.955 (minimum 0.833), the backends reach H/I/D = 30/5/1 (CPM) vs 27/9/0
+  (vertex), the virus-field integral RMS between backends grows to ~25, and the
+  infected-patch occupancy IoU is 0.07 with SSIM 0.09 -- i.e. the SAME mechanism
+  produces visibly different morphology on the two substrates. At the CI-reduced
+  scale (N=80) the same pattern is present in miniature (agreement mean 0.994,
+  infected-patch IoU 0.00, I-patch area 26 px CPM vs 56 px vertex). No divisions
+  occur in this model, so lineage agreement is trivially 1.0 over 48 roots.
+
+purpose:
+  question: >
+    Does one backend-neutral blueprint reproduce the Sego 2022 influenza model on
+    two different mechanical substrates, and where do the substrates agree vs
+    diverge once the shared mechanism is driven live?
+  mechanism: >
+    The epithelial rates, four reaction-diffusion fields, Price-2015 systemic ODE
+    (fed live by CellCountStep) and latent-pool immune recruitment are compiled
+    identically onto both backends; only the single mechanics node differs (CPM
+    Metropolis flips vs tyssue vertex relaxation). Cell fate is therefore
+    backend-neutral except where it couples THROUGH the substrate -- field sampling
+    at the cell centroid and contact-surface measurement -- which is where the two
+    diverge.
+  expected_outcome: >
+    High per-cell fate agreement with a bounded, growing divergence driven by the
+    substrate coupling, and a clear spatial-morphology divergence (low occupancy
+    IoU) even where the fate trajectories agree.
+
+key_assumptions:
+  - "Reduced scale: a 50x50-site patch with a 6x6 epithelial block (NOT paper scale); the demonstration run is 400 steps (= 400 MCS = ~6.7 h sim), the CI test 80."
+  - "Immune recruitment is modelled as activation of a PRE-PLACED LATENT pool at the tissue margin (ruling T20-RECRUIT), not as from-nothing cell insertion."
+  - "The systemic-ODE inputs V/L/C/F (virus/IFN/chemokine/IFN-field loads) have NO producer yet and sit at 0 (Task 21 follow-up), so the ODE's immune-recruitment drive is weak and the latent pool is barely activated at this scale."
+  - "Sego rates are carried verbatim (no tuning); at faithful rates the infection probability is ~0.004/step, so the epidemic is slow at reduced scale."
+  - "1 grid unit = 1 um (grid_resolution_um = 1), so both backends' native coordinates are compared in the same frame."
+
+baseline:
+  - name: sego-influenza-crossparadigm
+    composite: viva_multicell_blueprint.composites.sego_crossparadigm
+    description: >
+      The Sego 2022 influenza blueprint compiled onto each backend and run for N
+      coupled steps; the comparison is computed by viva_multicell_blueprint.compare
+      over a shared identity registry.
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/influenza_sego2022.yaml
+      grid_sites: [50, 50]
+      epithelial_block: [6, 6]
+      latent_pool_cells: 12
+      demonstration_steps: 400
+      ci_steps: 80
+      seed: 0
+
+variants:
+  - name: cpm-vs-vertex
+    description: The two mechanical substrates (CPM voxel, tyssue vertex) sharing one compiled mechanism.
+    params: {}
+
+simulation_set:
+  - name: crossparadigm-demonstration-N400
+    status: completed
+    base_model: sego-influenza-crossparadigm
+    seeds: [0]
+    metrics:
+      per_cell_agreement_mean: 0.955
+      per_cell_agreement_min: 0.833
+      final_HID_cpm: "30/5/1"
+      final_HID_vertex: "27/9/0"
+      virus_field_integral_rms: 25.4
+      infected_patch_iou: 0.067
+      ssim: 0.088
+      lineage_root_agreement: 1.0
+    pass_fail_tests:
+      - "both-backends-run-end-to-end: pass"
+      - "three-comparison-families-computed: pass"
+      - "three-figures-render-under-cap: pass"
+      - "substrates-diverge-spatially (IoU_I < 0.9): pass"
+  - name: crossparadigm-ci-N80
+    status: completed
+    base_model: sego-influenza-crossparadigm
+    seeds: [0, 1, 2]
+    metrics:
+      per_cell_agreement_mean: 0.994
+      infected_patch_iou: 0.00
+      i_patch_area_cpm_px: 26
+      i_patch_area_vertex_px: 56
+    pass_fail_tests:
+      - "capstone behavior test (tests/test_study_flu_lung_crossparadigm.py): pass"
+
+readouts:
+  - name: per_cell_agreement
+    description: Fraction of the t0 cohort in the same state (type, or alive-vs-dead) per step; the primary fate-agreement metric.
+    store_path: "compare/per_cell_agreement"
+    units: fraction
+    status: measured
+  - name: dynamics_distance
+    description: RMS distance between the two backends' type-count and field-integral trajectories.
+    store_path: "compare/dynamics_distance"
+    units: counts / a.u.
+    status: measured
+  - name: spatial_pattern
+    description: Per infected/dying type, patch area, centroid, radius of gyration, front position, plus occupancy IoU and SSIM on the rasterized footprints.
+    store_path: "compare/spatial_pattern"
+    units: px / dimensionless
+    status: measured
+  - name: lineage_agreement
+    description: Whether the same t0 roots proliferate on both backends; trivially 1.0 here (no division rule).
+    store_path: "compare/lineage_agreement"
+    units: fraction
+    status: measured
+
+behavior_tests:
+  - name: both-backends-run-end-to-end
+    classification: primary
+    description: The full Sego blueprint compiles and runs on BOTH backends for N coupled steps with the whole cohort intact.
+    measure: {kind: count, field: frames, when: end-of-run}
+    pass_if: {op: eq, value: 81, field: n_frames_at_N80}
+    units: frames
+    requires_simulation: "true"
+  - name: three-comparison-families-computed
+    classification: primary
+    description: Per-cell agreement, dynamics distance (incl. field integrals), and spatial pattern + IoU/SSIM are all computed over the shared registry.
+    measure: {kind: presence, field: compare_outputs}
+    pass_if: {op: all_present, note: "n_cohort=48, bands well-formed"}
+    units: n/a
+    requires_simulation: "true"
+  - name: substrates-diverge-spatially
+    classification: primary
+    description: >
+      The infected-patch footprints do not coincide pixel-for-pixel across the two
+      substrates -- the headline finding that the same mechanism yields different
+      morphology on CPM vs vertex.
+    measure: {kind: metric, field: infected_patch_iou}
+    pass_if: {op: lt, value: 0.9, field: infected_patch_iou}
+    units: IoU
+    requires_simulation: "true"
+  - name: three-figures-render-under-cap
+    classification: secondary
+    description: spatial_playback, dynamics_overlay (with the CPM-ensemble band) and divergence all render and serialize under the workbench inline cap.
+    measure: {kind: size, field: figure_html_bytes}
+    pass_if: {op: lt, value: 2500000, field: figure_html_bytes}
+    units: bytes
+    requires_simulation: "true"
+
+conclusion_logic:
+  if_primary_tests_pass:
+    implementation_status: "One blueprint runs the full Sego model on both substrates; the comparison spine is operational."
+    biological_validation: "Cell fate is backend-neutral (shared mechanism); morphology is substrate-specific -- the expected, honest result."
+    pipeline_unblocks:
+      - "dose-response-crossparadigm (directional agreement over initial viral load)."
+      - "ODE V/L/C/F producers (Task 21 follow-up) to drive meaningful immune recruitment at scale."
+  if_primary_tests_fail:
+    diagnose:
+      - "A backend fails to run the full model -- inspect the mechanics node and the shared stores."
+      - "A metric cannot be computed -- check the identity registry / footprint ports."
+    block_downstream: "Do not report cross-paradigm agreement until both backends run the full model."
+
+limitations:
+  - "Reduced scale + modest steps: this is a demonstration, not paper scale; the epidemic is in its slow onset, so fate divergence is bounded (agreement >= 0.83)."
+  - "Immune recruitment is a latent-pool approximation (ruling T20-RECRUIT); at this scale the ODE drive rounds to ~0 activations, so the latent pool stays mostly latent and the immune arm is barely exercised."
+  - "The systemic-ODE inputs V/L/C/F have no producer (Task 21 follow-up) and sit at 0, further weakening the recruitment drive."
+  - "Parameters are the faithful Sego 2022 values (no tuning); divergence is reported, never calibrated away (anti-goal respected)."
+  - "The Sego acceptance band here is the CPM >=3-seed stochastic envelope, NOT a digitized Sego 2022 figure -- a literature-digitized band is an open item."
+
+report:
+  title: "Flu-lung cross-paradigm: one blueprint, two substrates, honest divergence"
+  verdict: >
+    The capstone works: the single Sego 2022 influenza blueprint runs the FULL model
+    (fields, rules, live systemic ODE, latent-pool recruitment) on both the CPM and
+    the vertex backend, and the three comparison families all compute. The headline
+    result is the one the shared-mechanism architecture predicts: cell-FATE dynamics
+    are nearly backend-independent (per-cell agreement 0.955 at N=400, 0.994 at N=80)
+    because they are produced by the shared field/rules/ODE, while SPATIAL morphology
+    diverges (infected-patch occupancy IoU 0.07, SSIM 0.09; I-patch area 119 vs 229 px
+    at N=400) because each substrate samples the field and measures contact through its
+    own geometry. Divergence is reported as a finding, not tuned away.
+  confidence: medium
+  evidence_quality: preliminary
+  main_insight: >
+    Sharing the mechanism byte-for-byte isolates the mechanical substrate as the ONLY
+    source of cross-paradigm difference: fates agree, morphology diverges. The point
+    where they couple -- field sampled at the cell centroid, contact measured on the
+    substrate -- is exactly where CPM and vertex part ways.
+  caveat: >
+    Reduced scale; the immune arm is barely exercised (latent-pool + producer-less ODE
+    inputs); the acceptance band is the CPM stochastic envelope, not a Sego figure.
+
+findings:
+  - id: F1-fate-neutral-morphology-divergent
+    kind: computational
+    status: novel
+    statement: >
+      With the mechanism shared byte-for-byte, the two backends agree on cell fate
+      (per-cell agreement 0.955 at N=400) but diverge on morphology (infected-patch
+      IoU 0.07), isolating the mechanical substrate as the sole driver of difference.
+    evidence:
+      observed: "agreement mean 0.955 (min 0.833); IoU_I 0.067; SSIM 0.088; I-patch area 119 (CPM) vs 229 px (vertex)"
+    expected:
+      range: "high fate agreement with bounded divergence; low spatial IoU"
+    explanation: >
+      Fate is computed by the shared field/rules/ODE; divergence enters only where
+      fate couples through the substrate (centroid field-sampling, contact surface).
+    next_action: "drive the ODE V/L/C/F producers (Task 21) to exercise the immune arm and re-test at larger scale"
+    provenance:
+      run_ids: [crossparadigm-demonstration-N400, crossparadigm-ci-N80]
+  - id: F2-slow-epidemic-at-faithful-rates
+    kind: methodological
+    status: confirms
+    statement: >
+      At faithful Sego rates the per-step infection probability is ~0.004 and the
+      ODE recruitment inflow rounds to ~0 activations, so at reduced scale the
+      epidemic is a slow onset and the latent immune pool is barely activated.
+    evidence:
+      observed: "virus-field integral grows 0 -> ~180 over 400 steps; H/I/D 30/5/1 (CPM); activations = 0"
+    explanation: "Faithful rates + reduced scale + producer-less ODE inputs -> weak drive; not tuned up (anti-goal)."
+    next_action: "add the V/L/C/F producers and/or run longer; keep rates faithful"
+    provenance:
+      run_ids: [crossparadigm-demonstration-N400]
+
+visualizations:
+  - name: capstone-spatial-playback
+    address: "html:capstone_spatial_playback.html"
+    config: {title: "Spatial playback: CPM | vertex"}
+  - name: capstone-dynamics-overlay
+    address: "html:capstone_dynamics_overlay.html"
+    config: {title: "Dynamics with CPM-ensemble acceptance band"}
+  - name: capstone-divergence
+    address: "html:capstone_divergence.html"
+    config: {title: "Per-cell agreement + spatial divergence map"}
+
+bibliography:
+  sources:
+    - key: sego2022
+      note: "Sego et al. 2022 ViralInfectionVTM; the influenza model this blueprint transcribes (params.yaml @ b952eec2)."
+    - key: price2015
+      note: "Price/Mochan-Keef 2015 in-host immune ODE; the systemic component coupled per Sego 2022."

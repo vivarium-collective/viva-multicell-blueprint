@@ -146,27 +146,40 @@ def resolve_initial_state(blueprint) -> list[dict]:
     )
 
 
-def _generate_blocks(init: dict) -> list[dict]:
-    """Generative ``kind: blocks``: a ``shape`` grid of ``type`` cells at ``spacing`` pitch
-    from ``origin`` (centroids in grid units), plus an optional ``infected_seed``
-    ``{type, fraction, seed}`` that retypes ``max(1, round(fraction * n))`` of them
-    (seeded, reproducible)."""
-    import numpy as np
-
-    b = init["block"]
-    nx, ny = (int(v) for v in b["shape"])
-    ox, oy = (float(v) for v in b.get("origin", [0, 0]))
-    pitch = float(b["spacing"])
-    cells = [
-        {"id": 1 + j * nx + i, "type": b["type"],
-         "centroid": [ox + i * pitch, oy + j * pitch], "size": float(b.get("size", 1.0))}
+def _block_cells(spec: dict, start_id: int) -> list[dict]:
+    """A ``shape`` grid of ``type`` cells at ``spacing`` pitch from ``origin``
+    (centroids in grid units), ids numbered contiguously from ``start_id``."""
+    nx, ny = (int(v) for v in spec["shape"])
+    ox, oy = (float(v) for v in spec.get("origin", [0, 0]))
+    pitch = float(spec["spacing"])
+    return [
+        {"id": start_id + j * nx + i, "type": spec["type"],
+         "centroid": [ox + i * pitch, oy + j * pitch], "size": float(spec.get("size", 1.0))}
         for j in range(ny) for i in range(nx)
     ]
+
+
+def _generate_blocks(init: dict) -> list[dict]:
+    """Generative ``kind: blocks``: the main ``block`` (a ``shape`` grid of cells
+    at ``spacing`` pitch from ``origin``, centroids in grid units) plus any
+    ``extra_blocks`` (same shape) appended with CONTIGUOUS ids. ``extra_blocks``
+    pre-place the LATENT immune pool at the tissue margin (Task 20 recruitment
+    activates it). An optional ``infected_seed`` ``{type, fraction, seed}`` retypes
+    ``max(1, round(fraction * n_main))`` cells of the MAIN block only (seeded,
+    reproducible) -- scoping it to the main block keeps the infected count
+    invariant to the size of the latent pool."""
+    import numpy as np
+
+    cells = _block_cells(init["block"], start_id=1)
+    n_main = len(cells)                      # the main (epithelial) block
+    for extra in (init.get("extra_blocks") or []):
+        cells.extend(_block_cells(extra, start_id=len(cells) + 1))
+
     seed = init.get("infected_seed")
     if seed:
-        n = max(1, int(round(float(seed["fraction"]) * len(cells))))
+        n = max(1, int(round(float(seed["fraction"]) * n_main)))
         rng = np.random.default_rng(int(seed.get("seed", 0)))
-        for k in rng.choice(len(cells), size=n, replace=False):
+        for k in rng.choice(n_main, size=n, replace=False):   # main-block indices only
             cells[int(k)]["type"] = seed["type"]
     return cells
 

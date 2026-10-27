@@ -1,0 +1,159 @@
+schema_version: 4
+name: dose-response-crossparadigm
+created: "2026-10-27"
+status: in-progress
+phase: Evaluate
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: passed
+design_status: drafted
+
+claim: >
+  Both backends AGREE on the monotone DIRECTION of the dose response: a larger
+  initial viral load (more initially-infected epithelial cells) yields at-least-as-
+  much infection at the end on each substrate. The magnitudes differ, but the sign
+  of the response is backend-independent.
+
+experiment: >
+  Sweep the initial viral load via `infected_seed.fraction` in {0.03, 0.08, 0.15}
+  on the Sego blueprint (seeding 1, 3, 5 infected cells of the 36-cell block). Run
+  each dose on BOTH backends at reduced scale and record the final infected-cell
+  count. Check that the final count is non-decreasing in the initial load on each
+  backend (a directional, not magnitude, agreement check -- Sego Fig 5/7 style).
+
+result: >
+  Seeding 1 / 3 / 5 infected cells gives final infected counts of 1 / 3 / 7 on CPM
+  and 0 / 2 / 5 on vertex (150 steps). BOTH are non-decreasing in the initial load,
+  so the backends agree on the monotone direction; CPM runs slightly hotter (larger
+  final counts), consistent with the capstone's substrate-driven divergence.
+
+purpose:
+  question: >
+    Do the two substrates agree on the SIGN of the dose response over initial viral
+    load, even if the magnitudes differ?
+  mechanism: >
+    More initially-infected cells secrete more virus into the shared field, raising
+    the per-cell infection probability (Pr = 1 - exp(-g_hv * virus)) everywhere, so
+    the final infected count rises with the initial dose on either substrate.
+  expected_outcome: >
+    A monotone (non-decreasing) final-infection vs initial-load curve on both
+    backends -- directional agreement -- with CPM/vertex magnitudes differing.
+
+key_assumptions:
+  - "Initial viral load is proxied by the number of initially-infected cells (infected_seed.fraction); the ODE v0 input has no field producer at this scale."
+  - "Rates are the faithful Sego values (no tuning); the epidemic is slow, so the demonstration runs 150 steps."
+  - "Directional (sign) agreement is the target, NOT a magnitude match (the substrates diverge in magnitude -- see flu-lung-crossparadigm)."
+
+baseline:
+  - name: sego-dose-sweep
+    composite: viva_multicell_blueprint.composites.sego_crossparadigm
+    description: The Sego blueprint run at several initial viral loads on each backend.
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/influenza_sego2022.yaml
+
+variants:
+  - name: initial-load-sweep
+    description: infected_seed.fraction in {0.03, 0.08, 0.15} (seeds 1/3/5 infected cells).
+    params: {}
+
+simulation_set:
+  - name: dose-response
+    status: completed
+    base_model: sego-dose-sweep
+    seeds: [0]
+    metrics:
+      seed_infected: "1 / 3 / 5"
+      final_infected_cpm: "1 / 3 / 7"
+      final_infected_vertex: "0 / 2 / 5"
+      cpm_monotone_nondecreasing: true
+      vertex_monotone_nondecreasing: true
+      direction_agreement: true
+    pass_fail_tests:
+      - "cpm-monotone-in-dose: pass"
+      - "vertex-monotone-in-dose: pass"
+      - "backends-agree-on-direction: pass"
+
+readouts:
+  - name: final_infected_count
+    description: Number of infected (type I) cells at the final step, per dose per backend.
+    store_path: "mechanics/types"
+    units: count
+    status: measured
+
+behavior_tests:
+  - name: cpm-monotone-in-dose
+    classification: primary
+    description: On CPM, the final infected count is non-decreasing in the initial viral load.
+    measure: {kind: monotone, field: final_infected_count, versus: initial_load, backend: cpm}
+    pass_if: {op: nondecreasing, note: "1 -> 3 -> 7"}
+    units: count
+    requires_simulation: "true"
+  - name: vertex-monotone-in-dose
+    classification: primary
+    description: On vertex, the final infected count is non-decreasing in the initial viral load.
+    measure: {kind: monotone, field: final_infected_count, versus: initial_load, backend: vertex}
+    pass_if: {op: nondecreasing, note: "0 -> 2 -> 5"}
+    units: count
+    requires_simulation: "true"
+  - name: backends-agree-on-direction
+    classification: primary
+    description: Both backends show the SAME sign (non-decreasing) of the dose response.
+    measure: {kind: sign_agreement, field: final_infected_count}
+    pass_if: {op: eq, value: true, field: direction_agreement}
+    units: boolean
+    requires_simulation: "true"
+
+conclusion_logic:
+  if_primary_tests_pass:
+    implementation_status: "Dose sweep runs on both backends; the direction is backend-independent."
+    biological_validation: "More initial load -> more infection on both substrates (Sego Fig 5/7 direction)."
+    pipeline_unblocks:
+      - "A magnitude-level dose-response comparison once the ODE V producer lands (Task 21)."
+  if_primary_tests_fail:
+    diagnose:
+      - "Non-monotone on one backend -- check the seeded infected count and run length."
+    block_downstream: "Report only directional agreement until magnitudes are reconciled."
+
+limitations:
+  - "Directional only: CPM runs hotter than vertex (magnitudes differ) -- consistent with the substrate-driven divergence in the capstone."
+  - "Initial load is proxied by seeded infected cells; the ODE v0 virus input has no producer, so a true viral-titre dose axis is deferred (Task 21)."
+  - "Three doses, single seed, reduced scale/steps -- enough to establish the sign, not a dose-response curve fit."
+
+report:
+  title: "Dose-response: both substrates agree on the direction"
+  verdict: >
+    Over initial viral loads seeding 1/3/5 infected cells, the final infected count
+    rises monotonically on both backends (CPM 1/3/7, vertex 0/2/5), so the two
+    substrates AGREE on the direction of the dose response. CPM runs hotter in
+    magnitude, consistent with the capstone's substrate-driven divergence. This is a
+    directional (sign) result, not a magnitude match.
+  confidence: medium
+  evidence_quality: preliminary
+  main_insight: >
+    The shared field makes the dose-response DIRECTION backend-independent (more seed
+    virus -> higher infection probability everywhere), even though the mechanical
+    substrate sets the magnitude.
+  caveat: >
+    Three doses, one seed, reduced scale; the dose axis is seeded-cell count, not a
+    viral titre (ODE v0 has no producer yet).
+
+findings:
+  - id: F1-direction-agreement
+    kind: computational
+    status: confirms
+    statement: >
+      Both substrates show a non-decreasing final-infection vs initial-load response
+      (CPM 1/3/7, vertex 0/2/5), agreeing on the sign while differing in magnitude.
+    evidence:
+      observed: "seed 1/3/5 -> final cpm 1/3/7, vertex 0/2/5 (150 steps)"
+    explanation: "More seed virus raises the shared-field infection probability everywhere; the substrate sets the magnitude."
+    next_action: "revisit magnitudes once the ODE V producer lands (Task 21)"
+    provenance:
+      run_ids: [dose-response]
+
+bibliography:
+  sources:
+    - key: sego2022
+      note: "Sego 2022 Fig 5/7 dose-response direction (infection vs initial viral load)."

@@ -96,7 +96,12 @@ def test_generative_blocks_initial_state(bp):
     from viva_multicell_blueprint.compile._shared import resolve_initial_state
 
     cells = resolve_initial_state(bp)
-    assert len(cells) == 36 and all(c["size"] == 25 for c in cells)
-    n_i = sum(c["type"] == "I" for c in cells)
-    assert n_i == 2 and sum(c["type"] == "H" for c in cells) == 34  # 5% seed of 36
+    # 36-cell epithelial block + a 12-cell pre-placed latent immune pool (Task 20)
+    assert len(cells) == 48 and all(c["size"] == 25 for c in cells)
+    epi = [c for c in cells if c["type"] in {"H", "I"}]
+    assert len(epi) == 36
+    n_i = sum(c["type"] == "I" for c in epi)
+    assert n_i == 2 and sum(c["type"] == "H" for c in epi) == 34  # 5% seed of the 36 block
+    latent = [c for c in cells if str(c["type"]).endswith("_latent")]
+    assert len(latent) == 12 and {c["type"] for c in latent} == {"M_latent", "NK_latent", "CD8_latent"}
     assert resolve_initial_state(bp) == cells  # seeded -> reproducible
