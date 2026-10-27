@@ -66,7 +66,7 @@ variants:
 simulation_set:
   - name: t0-fidelity
     status: completed
-    base_model: sego-t0-fidelity
+    base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     seeds: [0]
     metrics:
       n_cells: 48
@@ -173,3 +173,11 @@ bibliography:
   sources:
     - key: sego2022
       note: "Sego 2022 initial epithelial layout; the blueprint's generative initial_state transcribes it."
+
+visualizations:
+  - name: "t0 centroid residuals"
+    address: "html:t0-residuals.html"
+    config: {title: "Per-cell t0 centroid residual, CPM vs vertex"}
+  - name: "t0 side-by-side"
+    address: "html:t0-side-by-side.html"
+    config: {title: "Initial state: CPM | vertex"}
