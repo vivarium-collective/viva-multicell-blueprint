@@ -19,13 +19,19 @@ INPUT_PORTS = {
     "deaths": "list[node]",           # lineage events (from RulesProcess)
 }
 
+# Each port is a per-step SNAPSHOT of the whole cell cohort, so it is wrapped in
+# ``overwrite[...]``: emitting the full map atomically REPLACES the shared store.
+# A bare ``map[..]`` apply merges by key and DROPS keys absent from the prior
+# (empty, at t=0) store, so the mechanics outputs would never reach the shared
+# stores the field/rules read (viva-cpm's CPMProcess wraps its map outputs for the
+# identical reason). Readers wire plain ``map[..]`` inputs; the two reconcile.
 OUTPUT_PORTS = {
-    "positions": "map[list[float]]",              # centroid [x,y(,z)]
-    "sizes": "map[float]",                        # volume (CPM) / area (vertex)
-    "types": "map[string]",
-    "shared_surface_by_type": "map[map[float]]",  # cell_id -> {type -> float}
-    "neighbors": "map[list[string]]",
-    "alive": "map[boolean]",
+    "positions": "overwrite[map[list[float]]]",             # centroid [x,y(,z)]
+    "sizes": "overwrite[map[float]]",                       # volume (CPM) / area (vertex)
+    "types": "overwrite[map[string]]",
+    "shared_surface_by_type": "overwrite[map[map[float]]]",  # cell_id -> {type -> float}
+    "neighbors": "overwrite[map[list[string]]]",
+    "alive": "overwrite[map[boolean]]",
 }
 
 

@@ -97,7 +97,10 @@ class FieldProcess(Process):
         return {"positions": "map[list[float]]", "types": "map[string]"}
 
     def outputs(self):
-        return {"field_grid": "map[node]"}
+        # overwrite: the authoritative field grid is re-emitted whole each step, so
+        # it atomically replaces the shared store (a bare map[..] apply would drop
+        # the field name on the empty t=0 store). Readers wire plain map[node].
+        return {"field_grid": "overwrite[map[node]]"}
 
     def _site(self, pos):
         return tuple(int(min(max(round(float(v)), 0), n - 1)) for v, n in zip(pos, self._shape))

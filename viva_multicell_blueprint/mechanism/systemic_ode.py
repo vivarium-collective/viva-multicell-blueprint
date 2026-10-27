@@ -347,7 +347,11 @@ class SystemicODEProcess(Process):
         return {k: "float" for k in _INPUT_KEYS} | {"G_ki": "float", "B_ei": "float"}
 
     def outputs(self):
-        return {"ode_state": "map[float]", "recruit_drivers": "map[float]", "sig_1": "float"}
+        # overwrite: the ODE state + recruitment drivers are re-emitted whole each
+        # step, atomically replacing the shared store (a bare map[..] apply would
+        # drop every key on the empty t=0 store). Readers wire plain map[float].
+        return {"ode_state": "overwrite[map[float]]",
+                "recruit_drivers": "overwrite[map[float]]", "sig_1": "float"}
 
     def update(self, inputs, interval=1):
         inp = {k: float(inputs.get(k) or 0.0) for k in _INPUT_KEYS}
