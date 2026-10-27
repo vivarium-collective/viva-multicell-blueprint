@@ -26,6 +26,10 @@ dependencies = [
     # vertex model (wraps the vivatyssue fork). Both via git (never committed path).
     "viva-cpm",
     "vivarium-tyssue",
+    # vivarium-tyssue@master does NOT declare tyssue in its runtime deps, and we
+    # use tyssue directly (Voronoi mesh build, the ActiveMigration effector), so
+    # pin the pandas-3 fork explicitly here (source below).
+    "tyssue",
     "numpy",
     "scipy",
     "scikit-image",
