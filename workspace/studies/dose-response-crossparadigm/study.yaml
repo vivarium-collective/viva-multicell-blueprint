@@ -50,7 +50,7 @@ key_assumptions:
 
 baseline:
   - name: sego-dose-sweep
-    composite: viva_multicell_blueprint.composites.sego_crossparadigm
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     description: The Sego blueprint run at three initial viral loads on each backend, over rules-seeds {0,1}.
     params:
       backend: cpm

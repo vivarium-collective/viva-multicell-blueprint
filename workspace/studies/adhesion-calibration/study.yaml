@@ -58,7 +58,7 @@ key_assumptions:
 
 baseline:
   - name: neutral-mechanics-sheet
-    composite: viva_multicell_blueprint.composites.sego_crossparadigm
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     description: >
       The mechanics-only neutral sheet compiled onto each backend (the generator's
       `blueprint` parameter points at workspace/blueprints/mechanics_sheet.yaml).

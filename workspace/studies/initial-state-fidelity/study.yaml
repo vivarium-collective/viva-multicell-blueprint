@@ -52,7 +52,7 @@ key_assumptions:
 
 baseline:
   - name: sego-t0-fidelity
-    composite: viva_multicell_blueprint.composites.sego_crossparadigm
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     description: The Sego blueprint's t0 emission on each backend, compared to the resolved blueprint cells.
     params:
       backend: cpm
