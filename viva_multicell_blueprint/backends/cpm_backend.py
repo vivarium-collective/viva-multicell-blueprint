@@ -30,6 +30,7 @@ lineage and not folded into the t=0 cohort. Lineage events arrive shaped
 from __future__ import annotations
 
 import math
+import warnings
 
 import numpy as np
 
@@ -71,6 +72,7 @@ class CPMBackend(MechanicsBackend):
         # immune type draws from. Explicit per-type map + generic latent name.
         self._latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
         self._latent_generic = str(bp.get("latent_generic", GENERIC_LATENT))
+        self._warned_activation_types: set = set()
 
         cells = config.get("initial_state") or []
         self._all_ids = [str(c["id"]) for c in cells]
@@ -374,7 +376,19 @@ class CPMBackend(MechanicsBackend):
 
         for active_type in sorted(activations):
             count = int(activations.get(active_type, 0) or 0)
-            if count <= 0 or active_type not in self._type_ids:
+            if count <= 0:
+                continue
+            if active_type not in self._type_ids:
+                # Fail LOUD(ish), not silent: an undeclared active type would make
+                # recruitment a silent no-op (the Task-20 silent-failure trap).
+                if active_type not in self._warned_activation_types:
+                    self._warned_activation_types.add(active_type)
+                    warnings.warn(
+                        f"CPMBackend: activation requested for unknown active type "
+                        f"{active_type!r} (not in cell_types/type_ids) -- no cells "
+                        f"activated. Declare it in the blueprint cell_types.",
+                        RuntimeWarning, stacklevel=2,
+                    )
                 continue
             pool = latent_pool_types(active_type, self._latent_map, self._latent_generic)
             picked = 0

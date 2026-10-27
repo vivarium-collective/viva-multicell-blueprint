@@ -180,6 +180,10 @@ def test_vertex_activation_changes_latent_to_active():
     out1 = b.update({"activations": {"M": 3}}, 1.0)
     assert sum(t == "M" for t in out1["types"].values()) == 3
     assert sum(t == "M_latent" for t in out1["types"].values()) == 6
+    # deterministic selection: the first three ids in sorted order activate (matching
+    # the CPM test -> the CPM-vs-vertex reproducibility claim is pinned, not assumed).
+    assert out1["types"]["1"] == "M" and out1["types"]["2"] == "M" and out1["types"]["3"] == "M"
+    assert all(out1["types"][str(i)] == "M_latent" for i in range(4, 10))
 
     # pool respected: request far more than remain -> clamp to the 6 left.
     out2 = b.update({"activations": {"M": 100}}, 1.0)

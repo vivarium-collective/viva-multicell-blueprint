@@ -239,6 +239,60 @@ def test_compiler_wires_recruitment_to_activation(tmp_path):
     assert {k: v for k, v in acts.items() if v} == dict(by_type)
 
 
+# A pre-placed LATENT macrophage (id 1) + three inert H cells (a non-degenerate
+# cloud both backends can mesh). id 1 is the pool the activation must flip.
+_LATENT_TABLE = (
+    "id,type,x,y,size\n1,M_latent,6,6,25\n2,H,15,6,25\n3,H,6,15,25\n4,H,15,15,25\n"
+)
+
+
+def _latent_blueprint(tmp_path):
+    """A tiny blueprint with a pre-placed LATENT immune cell and NO immune/ODE node,
+    so the ``activations`` store is driven only by what the test seeds -- isolating the
+    store->backend read path (where an overwrite[map] t=0 key-drop would bite)."""
+    return Blueprint.from_dict({
+        "domain": {"extent_um": [22, 22], "grid_resolution_um": 1, "boundary": "noflux"},
+        "cell_types": [
+            {"name": "H", "target_size": 25},
+            {"name": "M", "target_size": 25},
+            {"name": "M_latent", "target_size": 25},
+        ],
+        "initial_state": {"from_data": {"cell_table": _cell_table(tmp_path, _LATENT_TABLE)}},
+        "rules": [],
+    })
+
+
+@pytest.mark.parametrize("backend", ["cpm", "vertex"])
+def test_nonempty_activations_flow_store_to_backend(tmp_path, backend):
+    """IMPORTANT (review fix): a NON-EMPTY ``activations`` map must flow through the
+    COMPILED composite store into the backend and actually flip the latent cell's
+    type in the SHARED ``types`` store. This is exactly where the Task-13
+    overwrite[map] t=0 key-drop could silently recur (the backend reads ``activations``
+    as a plain map[integer]). If the latent cell does NOT flip, the key was dropped."""
+    bp = _latent_blueprint(tmp_path)
+    doc = compile_blueprint(bp, backend=backend)
+    state = doc["state"]
+
+    # pre-seed a NON-EMPTY activations store: activate 1 macrophage from the latent pool.
+    assert state["activations"] == {}            # default is empty at t=0
+    state["activations"] = {"M": 1}
+
+    comp = Composite({"state": state}, core=build_core())
+    # t1: mechanics reads the seeded activations store, activates cell 1 (M_latent->M),
+    #     and re-emits the shared `types` store via overwrite[map].
+    comp.run(2.0)
+
+    types = comp.state["types"]
+    assert types.get("1") == "M", (
+        f"latent cell 1 did not activate through the compiled composite "
+        f"(activations store->backend): types={types}. A key-drop crossing the "
+        f"activations store would leave it 'M_latent'."
+    )
+    # the three H cells are untouched (no spurious activation).
+    assert all(types[str(i)] == "H" for i in (2, 3, 4))
+    assert comp.state["alive"]["1"] is True
+
+
 # --------------------------------------------------------------------------- #
 # Rule validation hook
 # --------------------------------------------------------------------------- #

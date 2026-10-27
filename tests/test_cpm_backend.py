@@ -225,6 +225,23 @@ def test_cpm_activation_changes_latent_to_active():
     assert all(out2["alive"].values())
 
 
+def test_cpm_activation_unknown_type_warns_not_silent():
+    """Review fix #2: an activation for a type not declared in cell_types must WARN
+    (once), not silently no-op -- a missing declaration is a config bug, not a quiet
+    zero-recruitment."""
+    cells = _latent_pool()
+    b = _make(
+        cells,
+        cell_types=[{"name": "M_latent"}],  # NOTE: active type "M" is NOT declared
+        backend_params={"dims": [16, 16, 1], "mcs_per_update": 0},
+    )
+    with pytest.warns(RuntimeWarning, match="unknown active type"):
+        out = b.update({"activations": {"M": 2}}, 1.0)
+    # nothing activated (type unknown), but the pool is untouched, not corrupted.
+    assert sum(t == "M_latent" for t in out["types"].values()) == 3
+    assert sum(t == "M" for t in out["types"].values()) == 0
+
+
 def test_cpm_contact_area_by_type():
     cells = _two_adjacent()
     # mcs_per_update=0: the world stays at the deterministic seed, so the two
