@@ -69,10 +69,12 @@ at_a_glance:
     role: >
       §9.3 CAPSTONE. Full Sego model on both backends; three comparison families +
       three figures, judged against a NULL CONTROL (same-backend seed-to-seed spread).
-      Headline: cross-backend fate agreement (0.942 at N=400) is WITHIN the
-      same-backend seed baseline (CPM 0.934 / vertex 0.943) and the vertex trajectory
-      lies 100% inside the CPM stochastic envelope — backend-neutral to within seed
-      noise; no substrate-driven divergence detected at this scale.
+      Headline: on fate + patch LOCATION the cross-backend difference falls inside the
+      same-backend seed spread (cross fate 0.942 vs CPM 0.934 / vertex 0.943; vertex
+      100% inside the CPM envelope) → we FAIL TO REJECT a substrate effect at this
+      scale/seed count (null, not equality). The one exception: raw occupancy IoU
+      trends ~25-35% below both baselines (0.165 vs 0.249/0.212) — a candidate weak
+      signal to test at larger scale / more vertex seeds.
   - study: dose-response-crossparadigm
     role: >
       §9 stretch. Sweep initial viral load over seeds; both substrates agree on the
@@ -111,24 +113,29 @@ executive:
     live systemic ODE, latent-pool recruitment) on both backends, and because the
     mechanism is shared byte-for-byte the mechanical substrate is the only possible
     source of cross-paradigm difference. Judged against a NULL CONTROL (same-backend
-    seed-to-seed spread), no such difference is detectable at this scale:
-    cross-backend cell-fate agreement is 0.942 (N=400), WITHIN the same-backend
-    baselines (CPM 0.934, vertex 0.943; equal 0.987 at CI scale), the infected-patch
-    location agrees cross-backend (6.1 um) as well as within-backend (5.4 um), and the
-    vertex trajectory lies inside the CPM stochastic envelope at 100% of steps. Final
-    cell areas match (24.7 vs 24.5), so the spatial comparison is not
-    representation-confounded; raw occupancy IoU is only modestly below its
-    same-backend baseline and is reported with it. Dose-response direction is strict
-    on both backends across seeds. Initial-state fidelity is exact on CPM and a clean
-    1:1 on vertex; the adhesion J<->tension mapping is directional. The earlier "fate
-    agrees, morphology diverges" reading was an artifact of comparing a single
-    seed-pair to zero; against the null control the model is backend-neutral to within
-    seed noise. This is preliminary (single vertex seed, reduced scale); a substrate
-    signal could still emerge at larger scale. Known limits: the recruitment
-    latent-pool approximation (T20-RECRUIT), the reduced scale, the producer-less ODE
-    inputs V/L/C/F (Task 21), and the directional adhesion calibration.
+    seed-to-seed spread), on cell fate and infected-patch LOCATION the cross-backend
+    difference falls inside the same-backend seed spread, so we FAIL TO REJECT a
+    substrate effect at this scale and seed count (a null result, NOT proof of
+    equality): cross-backend fate agreement 0.942 (N=400), within the same-backend
+    baselines (CPM 0.934, vertex 0.943; equal 0.987 at CI scale); patch location 6.1
+    um cross vs 5.4 um same-backend; vertex trajectory inside the CPM 3-seed envelope
+    at 100% of steps. Final cell areas match (24.7 vs 24.5), so the spatial comparison
+    is not representation-confounded. The ONE exception: raw infected-patch occupancy
+    IoU trends ~25-35% below BOTH same-backend baselines (0.165 vs CPM 0.249 / vertex
+    0.212) — flagged as a candidate weak substrate signal to test at larger scale /
+    more vertex seeds, not attributed to seed noise without evidence. Dose-response
+    direction is strict on both backends across seeds. Initial-state fidelity is exact
+    on CPM and a clean 1:1 on vertex; the adhesion J<->tension mapping is directional.
+    The earlier "fate agrees, morphology diverges" reading was an artifact of
+    comparing a single seed-pair to zero. This is preliminary: reduced scale, and the
+    CROSS comparison uses a single vertex seed (seed 0) against 3 CPM seeds (the
+    vertex-vs-vertex baseline uses 3 vertex seeds); a substrate effect could emerge at
+    larger scale or with more vertex seeds. Known limits: the recruitment latent-pool
+    approximation (T20-RECRUIT), the reduced scale, the producer-less ODE inputs
+    V/L/C/F (Task 21), and the directional adhesion calibration.
   verdict_status: preliminary
   decisions_needed:
+    - "Raw infected-patch occupancy IoU trends ~25-35% below both same-backend baselines (cross 0.165 vs CPM 0.249 / vertex 0.212) — a CANDIDATE weak substrate signal. Test it at larger scale AND with more vertex seeds (the cross comparison currently uses a single vertex seed) before calling it signal or noise."
     - "ODE inputs V/L/C/F have no producer (Task 21) — the immune arm is barely exercised at this scale; land the producers to drive recruitment."
     - "Immune recruitment is a latent-pool approximation (T20-RECRUIT) — confirm this is the intended mechanism or replace with topology insertion."
     - "Sego acceptance bands are the CPM stochastic envelope, not digitized Sego 2022 figures — digitize the paper curves for a literature band."

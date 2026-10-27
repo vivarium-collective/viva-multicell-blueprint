@@ -13,11 +13,14 @@ claim: >
   The ONE backend-neutral Sego 2022 influenza blueprint compiles to BOTH the CPM
   (viva-cpm) and vertex (vivarium-tyssue) substrates and runs the FULL model
   end-to-end on each. Because the field / rules / systemic-ODE / recruitment
-  mechanism is shared byte-for-byte across the two compiles, the two backends are
-  INDISTINGUISHABLE from same-backend seed-to-seed noise on cell fate and on
-  infected-patch location at this scale -- i.e. the architecture is backend-neutral
-  to within seed noise. This is judged against a NULL CONTROL (CPM-vs-CPM across
-  rules-seeds), not against zero.
+  mechanism is shared byte-for-byte across the two compiles, we test for a
+  substrate effect against a NULL CONTROL (same-backend seed-to-seed spread). On
+  cell fate and infected-patch LOCATION the cross-backend difference sits inside the
+  same-backend seed spread, so at this scale and seed count we FAIL TO REJECT the
+  null (no detectable substrate effect -- NOT proof of equality). The one exception
+  is raw infected-patch occupancy IoU, which trends ~25-35% below both same-backend
+  baselines -- a candidate weak substrate signal to test at larger scale / more
+  vertex seeds.
 
 experiment: >
   Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM and vertex and run
@@ -43,13 +46,16 @@ result: >
   vertex I-count lies inside the CPM 3-seed envelope at 100% of steps. Final-frame
   mean cell areas match (CPM 24.67, vertex 24.51; ratio 0.99), so the spatial
   comparison is NOT representation-confounded (the vertex Voronoi faces, ~46 at t0,
-  relax to the target by the end). The only metric modestly below its baseline is the
-  raw infected-patch occupancy IoU (cross 0.165 vs same-backend CPM 0.249 / vertex
-  0.212), but all three are low because the single infected patch scatters
-  stochastically; the gap is small and partly seed-driven. At the CI scale (N=150)
-  cross-backend and same-backend CPM fate agreement are equal (0.987 vs 0.987).
-  CONCLUSION: no substrate-driven divergence beyond seed noise is detected at this
-  scale -- a positive result for backend-neutrality.
+  relax to the target by the end). The ONE metric that trends below its baseline is
+  the raw infected-patch occupancy IoU (cross 0.165 vs same-backend CPM 0.249 /
+  vertex 0.212, ~25-35% lower): all three are low because the single infected patch
+  scatters, but the cross-backend value sits below BOTH same-backend baselines, so it
+  is flagged as a CANDIDATE weak substrate signal (NOT attributed to seed noise --
+  that is untested) to check at larger scale / more vertex seeds. At the CI scale
+  (N=150) cross-backend and same-backend CPM fate agreement are equal (0.987 vs
+  0.987). CONCLUSION: on fate and patch location we FAIL TO REJECT a substrate
+  difference at this scale and seed count (a null result, not proof of equality); raw
+  occupancy IoU is the one metric that may carry a weak substrate signal.
 
 purpose:
   question: >
@@ -68,8 +74,9 @@ purpose:
     to stochastic scatter rather than the substrate.
 
 key_assumptions:
-  - "The comparison is baseline-relative: cross-backend is judged against the same-backend (CPM-vs-CPM) seed spread, never against zero."
-  - "Reduced scale: a 50x50-site patch with a 6x6 epithelial block (NOT paper scale); headline N=400 (~6.7 h sim), CI test N=150, >=3 CPM rules-seeds."
+  - "The comparison is baseline-relative: cross-backend is judged against the same-backend seed spread, never against zero."
+  - "Seed provenance: the headline N=400 table (scripts/regen_capstone_metrics.py) builds the same-backend baselines from 3 CPM seeds {0,1,2} AND 3 vertex seeds {0,1,2} and the cross term from all 9 CPM*vertex pairs; the CI behavior test (N=150) pins the relationship with CPM seeds {0,1,2} vs vertex seed 0. The verdict's 'single vertex seed' caveat refers to the vertex side of the CROSS comparison (seed 0), not the vertex-vs-vertex baseline (3 seeds)."
+  - "Reduced scale: a 50x50-site patch with a 6x6 epithelial block (NOT paper scale); headline N=400 (~6.7 h sim), CI test N=150."
   - "Immune recruitment is activation of a PRE-PLACED LATENT pool at the tissue margin (ruling T20-RECRUIT), not from-nothing insertion."
   - "The systemic-ODE inputs V/L/C/F have NO producer yet and sit at 0 (Task 21 follow-up), so the ODE recruitment drive is weak and the latent pool is barely activated at this scale."
   - "Sego rates are carried verbatim (no tuning); at faithful rates the infection probability is ~0.004/step, so the epidemic is a slow onset."
@@ -217,65 +224,74 @@ limitations:
   - "Raw occupancy IoU is modestly lower cross-backend than same-backend, but all values are low (stochastic single-patch scatter); it is reported with its baseline, not as a headline."
 
 report:
-  title: "Flu-lung cross-paradigm: one blueprint, two substrates, backend-neutral within seed noise"
+  title: "Flu-lung cross-paradigm: one blueprint, two substrates, no substrate effect rejected (with one caveat)"
   verdict: >
     The capstone works: the single Sego 2022 influenza blueprint runs the FULL model
     (fields, rules, live systemic ODE, latent-pool recruitment) on both the CPM and
-    vertex backends. Judged against a NULL CONTROL (CPM-vs-CPM across rules-seeds),
-    the two substrates are indistinguishable from seed noise on cell fate
-    (cross-backend agreement 0.942 vs same-backend 0.934-0.943 at N=400; equal 0.987
-    at N=150) and on infected-patch location (centroid 6.1 um cross vs 5.4 um
-    same-backend), and the vertex trajectory lies inside the CPM stochastic envelope
-    at 100% of steps. Final cell areas match (24.7 vs 24.5), so the spatial comparison
-    is not representation-confounded. The only metric modestly below its baseline is
-    raw occupancy IoU, and that is small and partly stochastic. So at this reduced
-    scale there is NO substrate-driven divergence beyond seed noise -- a positive
-    result for the shared-mechanism architecture. This is preliminary (single vertex
-    seed, reduced scale); a substrate signal could still emerge at larger scale.
+    vertex backends. Judged against a NULL CONTROL (same-backend seed-to-seed spread),
+    on cell fate and infected-patch LOCATION the cross-backend difference falls inside
+    the same-backend seed spread, so we FAIL TO REJECT a substrate difference at this
+    scale and seed count (a null result, NOT proof of equality): cross-backend fate
+    agreement 0.942 vs same-backend 0.934-0.943 at N=400 (equal 0.987 at N=150),
+    infected-patch centroid 6.1 um cross vs 5.4 um same-backend, vertex I-count inside
+    the CPM 3-seed envelope at 100% of steps. Final cell areas match (24.7 vs 24.5),
+    so the spatial comparison is not representation-confounded. The ONE exception is
+    raw infected-patch occupancy IoU, which trends ~25-35% BELOW both same-backend
+    baselines (cross 0.165 vs CPM 0.249 / vertex 0.212) -- a candidate weak substrate
+    signal to test at larger scale / more vertex seeds, not attributable to seed noise
+    without evidence. Preliminary: reduced scale, and the CROSS comparison uses a
+    single vertex seed (seed 0) against 3 CPM seeds; a substrate signal could emerge
+    at larger scale or with more vertex seeds.
   confidence: medium
   evidence_quality: preliminary
   main_insight: >
     Sharing the mechanism byte-for-byte isolates the mechanical substrate as the only
     possible source of cross-paradigm difference -- and against a same-backend seed
-    null control, no such difference is detectable here. The architecture delivers a
-    backend-neutral model at this scale; the earlier "fate agrees, morphology
-    diverges" reading was an artifact of comparing a single seed-pair to zero.
+    null control, fate and patch-location differences are not separable from seed
+    noise here, while raw occupancy IoU trends below its baseline and is flagged as a
+    candidate weak signal. The earlier "fate agrees, morphology diverges" reading was
+    an artifact of comparing a single seed-pair to zero; the correct statement is a
+    null result (fail to reject) plus one metric to watch.
   caveat: >
-    A null (no-divergence) result at reduced scale with a single vertex seed; the
-    immune arm is barely exercised (latent-pool + producer-less ODE inputs); the band
-    is the CPM stochastic envelope, not a Sego figure.
+    A null (fail-to-reject) result at reduced scale, with the CROSS comparison using a
+    single vertex seed; raw IoU is a candidate weak substrate signal, not yet tested;
+    the immune arm is barely exercised (latent-pool + producer-less ODE inputs); the
+    band is the CPM stochastic envelope, not a Sego figure.
 
 findings:
-  - id: F1-backend-neutral-within-seed-noise
+  - id: F1-fail-to-reject-substrate-effect-on-fate-and-location
     kind: computational
     status: confirms
     statement: >
-      With the mechanism shared byte-for-byte, cross-backend cell-fate agreement
-      (0.942) falls within the same-backend seed baseline (CPM 0.934, vertex 0.943),
-      and the vertex trajectory lies 100% within the CPM stochastic envelope: no
-      substrate-driven divergence beyond seed noise is detected at this scale.
+      On cell fate and infected-patch LOCATION the cross-backend difference falls
+      inside the same-backend seed spread (cross fate 0.942 vs CPM 0.934 / vertex
+      0.943; centroid 6.1 vs 5.4 um; vertex 100% inside the CPM envelope), so at this
+      scale and seed count we FAIL TO REJECT a substrate difference -- a null result,
+      not proof of equality.
     evidence:
       observed: "cross 0.942 (0.890-1.000) vs same-backend CPM 0.934 / vertex 0.943; vertex in-band 1.0; N=150 cross == same == 0.987"
     expected:
       range: "cross within the same-backend seed spread (null control)"
     explanation: >
       Fate is computed by the shared field/rules/ODE; the substrate enters only via
-      centroid field-sampling + contact-surface, whose effect is below seed noise here.
-    next_action: "drive the ODE V/L/C/F producers (Task 21) and re-test at larger scale, where a substrate signal could emerge"
+      centroid field-sampling + contact-surface, whose effect is not separable from
+      seed noise at this scale/seed count.
+    next_action: "drive the ODE V/L/C/F producers (Task 21) and re-test at larger scale / more vertex seeds, where a substrate effect could become detectable"
     provenance:
       run_ids: [crossparadigm-nullcontrol-N400, crossparadigm-ci-N150]
-  - id: F2-spatial-divergence-is-mostly-stochastic-not-representation
-    kind: methodological
-    status: confirms
+  - id: F2-raw-iou-candidate-weak-substrate-signal
+    kind: computational
+    status: partial
     statement: >
-      The low infected-patch IoU is NOT a representation artifact (final mean areas
-      match: CPM 24.67 vs vertex 24.51) and is only modestly below the same-backend
-      baseline (cross 0.165 vs same-backend ~0.23): most of the spatial scatter is
-      stochastic single-patch placement present within a single backend too.
+      Raw infected-patch occupancy IoU is the ONE metric trending below BOTH
+      same-backend baselines (cross 0.165 vs CPM 0.249 / vertex 0.212, ~25-35% lower).
+      It is NOT a representation artifact (final mean areas match: CPM 24.67 vs vertex
+      24.51), so it is flagged as a CANDIDATE weak substrate signal -- not attributed
+      to seed noise, which is untested -- to be checked at larger scale / more seeds.
     evidence:
       observed: "final area ratio 0.99; IoU_I cross 0.165 vs same-backend CPM 0.249 / vertex 0.212; centroid 6.1 vs 5.4 um"
-    explanation: "The single infected patch moves stochastically; the vertex Voronoi faces relax to target by the end, removing the t0 size confound."
-    next_action: "report IoU only with its same-backend baseline; prefer the representation-robust centroid metric"
+    explanation: "Both baselines are low (single-patch scatter), but the cross term sits below both; the vertex Voronoi faces relax to target, ruling out the t0 size confound."
+    next_action: "test the IoU gap with more vertex seeds + a larger/longer run before calling it signal or noise; report IoU only with its same-backend baseline"
     provenance:
       run_ids: [crossparadigm-nullcontrol-N400]
   - id: F3-slow-epidemic-at-faithful-rates
