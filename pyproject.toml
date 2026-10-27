@@ -1,0 +1,73 @@
+[project]
+name = "multicell-blueprint"
+version = "0.0.0"
+description = "Process-bigraph research workspace"
+requires-python = ">=3.12"
+dependencies = [
+    # Floor: 1.8.5 ships the composite `core_extensions` mechanism (1.8.0) the
+    # dashboard relies on AND the emitter fix (#217) + `requests`/`fire` server
+    # deps. Below this, composite type-registration and agent-embedded emits
+    # break — the root cause behind the map[...] type errors seen in the field.
+    "process-bigraph>=1.8.5",
+    "bigraph-schema>=1.8.1",
+    "bigraph-viz>=2.0.3",
+    "pyyaml>=6.0",
+    "jsonschema[format-nongpl]>=4.21",
+    "jinja2>=3.1",
+    "pypdf>=4.0",
+    "matplotlib",
+    "plotly",
+    # Web-based workspace dashboard (server + templates + assets + lib helpers).
+    # Extracted from viva-template as of v0.4.16; provides the `vivarium-workbench
+    # serve` CLI invoked by scripts/serve.sh.
+    "vivarium-workbench",
+    # The two mechanical backends this workspace runs a blueprint on side-by-side.
+    # viva-cpm = Cellular Potts (Rust core, maturin build); vivarium-tyssue =
+    # vertex model (wraps the vivatyssue fork). Both via git (never committed path).
+    "viva-cpm",
+    "vivarium-tyssue",
+    "numpy",
+    "scipy",
+    "scikit-image",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+cli = ["typer", "rich"]
+
+[project.scripts]
+multicell-blueprint = "viva_multicell_blueprint.cli.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Allow ecosystem git-direct-reference deps (viva-superpowers / vivarium-workbench
+# @ git+https://…) that workspaces commonly add — hatchling rejects them otherwise.
+[tool.hatch.metadata]
+allow-direct-references = true
+
+# Declare the workspace Python package explicitly so this workspace is
+# pip-installable (e.g. `pip install git+<repo>@<sha>`).  sms-api injects it
+# as an extra_pip_dep so the container runner can import the workspace's
+# processes from a committed + pushed git ref.
+[tool.hatch.build.targets.wheel]
+packages = ["viva_multicell_blueprint"]
+
+[tool.uv]
+# vivarium-tyssue still pins the workbench by its pre-rename URL
+# (vivarium-dashboard.git), which uv treats as a different direct URL for the
+# same `vivarium-workbench` package → a conflict. Force one resolution.
+override-dependencies = [
+    "vivarium-workbench @ git+https://github.com/vivarium-collective/vivarium-workbench.git@main",
+]
+
+[tool.uv.sources]
+vivarium-workbench = { git = "https://github.com/vivarium-collective/vivarium-workbench.git", branch = "main" }
+viva-cpm = { git = "https://github.com/vivarium-collective/viva-cpm.git", branch = "main" }
+vivarium-tyssue = { git = "https://github.com/vivarium-collective/vivarium-tyssue.git", branch = "master" }
+# vivarium-tyssue depends on the pandas-3 tyssue fork, but uv only honors
+# [tool.uv.sources] from the TOP-LEVEL project — so the fork pin must live here,
+# not only in vivarium-tyssue's own pyproject, or stock PyPI tyssue 1.1.0 (which
+# lacks ActiveMigration and crashes on real topology ops) would be resolved.
+tyssue = { git = "https://github.com/vivarium-collective/vivatyssue.git" }
