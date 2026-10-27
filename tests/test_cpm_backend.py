@@ -1,0 +1,153 @@
+"""CPMBackend: the viva-cpm Cellular Potts model behind the MechanicsBackend port.
+
+Small fixtures (2-4 cells on a tiny lattice). These cover the four seams the
+brief names: exact 1:1 seeding from the canonical cell list, port-shape emission,
+the ``set_field`` seam (the shared field is written into the World each step with
+native dynamics zeroed, so CPM only READS it -- it is not re-diffused), and the
+contact-area readback grouped by neighbor type name into ``shared_surface_by_type``.
+"""
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+from viva_multicell_blueprint.compile.base import MechanicsBackend, OUTPUT_PORTS
+from viva_multicell_blueprint.core import build_core
+
+
+def _make(cells, backend_params=None, domain=None, cell_types=None, adhesion=None):
+    from viva_multicell_blueprint.backends.cpm_backend import CPMBackend
+
+    return CPMBackend(
+        {
+            "initial_state": cells,
+            "cell_types": cell_types or [],
+            "adhesion": adhesion or [],
+            "domain": domain or {},
+            "backend_params": backend_params or {},
+        },
+        core=build_core(),
+    )
+
+
+def _three_cells():
+    """Three well-separated cells (two types) on a 20x20 lattice."""
+    return [
+        {"id": 10, "type": "epithelium", "centroid": [5.0, 5.0], "size": 25.0},
+        {"id": 20, "type": "immune", "centroid": [14.0, 5.0], "size": 25.0},
+        {"id": 30, "type": "epithelium", "centroid": [5.0, 14.0], "size": 25.0},
+    ]
+
+
+def _two_adjacent():
+    """Two cells of different types whose seed blocks abut (share a contact face)."""
+    return [
+        {"id": 1, "type": "A", "centroid": [5.0, 5.0], "size": 25.0},
+        {"id": 2, "type": "B", "centroid": [10.0, 5.0], "size": 25.0},
+    ]
+
+
+def test_cpm_seeds_from_cell_list():
+    cells = _three_cells()
+    b = _make(cells, backend_params={"dims": [20, 20, 1], "mcs_per_update": 1})
+
+    # EXACT 1:1 identity: every blueprint id -> a distinct cpm cell id.
+    assert set(b.identity) == {"10", "20", "30"}
+    assert len(set(b.identity.values())) == 3
+    # the cpm world really holds three cells.
+    assert b._world.n_cells() == 3
+    # type names round-trip through the integer tag map.
+    assert b._type_ids["medium"] == 0
+    assert b.identity["10"] != b.identity["20"]
+
+    out = b.update({}, 1.0)
+    # every blueprint cell emits a positive seeded size (~ its target volume).
+    assert set(out["sizes"]) == {"10", "20", "30"}
+    assert all(s > 0 for s in out["sizes"].values())
+    # types come back as blueprint type names, not ints.
+    assert out["types"]["10"] == "epithelium"
+    assert out["types"]["20"] == "immune"
+    assert all(out["alive"].values())
+
+
+def test_cpm_emits_port_shape():
+    cells = _three_cells()
+    b = _make(cells, backend_params={"dims": [20, 20, 1], "mcs_per_update": 1})
+
+    assert isinstance(b, MechanicsBackend)
+    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths"}
+    assert set(b.outputs()) == set(OUTPUT_PORTS)
+
+    out = b.update({}, 1.0)
+    assert set(out) == set(OUTPUT_PORTS)
+    ids = {str(c["id"]) for c in cells}
+    # every blueprint cell is present in every output map.
+    for port in OUTPUT_PORTS:
+        assert set(out[port]) == ids
+    # positions are 2D on a flat (nz=1) lattice; sizes are positive volumes.
+    assert all(len(p) == 2 for p in out["positions"].values())
+    assert all(s > 0 for s in out["sizes"].values())
+    # shared_surface_by_type is map[cell -> map[type_name -> area]]; medium excluded.
+    shared = out["shared_surface_by_type"]
+    assert all(isinstance(v, dict) for v in shared.values())
+    assert "medium" not in {t for m in shared.values() for t in m}
+    # neighbors reference only blueprint ids.
+    for nbrs in out["neighbors"].values():
+        assert all(n in ids for n in nbrs)
+
+    # fates relabel a cell's type (names on the port -> int tags internally).
+    out2 = b.update({"fates": {"10": "immune"}}, 1.0)
+    assert out2["types"]["10"] == "immune"
+
+
+def test_cpm_set_field_overwrites_grid():
+    cells = _three_cells()
+    dims = [20, 20, 1]
+    b = _make(
+        cells,
+        backend_params={
+            "dims": dims,
+            "mcs_per_update": 1,
+            "fields": [{"name": "virus"}],
+        },
+    )
+    # the native field must be built with zeroed dynamics so the engine only
+    # READS the injected grid (d=0, decay=0, no secretion -> step() cannot change it).
+    nx, ny, nz = dims
+    grid = np.arange(nx * ny * nz, dtype=float).reshape((nx, ny, nz))
+    b.update({"field_grid": {"virus": grid}}, 1.0)
+
+    fc = np.asarray(b._world.field_conc(b._field_idx["virus"]))
+    # set_field wrote our grid in field_conc layout and step() did NOT re-diffuse it.
+    assert np.allclose(fc, grid.flatten(order="F"))
+
+    # a second, different grid OVERWRITES the first (authoritative shared field).
+    grid2 = grid * 3.0 + 1.0
+    b.update({"field_grid": {"virus": grid2}}, 1.0)
+    fc2 = np.asarray(b._world.field_conc(b._field_idx["virus"]))
+    assert np.allclose(fc2, grid2.flatten(order="F"))
+    assert not np.allclose(fc2, fc)
+
+
+def test_cpm_contact_area_by_type():
+    cells = _two_adjacent()
+    # mcs_per_update=0: the world stays at the deterministic seed, so the two
+    # abutting blocks are guaranteed to share a contact face at read-back.
+    b = _make(cells, backend_params={"dims": [16, 12, 1], "mcs_per_update": 0})
+    out = b.update({}, 1.0)
+    shared = out["shared_surface_by_type"]
+
+    # grouping is keyed by the NEIGHBOR's type NAME, with medium (tag 0) excluded.
+    assert set(shared["1"]) == {"B"}
+    assert set(shared["2"]) == {"A"}
+    assert shared["1"]["B"] > 0
+
+    # it equals the raw CPM contact-area-by-type readback for that neighbor tag.
+    raw = b._world.cell_contact_area_by_type(b.identity["1"])
+    assert shared["1"]["B"] == raw[b._type_ids["B"]]
+    # medium never appears as a shared-surface key.
+    assert "medium" not in shared["1"] and 0 not in shared["1"]
+
+    # neighbors list references blueprint ids (the abutting partner).
+    assert "2" in out["neighbors"]["1"]
+    assert "1" in out["neighbors"]["2"]
