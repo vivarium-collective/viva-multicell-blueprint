@@ -37,7 +37,12 @@ def from_label_image(path, type_map: dict | None = None) -> list[Cell]:
     cells: list[Cell] = []
     for rp in regionprops(labels):  # skips label 0; sorted by label
         cy, cx = rp.centroid
-        typ = DEFAULT_TYPE if type_map is None else type_map[rp.label]
+        if type_map is None:
+            typ = DEFAULT_TYPE
+        elif rp.label in type_map:
+            typ = type_map[rp.label]
+        else:
+            raise KeyError(f"label {rp.label} not in type_map")
         cells.append(Cell(id=int(rp.label), type=str(typ),
                           centroid=(float(cx), float(cy)), size=float(rp.area)))
     return cells
@@ -45,7 +50,7 @@ def from_label_image(path, type_map: dict | None = None) -> list[Cell]:
 
 def from_cell_table(path) -> list[Cell]:
     """Cells from a CSV with columns ``id, x, y, type, size``."""
-    df = pd.read_csv(path)
+    df = pd.read_csv(path, keep_default_na=False)
     missing = [c for c in _TABLE_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(f"cell table missing columns: {missing}")

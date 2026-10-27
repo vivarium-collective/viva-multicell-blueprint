@@ -17,6 +17,7 @@ dependencies = [
     "pypdf>=4.0",
     "matplotlib",
     "plotly",
+    "pandas",
     # Web-based workspace dashboard (server + templates + assets + lib helpers).
     # Extracted from viva-template as of v0.4.16; provides the `vivarium-workbench
     # serve` CLI invoked by scripts/serve.sh.

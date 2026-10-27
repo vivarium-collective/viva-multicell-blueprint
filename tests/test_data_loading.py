@@ -67,3 +67,16 @@ def test_single_cell_degenerate(tmp_path):
     p = tmp_path / "one.csv"
     p.write_text("id,x,y,type,size\n7,0,0,A,1\n")
     assert len(from_cell_table(p)) == 1
+
+
+def test_cell_table_type_named_NA(tmp_path):
+    p = tmp_path / "na.csv"
+    p.write_text("id,x,y,type,size\n1,0,0,NA,1\n2,1,1,None,1\n")
+    assert [c["type"] for c in from_cell_table(p)] == ["NA", "None"]
+
+
+def test_unmapped_label_message(tmp_path):
+    a = np.zeros((3, 3), dtype=np.uint8)
+    a[0, 0] = 1
+    with pytest.raises(KeyError, match="label 1 not in type_map"):
+        from_label_image(_png(tmp_path, a), type_map={2: "B"})
