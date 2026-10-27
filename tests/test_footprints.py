@@ -47,6 +47,8 @@ def test_vertex_emits_polygon_footprint():
 
 
 def test_raster_uses_real_footprint_iou_one():
+    # SCOPE: raster path + voxel/pixel convention only (polygons are the occupancy's
+    # own bounding boxes); NOT a cross-paradigm mechanics comparison.
     from test_cpm_backend import _make as mk_cpm, _three_cells
     out = mk_cpm(_three_cells(), backend_params={"mcs_per_update": 0}, domain={"extent_um": [20, 20], "grid_resolution_um": 1}).update({}, 1.0)
     spec = {"extent_um": [20, 20], "grid_resolution_um": 1.0,
@@ -69,3 +71,27 @@ def test_raster_uses_real_footprint_iou_one():
     assert iou(real, disc) < iou(real, from_poly)  # disc fallback is biased
     # real footprint pixel count equals total CPM volume exactly
     assert occ(real).sum() == round(sum(out["sizes"].values()))
+
+
+def test_vertex_polygons_rasterize_to_face_area():
+    from test_vertex_backend import _make, _grid_cells
+    out = _make(_grid_cells()).update({}, 1.0)
+    frame = frame_from_backend(out)
+    assert len(frame["polygons"]) == len(out["sizes"]) and not frame["occupancy"]
+    types = sorted(set(out["types"].values()))
+    res = 0.05
+    spec = {"extent_um": [4.0, 4.0], "grid_resolution_um": res,
+            "type_codes": {t: i + 1 for i, t in enumerate(types)}}
+    # shift native coords (centroids ~0..2) into the grid
+    frame["frame"] = {"scale": 1.0, "origin": [1.0, 1.0]}
+    ras = rasterize(frame, spec)
+    area = (ras > 0).sum() * res * res
+    np.testing.assert_allclose(area, sum(out["sizes"].values()), rtol=0.05)
+
+
+def test_dead_footprints_do_not_share_xy_list():
+    from test_cpm_backend import _make, _three_cells
+    b = _make(_three_cells(), domain={"extent_um": [20, 20], "grid_resolution_um": 1})
+    out = b.update({"deaths": [{"cell_id": "10"}, {"cell_id": "20"}]}, 1.0)
+    out["footprints"]["10"]["xy"].append([0, 0])
+    assert out["footprints"]["20"]["xy"] == []

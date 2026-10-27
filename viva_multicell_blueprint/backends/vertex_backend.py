@@ -34,7 +34,7 @@ from pathlib import Path
 
 import numpy as np
 
-from viva_multicell_blueprint.compile.base import NO_FOOTPRINT, MechanicsBackend
+from viva_multicell_blueprint.compile.base import MechanicsBackend, no_footprint
 
 # Default sheet mechanics. ActiveMigration is the motility effector the field
 # drives; FaceAreaElasticity + LineTension keep cells bounded so a strong
@@ -375,7 +375,8 @@ class VertexBackend(MechanicsBackend):
 
         positions, sizes, types, alive, neighbors, shared = {}, {}, {}, {}, {}, {}
         footprints = {}
-        polys = self._face_polygons()
+        polys = self._face_polygons(
+            [label_by_uid[u] for u in self._uid.values() if u in label_by_uid])
         for bid in self._all_ids:
             uid = self._uid.get(bid)
             if uid is None:
@@ -388,7 +389,7 @@ class VertexBackend(MechanicsBackend):
                 alive[bid] = False
                 neighbors[bid] = []
                 shared[bid] = {}
-                footprints[bid] = dict(NO_FOOTPRINT)
+                footprints[bid] = no_footprint()
                 continue
             lab = label_by_uid.get(uid)
             if lab is None:
@@ -400,7 +401,7 @@ class VertexBackend(MechanicsBackend):
                 alive[bid] = False
                 neighbors[bid] = []
                 shared[bid] = {}
-                footprints[bid] = dict(NO_FOOTPRINT)
+                footprints[bid] = no_footprint()
                 continue
             footprints[bid] = {"kind": "polygon", "xy": polys.get(lab, [])}
             pos = [float(fd.loc[lab, "x"]), float(fd.loc[lab, "y"])]
@@ -442,23 +443,27 @@ class VertexBackend(MechanicsBackend):
             "footprints": footprints,
         }
 
-    def _face_polygons(self) -> dict:
-        """face label -> ordered [[x, y], ...] boundary vertices, walking each
-        face's half-edges srce -> trgt (tyssue edges of a face form a closed loop).
-        Computed for every face; only mapped interior faces are emitted."""
+    def _face_polygons(self, labels) -> dict:
+        """face label -> ordered [[x, y], ...] boundary vertices for the given
+        (mapped, interior) faces only, walking half-edges srce -> trgt. Raises if
+        a ring does not close into >= 3 vertices rather than emit a partial one."""
         eptm = self._solver.eptm
         ed = eptm.edge_df
         vx = eptm.vert_df["x"].to_dict()
         vy = eptm.vert_df["y"].to_dict()
+        sel = ed[ed["face"].isin(list(labels))]
         out = {}
-        for lab, grp in ed.groupby("face"):
+        for lab, grp in sel.groupby("face"):
             nxt = dict(zip(grp["srce"].tolist(), grp["trgt"].tolist()))
             start = next(iter(nxt))
             ring, v = [], start
-            while v in nxt and len(ring) <= len(nxt):
+            while True:
                 ring.append([float(vx[v]), float(vy[v])])
-                v = nxt[v]
-                if v == start:
+                v = nxt.get(v)
+                if v is None or v == start or len(ring) > len(nxt):
                     break
+            if v != start or len(ring) < 3 or len(ring) != len(nxt):
+                raise RuntimeError(f"face {lab}: half-edge ring did not close "
+                                   f"({len(ring)} of {len(nxt)} vertices)")
             out[lab] = ring
         return out

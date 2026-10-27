@@ -36,7 +36,7 @@ import numpy as np
 from viva_cpm.schema import load_world
 
 from viva_multicell_blueprint.compile.adhesion import to_cpm_contact
-from viva_multicell_blueprint.compile.base import NO_FOOTPRINT, MechanicsBackend
+from viva_multicell_blueprint.compile.base import MechanicsBackend, no_footprint
 
 MEDIUM = "medium"
 
@@ -362,7 +362,7 @@ class CPMBackend(MechanicsBackend):
                 alive[bid] = False
                 neighbors[bid] = []
                 shared[bid] = {}
-                footprints[bid] = dict(NO_FOOTPRINT)
+                footprints[bid] = no_footprint()
                 continue
             footprints[bid] = {"kind": "occupancy", "xy": occ.get(cpm, [])}
             com = coms[cpm]

@@ -40,7 +40,11 @@ OUTPUT_PORTS = {
     # ``polygons`` / ``occupancy`` keys ``rasterize`` consumes.
     "footprints": "overwrite[map[node]]",
 }
-NO_FOOTPRINT = {"kind": "none", "xy": []}
+
+
+def no_footprint() -> dict:
+    """A FRESH empty footprint (never share the xy list between cells)."""
+    return {"kind": "none", "xy": []}
 
 
 class MechanicsBackend(Process):
