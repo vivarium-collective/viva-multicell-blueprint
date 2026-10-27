@@ -47,6 +47,33 @@ def test_dynamics_overlay_has_band_ribbons():
     assert len(dynamics_overlay(runs).data) < len(fig.data)
 
 
+def test_vertex_panel_draws_polygons_when_frames_have_them():
+    # CPM run: occupancy-less synthetic (position frames) -> voxel heatmap.
+    # Vertex run: same frames + per-cell polygons -> polygon fills with edges.
+    def vrun(n, shift=0.0):
+        out = []
+        for t in range(n):
+            f = frame(t, shift)
+            polys = {}
+            for k, c in enumerate(IDS):
+                cx, cy = f["positions"][c]
+                polys[c] = [[cx - 3, cy - 3], [cx + 3, cy - 3], [cx + 3, cy + 3], [cx - 3, cy + 3]]
+            f["polygons"] = polys
+            out.append(f)
+        return out
+
+    fig = spatial_playback(run(6), vrun(6, 2.0), GRID)
+    # the vertex panel (xaxis x2) now has filled polygon scatter traces, not a heatmap
+    vtx_fills = [t for t in fig.data if t.type == "scatter" and t.fill == "toself"]
+    assert vtx_fills, "expected polygon fills on the vertex panel"
+    assert all(t.xaxis == "x2" for t in vtx_fills)
+    # exactly one voxel-state heatmap (CPM), not two
+    state_heatmaps = [t for t in fig.data if t.type == "heatmap" and t.name == "state"]
+    assert len(state_heatmaps) == 1 and state_heatmaps[0].xaxis == "x"
+    # frames still animate consistently
+    assert all(len(f.data) == len(f.traces) for f in fig.frames)
+
+
 def test_divergence_curve_and_map():
     fig = divergence(run(8), run(8, 3.0), reg(), GRID)
     assert len(fig.frames) == 8 and any(t.type == "heatmap" for t in fig.data)
