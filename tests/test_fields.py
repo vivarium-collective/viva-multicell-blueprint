@@ -52,9 +52,9 @@ def test_mass_conserved_no_decay():
 
 
 def test_refuses_unstable_dt():
-    with pytest.raises(AssertionError, match="unstable"):
+    with pytest.raises(ValueError, match="unstable"):
         make([spec(d=5.0, dynamics={"dt": 0.2, "substeps": 5})])  # 0.2*5*4 = 4 >= 1
-    with pytest.raises(AssertionError, match="substeps"):
+    with pytest.raises(ValueError, match="substeps"):
         make([spec(d=0.5, dynamics={"dt": 0.3, "substeps": 5})])  # 1.5 MCS != 1
 
 
@@ -74,3 +74,8 @@ def test_uptake_removes_mass():
     b.update({"positions": POS, "types": TYP}, 1)
     nb = b.update({"positions": POS, "types": {"c1": "X"}}, 1)
     assert a["field_grid"]["f"].sum() < nb["field_grid"]["f"].sum()
+
+
+def test_periodic_boundary_fails_loud():
+    with pytest.raises(NotImplementedError, match="periodic"):
+        make([spec()], boundary="periodic")

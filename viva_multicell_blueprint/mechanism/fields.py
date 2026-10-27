@@ -5,8 +5,7 @@ second diffusion engine exists. Fields live on a fixed Eulerian grid; secretion
 and uptake are applied at cell CENTROIDS by cell type; the field gradient is
 exposed for chemotaxis via ``field_gradient_at``.
 
-The numerical routines below (``_diffuse_step``, ``_check_stability``,
-``_per_pixel_secretion_rate``) are vendored from viva-cpm and kept faithful.
+The numerical routines below (``_diffuse_step``, ``_check_stability``) are vendored from viva-cpm and kept faithful.
 """
 from __future__ import annotations
 
@@ -18,26 +17,22 @@ from process_bigraph import Process
 #
 # Stability rule and the dt/substeps convention are verbatim from that file's
 # per-field ``assert dt * diffusion * 2 * 2 < 1.0`` / ``assert substeps * dt ==
-# 1.0`` (generalised from ndim=2 to ndim). ``_per_pixel_secretion_rate`` is
-# verbatim. ``_diffuse_step`` is the numpy transcription of the engine routine
+# 1.0`` (generalised from ndim=2 to ndim). ``_diffuse_step`` is the numpy transcription of the engine routine
 # it drives (crates/cpm-core/src/field.rs ``Field::diffuse_step``, which the
 # python file only configures): explicit forward Euler on the face-neighbour
 # Laplacian, ``c += dt * (D * sum_j(c_j - c_i) - decay * c_i)``, clamped >= 0,
 # no-flux walls (missing neighbours contribute nothing). Secretion is added as
 # ``rate * dt`` exactly ONCE per MCS, AFTER the diffusion substeps (engine
-# quirk documented in ``_per_pixel_secretion_rate``).
+# quirk). Boundary: only no-flux is implemented; boundary='periodic' raises
+# NotImplementedError (fail loud rather than silently treat as no-flux).
 # --------------------------------------------------------------------------
 
 
-def _per_pixel_secretion_rate(secretion_dimz_baked: float, cell_sites: int, dt: float) -> float:
-    """Shared secretion-rate derivation (vendored verbatim, see header)."""
-    per_pixel_per_mcs = (secretion_dimz_baked / 2.0) / cell_sites
-    return per_pixel_per_mcs / dt
-
-
 def _check_stability(name: str, d: float, dt: float, substeps: int, ndim: int = 2) -> None:
-    assert dt * d * 2 * ndim < 1.0, f"{name} field diffusion dt is unstable"
-    assert substeps * dt == 1.0, f"{name} field substeps*dt must equal one MCS"
+    if not dt * d * 2 * ndim < 1.0:
+        raise ValueError(f"{name} field diffusion dt is unstable")
+    if substeps * dt != 1.0:
+        raise ValueError(f"{name} field substeps*dt must equal one MCS")
 
 
 def _diffuse_step(conc: np.ndarray, d: float, decay: float, dt: float) -> np.ndarray:
@@ -75,9 +70,12 @@ class FieldProcess(Process):
         "grid_shape": {"_type": "list[integer]", "_default": [50, 50]},
         "fields": {"_type": "list[node]", "_default": []},
         "sites_per_cell": {"_type": "float", "_default": 1.0},
+        "boundary": {"_type": "string", "_default": "noflux"},
     }
 
     def initialize(self, config):
+        if config.get("boundary", "noflux") != "noflux":
+            raise NotImplementedError("periodic boundary not yet supported")
         self._shape = tuple(int(n) for n in config["grid_shape"])
         self._fields = []
         for f in config.get("fields") or []:
