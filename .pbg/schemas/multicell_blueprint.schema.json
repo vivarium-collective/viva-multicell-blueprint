@@ -5,7 +5,7 @@
   "description": "Backend-neutral multi-cell model document (spec section 7). Compiled to a CPM or vertex mechanics backend; rule rate_expr strings are parsed by the rate grammar, not validated here.",
   "type": "object",
   "required": ["domain", "cell_types", "initial_state"],
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
     "domain": {
       "type": "object",

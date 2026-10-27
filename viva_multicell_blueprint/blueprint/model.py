@@ -9,6 +9,9 @@ import yaml
 from .schema import validate
 
 
+_REQUIRED = ("domain", "cell_types", "initial_state")
+
+
 @dataclass
 class Blueprint:
     domain: dict
@@ -26,11 +29,14 @@ class Blueprint:
         errs = validate(doc)
         if errs:
             raise ValueError("invalid blueprint: " + "; ".join(errs))
-        known = cls.__dataclass_fields__
-        return cls(**{k: v for k, v in doc.items() if k in known})
+        unknown = sorted(set(doc) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ValueError(f"unknown top-level blueprint keys: {unknown}")
+        return cls(**doc)
 
     def to_dict(self) -> dict:
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        # Omit absent/default-empty optional sections so load->dump is faithful.
+        return {k: v for k, v in asdict(self).items() if v is not None and (v or k in _REQUIRED)}
 
     @classmethod
     def load(cls, path) -> "Blueprint":

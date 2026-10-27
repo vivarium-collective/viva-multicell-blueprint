@@ -29,7 +29,7 @@ def test_roundtrip_minimal_blueprint(tmp_path):
     bp = Blueprint.load(_write(tmp_path, MINIMAL))
     assert [c["name"] for c in bp.cell_types] == ["H", "I"]
     assert bp.rules[0]["rate_expr"].startswith("0.1")
-    assert bp.immune == [] or bp.immune is not None
+    assert bp.immune == []
     out = tmp_path / "out.yaml"
     bp.dump(out)
     assert Blueprint.load(out) == bp
@@ -61,3 +61,19 @@ def test_initial_state_from_data_and_bad_kind():
 def test_rule_requires_rate_expr_for_transition():
     bad = dict(MINIMAL, rules=[{"type": "transition", "from": "H", "to": "I"}])
     assert validate(bad)
+
+
+def test_rejects_unknown_top_level_key(tmp_path):
+    doc = dict(MINIMAL, adhesions=[{"a": "H", "b": "I", "strength": 2.0}])
+    assert validate(doc)
+    with pytest.raises(ValueError, match="adhesions"):
+        Blueprint.load(_write(tmp_path, doc))
+
+
+def test_dump_omits_absent_optional_sections(tmp_path):
+    bp = Blueprint.load(_write(tmp_path, MINIMAL))
+    out = tmp_path / "out.yaml"
+    bp.dump(out)
+    dumped = yaml.safe_load(out.read_text())
+    assert dumped == MINIMAL
+    assert "immune" not in dumped and "systemic_ode" not in dumped
