@@ -137,10 +137,37 @@ def resolve_initial_state(blueprint) -> list[dict]:
         if "label_image" in from_data:
             return from_label_image(from_data["label_image"], from_data.get("type_map"))
         raise ValueError(f"from_data needs cell_table or label_image, got {sorted(from_data)}")
+    if init.get("kind") == "blocks" and isinstance(init.get("block"), dict):
+        return _generate_blocks(init)
     raise ValueError(
         f"cannot resolve initial_state {sorted(init)}: supply from_data "
         "(cell_table/label_image) or an explicit cells list"
     )
+
+
+def _generate_blocks(init: dict) -> list[dict]:
+    """Generative ``kind: blocks``: a ``shape`` grid of ``type`` cells at ``spacing`` pitch
+    from ``origin`` (centroids in grid units), plus an optional ``infected_seed``
+    ``{type, fraction, seed}`` that retypes ``max(1, round(fraction * n))`` of them
+    (seeded, reproducible)."""
+    import numpy as np
+
+    b = init["block"]
+    nx, ny = (int(v) for v in b["shape"])
+    ox, oy = (float(v) for v in b.get("origin", [0, 0]))
+    pitch = float(b["spacing"])
+    cells = [
+        {"id": 1 + j * nx + i, "type": b["type"],
+         "centroid": [ox + i * pitch, oy + j * pitch], "size": float(b.get("size", 1.0))}
+        for j in range(ny) for i in range(nx)
+    ]
+    seed = init.get("infected_seed")
+    if seed:
+        n = max(1, int(round(float(seed["fraction"]) * len(cells))))
+        rng = np.random.default_rng(int(seed.get("seed", 0)))
+        for k in rng.choice(len(cells), size=n, replace=False):
+            cells[int(k)]["type"] = seed["type"]
+    return cells
 
 
 def _as_cell_nodes(cells) -> list[dict]:
