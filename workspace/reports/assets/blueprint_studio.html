@@ -31,7 +31,7 @@
   .engine.sel[data-e=cpm]{border-color:var(--cpm);background:color-mix(in srgb,var(--cpm) 10%,transparent)}
   .engine.sel[data-e=vertex]{border-color:var(--vertex);background:color-mix(in srgb,var(--vertex) 10%,transparent)}
   .engine.sel[data-e=both]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
-  .btn-mini{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .btn-mini{display:inline-block;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;text-decoration:none}
   .btn-mini:hover{border-color:var(--muted)}
   .result{margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--code);font-size:13px}
   .result.ok{background:var(--accentbg);border-color:var(--accent)}
@@ -109,6 +109,7 @@ const COMPOSITE = "viva_multicell_blueprint.composites.sego.sego_crossparadigm";
 // <base>/api/... - derive it so POSTs don't resolve under /assets/ (405) and so
 // a reverse-proxy base path is honored.
 const API = location.pathname.replace(/\/assets\/blueprint_studio\.html$/, "") + "/api";
+const SPA = API.replace(/\/api$/, "");   // the workbench root (for #simulations)
 const TEMPLATES = {
   default: {readonly:false, fetch:"sego_blueprint.yaml",
     hint:"The committed Sego 2022 flu-lung blueprint (loaded below). Edit and run it, or pick a smaller template.",
@@ -225,7 +226,12 @@ async function pollRun(runId, el, eng){
       const st = row && (row.status||row.state||"").toLowerCase();
       if(st && /complete|done|finished|success/.test(st)){
         el.className="result ok";
-        el.innerHTML = `✓ <b>${eng}</b> run complete — <a href="#simulations" target="_blank">open in Simulations DB</a> <span class="muted">(${runId})</span>`;
+        const dl = `${API}/simulation-run-download?run_id=${encodeURIComponent(runId)}`;
+        el.innerHTML = `✓ <b>${eng}</b> run complete <span class="muted">(${runId})</span>`
+          + `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">`
+          + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">View results ↗</a>`
+          + `<a class="btn-mini" href="${dl}" download>Download results ⬇</a>`
+          + `</div>`;
         return true;
       }
       if(st && /fail|error/.test(st)){
