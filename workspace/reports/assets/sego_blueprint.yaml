@@ -1,0 +1,582 @@
+# Sego et al. 2022 influenza (ViralInfectionVTM) as ONE backend-neutral blueprint.
+# Template expressiveness acceptance test (spec sections 7, 9): the whole model is
+# DATA here -- every epithelial rate is a rate_expr rule, every field a `fields`
+# entry, the immune recruitment + Price-2015 ODE are components. Compiles to the CPM
+# and vertex backends unchanged.
+#
+# PROVENANCE: every number is from viva-cpm
+#   viva_cpm_studies/influenza/params.yaml @ b952eec2   ("Sego 2022 params.yaml @ b952eec2")
+# which transcribes the CC3D source / Sego 2022 Tables 3-4. Nothing is invented; items the
+# source does not give as a single constant are listed under PENDING at the end.
+#
+# UNITS: 1 grid unit = 1 CC3D lattice site (2 um in the source) and 1 step = 1 MCS (60 s).
+# `*_um` keys are therefore in lattice sites; all D / decay / rates are the source's
+# lattice^2/MCS and per-MCS values (params.yaml *_lat2_per_mcs / *_per_mcs).
+# Tractable scale: a 50x50-site patch with a 6x6 block of epithelium.
+
+blueprint_version: "1.0"   # BP-01 canonical schema version
+domain:
+  extent_um: [50, 50]           # tractable patch (source patches: 0.3 mm / 1 mm, params.yaml scenarios)
+  grid_resolution_um: 1         # 1 unit = 1 lattice site (see UNITS)
+  boundary: noflux
+
+cell_types:
+  # Epithelium: params.yaml cpm.cell_sites = 25 (5x5 sites, 10 um diameter) -> target_size 25.
+  # (A size-9 CPM cell dissolves to volume 0 -- Task 13 finding -- so 25 is load-bearing.)
+  - {name: H, target_size: 25}      # UNINFECTED
+  - {name: I, target_size: 25}      # INFECTED / INFECTEDRELEASING
+  - {name: D, target_size: 25}      # DYING
+  # Immune: macrophage|nk|cd8.volume_sites = 25
+  - {name: M, target_size: 25}      # macrophage
+  - {name: NK, target_size: 25}
+  - {name: CD8, target_size: 25}
+  # LATENT immune pool (Task 20 recruitment design): a pre-placed resting reservoir
+  # at the tissue margin. ImmuneRecruitmentProcess activates these in place (type
+  # switch latent -> active) instead of inserting topology; on activation the cell
+  # becomes M/NK/CD8 and adopts those adhesion rows. While latent it carries no
+  # explicit adhesion (both backends fall back to their default contact for the
+  # inert margin reservoir), keeping size 25 so it does not dissolve. NOT a Sego
+  # params.yaml constant: this is the blueprint's expression of the recruitment
+  # mechanism (ruling T20-RECRUIT; see PENDING).
+  - {name: M_latent, target_size: 25}
+  - {name: NK_latent, target_size: 25}
+  - {name: CD8_latent, target_size: 25}
+
+# Contact energies J: Sego 2022 Table 3 collapsed values + the per-type rows of
+# ViralInfectionVTM.xml <Plugin Name="Contact"> recorded in params.yaml adhesion /
+# macrophage|nk|cd8.adhesion. The epithelial classes H/I/D share epithelial_epithelial and
+# epithelial_medium.
+adhesion:
+  # epithelial_epithelial = 5.0 (adhesion.epithelial_epithelial)
+  - {a: H, b: H, strength: 5}
+  - {a: H, b: I, strength: 5}
+  - {a: H, b: D, strength: 5}
+  - {a: I, b: I, strength: 5}
+  - {a: I, b: D, strength: 5}
+  - {a: D, b: D, strength: 5}
+  # epithelial_medium = 25.0 (adhesion.epithelial_medium)
+  - {a: H, b: medium, strength: 25}
+  - {a: I, b: medium, strength: 25}
+  - {a: D, b: medium, strength: 25}
+  # immune-medium = 10 (macrophage.adhesion.medium_macrophage, nk.adhesion.medium_nkcell, cd8.adhesion.medium_cd8tcell)
+  - {a: M, b: medium, strength: 10}
+  - {a: NK, b: medium, strength: 10}
+  - {a: CD8, b: medium, strength: 10}
+  # immune-epithelium: uninfected_* = 20, dying_* = 20; infected_macrophage = 20; infected_nkcell = infected_cd8tcell = 10
+  - {a: M, b: H, strength: 20}
+  - {a: M, b: I, strength: 20}
+  - {a: M, b: D, strength: 20}
+  - {a: NK, b: H, strength: 20}
+  - {a: NK, b: I, strength: 10}
+  - {a: NK, b: D, strength: 20}
+  - {a: CD8, b: H, strength: 20}
+  - {a: CD8, b: I, strength: 10}
+  - {a: CD8, b: D, strength: 20}
+  # immune-immune: macrophage_macrophage = nkcell_nkcell = cd8tcell_cd8tcell = 25; macrophage_nkcell = macrophage_cd8tcell = 10; nkcell_cd8tcell = 25
+  - {a: M, b: M, strength: 25}
+  - {a: NK, b: NK, strength: 25}
+  - {a: CD8, b: CD8, strength: 25}
+  - {a: M, b: NK, strength: 10}
+  - {a: M, b: CD8, strength: 10}
+  - {a: NK, b: CD8, strength: 25}
+
+# Generative initial state: a 6x6 block of H cells (5-site pitch, size 25) with a small
+# infected seed (virus.frac_init_infected = 0.05 of the block), PLUS a pre-placed LATENT
+# immune pool (M/NK/CD8_latent) along the tissue margins. `extra_blocks` are appended with
+# contiguous ids after the main block; the infected_seed is scoped to the MAIN block only,
+# so the latent pool never changes the infected count. The pool is deliberately generous
+# (12 cells) so the ODE-driven recruitment has latent cells to activate at reduced scale
+# (activation is clamped to the available pool). Margin placement, not a Sego constant.
+initial_state:
+  kind: blocks
+  block: {type: H, origin: [10, 10], shape: [6, 6], spacing: 5, size: 25}
+  infected_seed: {type: I, fraction: 0.05, seed: 0}
+  extra_blocks:
+    - {type: M_latent, origin: [6, 44], shape: [5, 1], spacing: 9, size: 25}   # top margin
+    - {type: NK_latent, origin: [6, 5], shape: [4, 1], spacing: 11, size: 25}   # bottom margin
+    - {type: CD8_latent, origin: [44, 10], shape: [1, 3], spacing: 11, size: 25} # right margin
+
+# Fields. dt/substeps per field are the viva-cpm stability splits (substeps*dt == 1 MCS,
+# dt*D*2*ndim < 1; fields.py _*_FIELD_DT/_SUBSTEPS). Secretion `rate` is the per-cell release
+# the engine adds as rate*dt once per MCS, i.e. (g/2)/dt: g bakes in the source dim.z=2 slab,
+# halved for a single-layer field (fields.py _per_pixel_secretion_rate; same convention as the
+# viva-cpm reproduction).
+fields:
+  - name: virus
+    D: 0.17882616694562153          # virus.diffusion_lat2_per_mcs
+    decay: 0.00028612186711299444   # virus.decay_per_mcs
+    dynamics: {dt: 0.2, substeps: 5}
+    secretion:
+      - {type: I, rate: 0.9655166013980694}   # (virus.secretion_g_vi 0.38620664055922777 / 2) / dt
+    chemotaxis:
+      - {type: M, strength: 5000}   # chemotaxis.macrophage_virus / macrophage.chemotaxis_v_macro
+  - name: ifn
+    D: 7.793793725154791            # ifn.diffusion_lat2_per_mcs
+    decay: 0.07793793725154792      # ifn.decay_per_mcs
+    dynamics: {dt: 0.025, substeps: 40}
+    secretion:
+      - {type: I, rate: 0.005465461602720083}  # (ifn.secretion_g_fp 0.00027327308013600416 / 2) / dt; (1-resist) gate: see PENDING
+    uptake:
+      - {type: I, rate: 15.74439694686276}     # ifn.uptake_g_fi; engine uptake form: see PENDING
+  - name: chemokine
+    D: 15.60770650326941            # chemokine.diffusion_lat2_per_mcs
+    decay: 0.006243082601307764     # chemokine.decay_per_mcs
+    dynamics: {dt: 0.0125, substeps: 80}
+    secretion:
+      - {type: M, rate: 2.2335172473999445}    # (chemokine.b_c 0.055837931184998614 / 2) / dt; IL-10-Hill scale: see PENDING
+    chemotaxis:
+      - {type: NK, strength: 5000}     # chemotaxis.nk_chemokine / nk.chemotaxis_v_nk
+      - {type: CD8, strength: 10000}   # chemotaxis.cd8_chemokine / cd8.chemotaxis_v_cd8
+  - name: il10
+    D: 4.900981940788802            # il10.diffusion_lat2_per_mcs
+    decay: 0.001960392776315521     # il10.decay_per_mcs
+    dynamics: {dt: 0.04, substeps: 25}
+    secretion:
+      - {type: M, rate: 0.04034329374804306}     # (il10.b_l 0.0032274634998434447 / 2) / dt; IL-10-Hill scale: see PENDING
+      - {type: H, rate: 2.2729746545302016e-05}  # (il10.mu_l 0.001960392776315521 * il10.b_lh 0.00092755887778863 / 2) / dt; (1-resist) gate: see PENDING
+
+# Rules, in evaluation order. RulesProcess applies Pr = 1 - exp(-rate) (Sego ul_rate_to_prob),
+# so each rate_expr is the source RATE: infection is `g_hv * field['virus']` (the rate in
+# transitions.infection_step). Writing `1 - exp(-g_hv*virus)` here would apply the exponential
+# twice. Constants live in mechanics_mapping.const below.
+rules:
+  # resistance rho = f/(a_rf + f)    (resistance.formula)
+  - {type: resistance, scalar: resist, rate_expr: "hill(field['ifn'], a_rf)"}
+  # infection H -> I                 (virus.infection_g_hv)
+  - {type: transition, from: H, to: I, rate_expr: "g_hv * field['virus']"}
+  # Allee death H -> D, neighbor-surface driven (allee.formula_death); srf_total = epithelial contact surface H+I+D
+  - type: allee
+    from: H
+    to: D
+    rate_expr: >-
+      (b_h * (1 - scalar['resist']) * neighbors.shared_surface['D']
+      * max(theta * (neighbors.shared_surface['H'] + neighbors.shared_surface['I'] + neighbors.shared_surface['D'])
+            - neighbors.shared_surface['H'], 0)
+      / max(neighbors.shared_surface['H'] + neighbors.shared_surface['I'] + neighbors.shared_surface['D'], 1e-9) ** 2)
+  # infected-cell death I -> D       (cell_death.mu_i_per_mcs, resistance-gated)
+  - {type: transition, from: I, to: D, rate_expr: "mu_i * (1 - scalar['resist'])"}
+  # NK / CD8 contact killing I -> D  (nk.g_ik / cd8.g_ie; kill_rate = g * tot_ec * srf * resist / volume, resist-DIRECT per source)
+  - {type: kill, killer: NK, target: I, to: D,
+     rate_expr: "g_ik * tot_ec * neighbors.shared_surface['NK'] * scalar['resist'] / size"}
+  - {type: kill, killer: CD8, target: I, to: D,
+     rate_expr: "g_ie * tot_ec * neighbors.shared_surface['CD8'] * scalar['resist'] / size"}
+  # Allee recovery D -> H            (allee.formula_recovery; same shared b_h)
+  - type: recovery
+    from: D
+    to: H
+    rate_expr: >-
+      (b_h * (1 - scalar['resist']) * neighbors.shared_surface['H']
+      * max(neighbors.shared_surface['H']
+            - theta * (neighbors.shared_surface['H'] + neighbors.shared_surface['I'] + neighbors.shared_surface['D']), 0)
+      / max(neighbors.shared_surface['H'] + neighbors.shared_surface['I'] + neighbors.shared_surface['D'], 1e-9) ** 2)
+
+mechanics_mapping:
+  const:                              # rule constants (Sego 2022 params.yaml @ b952eec2)
+    g_hv: 0.006133879567670876        # virus.infection_g_hv
+    a_rf: 8.51558276606456e-06        # resistance.a_rf
+    mu_i: 0.002812795041656167        # cell_death.mu_i_per_mcs
+    b_h: 0.01477732983566816          # allee.b_h (shared by death + recovery)
+    theta: 0.0528712421467436         # allee.srf_threshold (theta_local)
+    g_ik: 2.1401636386747083e-08      # nk.g_ik
+    g_ie: 6.840166937615132e-07       # cd8.g_ie
+    tot_ec: 250000                    # scaling.ode_epithelial_population (tot_ec_ODE)
+
+# Immune component (ImmuneRecruitmentProcess): ODE-driven M/NK/CD8 recruitment. The inflow/
+# outflow laws and Hill constants come from the price_ode block below (asymmetric per
+# discrepancy #12: CD8 is APC-driven, no baseline). `types` maps a driver to the spawned type.
+immune:
+  types: {macrophage_inflow: M, nk_inflow: NK, cd8_inflow: CD8}
+  seed: 0
+  id_prefix: rec
+  max_per_step: 1000
+  local_fraction: {M: 1.0, NK: 0.75, CD8: 0.75}   # macrophage.local_fraction_macrophage / nk.local_fraction_nk / cd8.local_fraction_cd8
+
+# Price/Mochan-Keef 2015 in-host ODE (hybrid-coupled per Sego 2022).
+systemic_ode:
+  model_ref: price2015
+  coupling:
+    num_epithelial: 36                # = the 6x6 epithelial block; eta = num_epithelial / 250000
+    dt_seconds: 60                    # price_ode.integrator.seconds_per_mcs
+    v0: 0                             # virus.v0_ode_options [0, 50, 500]; infection is seeded by initial_state
+    # spatial -> ODE count map is params.yaml coupling.spatial_to_ode (H, I, M, K, E, DH, V, F, C, L, B_ei, G_ki)
+  params:                             # the price_ode block (Sego 2022 params.yaml @ b952eec2), verbatim
+    source: ImmuneModel/ImmuneModelLib.py:immune_model_string (lines 45-229)
+    reference_full_ode: ImmuneModel/ImmuneModelLib.py:immune_model_string_ode (lines
+      232-410)
+    model_name: FluODE_20vars
+    integrated_states:
+    - NB
+    - N
+    - T
+    - X
+    - A
+    - B
+    - P
+    - W
+    - G
+    - O
+    integrated_nearby_surrogates:
+    - M_nb
+    - K_nb
+    - E_nb
+    spatialized_states:
+    - H
+    - I
+    - M
+    - E
+    - K
+    - L
+    - C
+    - F
+    - V
+    - DH
+    hill_exponents:
+      h_m: 3
+      h_x: 2
+      h_k: 2
+      h_e: 3
+      h_o: 2
+    integrator:
+      solver: roadrunner_cvode
+      step_size: 1
+      steps_per_mcs: 1
+      seconds_per_mcs: 60
+    scaling:
+      ode_epithelial_population: 250000
+      eta_formula: num_epithelial / 250000
+      eta_at_175: 0.0049
+      eta_at_500_1mm: 0.04
+      theta: 1.6e-07
+      s_t_formula: s_to_mcs/86400
+      cell_volume: 25
+      loc_to_global: s_v/s_l
+    constants:
+      a_11:
+        base: 0.00061091213762049
+        scale: null
+      mu_i:
+        base: 4.05042485998488
+        scale: s_t
+      a_12:
+        base: 1.92792875130612e-05
+        scale: null
+      g_vi:
+        base: 278.068781202644
+        scale: s_t
+      a_21:
+        base: 1.45266909729275
+        scale: s_v
+      g_vh:
+        base: 1.21539069969014e-05
+        scale: s_t/s_l
+      a_22:
+        base: 1478.77349187226
+        scale: s_v
+      g_va:
+        base: 0.00109087356190614
+        scale: s_t/s_v
+      g_1:
+        base: 498.217901666102
+        scale: s_v
+      g_v:
+        base: 197.445019092656
+        scale: s_t
+      g_2:
+        base: 5462.05818489935
+        scale: s_v*s_l
+      a_v:
+        base: 9.33445943442858
+        scale: 1/s_l
+      d_2:
+        base: 428.253164311871
+        scale: s_l
+      mu_v:
+        base: 0.412015488642712
+        scale: s_t
+      b_mc:
+        base: 13620.4859808076
+        scale: s_t*s_v
+      b_fi:
+        base: 0.196756617697923
+        scale: s_t
+      a_mc:
+        base: 574.707608135459
+        scale: s_v
+      b_fp:
+        base: 0.221363566856883
+        scale: s_t*s_l/s_v
+      mu_m:
+        base: 0.242202409519884
+        scale: s_t
+      g_fi:
+        base: 0.00181375452827859
+        scale: s_t/s_l
+      b_m:
+        base: null
+        scale: templated
+        formula: 'homeostatic_pops_ode.macro * eta (Sec.2.5: b_m = hs_macro_ODE * s_v,
+          template {hs_macro})'
+      mu_f:
+        base: 112.230629642229
+        scale: s_t
+      b_t:
+        base: 61.1099298442215
+        scale: s_t
+      a_rf:
+        base: 53.2223922879035
+        scale: s_l
+      k_1:
+        base: 0.919560555407162
+        scale: null
+      b_k:
+        base: null
+        scale: templated
+        formula: 'homeostatic_pops_ode.nk * eta (Sec.2.5: b_k = hs_nk_ODE * s_v, template
+          {hs_nk})'
+      k_2:
+        base: 251.401895880346
+        scale: s_v
+      b_kc:
+        base: 212683.830671333
+        scale: s_t*s_v
+      d_1:
+        base: 57.0468005728478
+        scale: s_v
+      a_kc:
+        base: 1356.29443420953
+        scale: s_v
+      mu_t:
+        base: 559.245454719045
+        scale: s_t
+      g_ki:
+        base: 8.83835904194133e-09
+        scale: s_t/s_v
+      b_l:
+        base: 2.32377371988728
+        scale: s_t
+      mu_k:
+        base: 2.20226570821557
+        scale: s_t
+      mu_l:
+        base: 2.82296559789435
+        scale: s_t
+      b_go:
+        base: 0.00267078457036687
+        scale: s_t
+      b_lh:
+        base: 0.000463779438894315
+        scale: null
+      a_go:
+        base: 0.701154807175855
+        scale: s_v
+      b_c:
+        base: 40.203310453199
+        scale: s_t
+      b_gk:
+        base: 1.61001492527962
+        scale: s_t
+      mu_c:
+        base: 8.99003894588318
+        scale: s_t
+      a_gk:
+        base: 11.3762919738437
+        scale: s_v
+      b_nt:
+        base: 1831199.07978509
+        scale: s_t*s_v
+      mu_g:
+        base: 89.9382159197401
+        scale: s_t
+      a_nt:
+        base: 177.556178464038
+        scale: s_v
+      p_0:
+        base: 6246.50442297409
+        scale: s_t*s_v
+      a_nl:
+        base: 0.0466177133703488
+        scale: null
+      g_pv:
+        base: 52.361340187773
+        scale: null
+      g_nc:
+        base: 1565.77531103506
+        scale: s_t
+      a_pv:
+        base: 953.016291300287
+        scale: s_v
+      a_nc:
+        base: 199.135063775527
+        scale: s_v
+      g_pi:
+        base: 2.16210269485218e-05
+        scale: 1/s_v
+      mu_n:
+        base: 0.776781658388633
+        scale: s_t
+      g_p:
+        base: 0.00973849483459614
+        scale: null
+      b_xn:
+        base: 609.739684621594
+        scale: s_t*s_v
+      b_pg:
+        base: 0.126601176697398
+        scale: null
+      a_xn:
+        base: 27277.1658907811
+        scale: s_v
+      a_pg:
+        base: 902.666448958217
+        scale: s_v
+      g_xi:
+        base: 3.90938622570566e-05
+        scale: s_t/s_v
+      mu_p:
+        base: 0.46572454272428
+        scale: s_t
+      g_xh:
+        base: 4.60945452030246e-07
+        scale: s_t/s_v
+      b_p:
+        base: null
+        scale: templated
+        formula: 'homeostatic_pops_ode.apc * eta (Sec.2.5: b_p = hs_apc_ODE * s_v, template
+          {hs_apc})'
+      mu_x:
+        base: 235.25392576208
+        scale: s_t
+      b_ep:
+        base: 101318.358506851
+        scale: s_t*s_v
+      b_h:
+        base: 8.51174198534486e-05
+        scale: s_t
+      a_ep:
+        base: 14522.3188063909
+        scale: s_v
+      theta:
+        base: 13217.8105366859
+        scale: s_v
+      b_ei:
+        base: 2.87556725383114e-07
+        scale: s_t/s_v
+      g_hv:
+        base: 1.41324585239137e-06
+        scale: s_t/s_l
+      mu_e:
+        base: 0.441073272611722
+        scale: s_t
+      g_hx:
+        base: 29.0380758578089
+        scale: s_t
+      b_op:
+        base: 317070.082528766
+        scale: s_t*s_v
+      a_hx:
+        base: 15.6825240521184
+        scale: s_v
+      a_op:
+        base: 14823.8275674019
+        scale: s_v
+      a_ix:
+        base: 0.0611971734649656
+        scale: s_v
+      mu_o:
+        base: 0.921060461394949
+        scale: s_t
+      g_ix:
+        base: 4.6524853526203
+        scale: s_t
+      b_wo:
+        base: 0.0092284656047177
+        scale: s_t
+      g_ik:
+        base: 3.08183563969158e-05
+        scale: s_t
+      a_wo:
+        base: 1987.31111667007
+        scale: s_v
+      g_ie:
+        base: 0.000984984039016579
+        scale: s_t
+      mu_w:
+        base: 0.936640894395778
+        scale: s_t
+      b_b:
+        base: 9.99860060276184
+        scale: s_t*s_v
+      b_bp:
+        base: 1.05601614882507e-06
+        scale: s_t/s_v/s_v
+      b_0:
+        base: 56777.3326082613
+        scale: s_v
+      mu_b:
+        base: 0.405022167434195
+        scale: s_t
+      b_a:
+        base: 0.00487789881403722
+        scale: s_t*s_v
+      b_ab:
+        base: 0.0685940586330701
+        scale: s_t
+      g_av:
+        base: 0.000159387382062868
+        scale: s_t/s_v
+      mu_a:
+        base: 5.43215036471264
+        scale: s_t
+      V0:
+        base: null
+        scale: templated
+        formula: Virus field total integral at ODE-instance build time (get_field_secretor(Virus).totalFieldIntegral(),
+          template {v_ini})
+    homeostatic_pops_ode:
+      macro: 21347.2655837073
+      nk: 225.999183404974
+      apc: 2064.80195826911
+      neutro_blood: 0
+      neutro: 0
+    initial_conditions:
+      NB: '{hs_neutro_blood}'
+      N: '{hs_neutro}'
+      M: b_m
+      L: b_lh*(1-R)*tot_cell
+      T: 0
+      X: 0
+      A: (b_a + b_ab*B)/mu_a
+      C: 0
+      I: 0
+      H: tot_cell
+      F: b_fp*b_p/mu_f
+      V: V0
+      DH: 0
+      E: b_ep/mu_e * b_p^h_e/(b_p^h_e+a_ep^h_e)
+      B: (b_b + b_bp*b_p*W*b_0)/(b_bp*b_p*W + mu_b)
+      K: b_k
+      P: b_p
+      W: b_p/mu_w * O*b_wo/(O+a_wo)
+      G: (b_go*W/(a_go+W)*O + b_gk*W/(a_gk+W)*K)/mu_g
+      O: b_op/mu_o * b_p^h_o/(b_p^h_o+a_op^h_o)
+      B_ei: 0
+      G_ki: 0
+      M_ratio: 0.0
+      M_nb: 0
+      K_ratio: 0.0
+      K_nb: 0.0
+      E_ratio: 0.0
+      E_nb: 0.0
+
+# PENDING (not a single constant in params.yaml -- recorded, NOT invented):
+#  - Macrophage chemokine/IL-10 secretion is scaled by the IL-10 Hill factor
+#    sig_1/(sig_1 + (g_1*L + g_2)/(L + d_2)); sig_1 is the ODE assignment rule a_11*T + a_12*D
+#    (live ODE state). The field `rate` above is the UNSCALED b_c / b_l.
+#  - IFN secretion by I and IL-10 secretion by H are gated by (1 - resist); a field secretion
+#    entry is a constant per type, so the gate is not expressible there yet.
+#  - IFN uptake: the source applies a per-pixel relative uptake (up_amount/volume); the field
+#    engine uses first-order centroid uptake, so g_fi is carried verbatim and needs calibration.
+#  - Source "nearby" (well-mixed) NK/CD8 killing term, global boundary secretion of chemokine/
+#    IL-10, the IL-10 uniform initial condition and the APC-driven IFN term b_fp*P are deferred
+#    in the source params.yaml itself.
+#  - Immune recruitment placement and the ODE-input COUNT producer are tracked follow-ups.

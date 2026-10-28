@@ -30,6 +30,28 @@ _BLUEPRINTS = Path(__file__).resolve().parent.parent.parent / "workspace" / "blu
 _SEGO = _BLUEPRINTS / "influenza_sego2022.yaml"
 
 
+def _load_blueprint(blueprint):
+    """Resolve the ``blueprint`` parameter to a :class:`Blueprint`.
+
+    Accepts (a) None -> the default Sego blueprint, (b) a dict -> loaded directly,
+    (c) a path to an existing YAML file, or (d) inline YAML text. (c)/(d) let the
+    Blueprint Studio UI run an edited blueprint without writing a file first.
+    """
+    import yaml
+    if blueprint is None:
+        return Blueprint.load(_SEGO)
+    if isinstance(blueprint, dict):
+        return Blueprint.from_dict(blueprint)
+    text = str(blueprint)
+    p = Path(text)
+    if len(text) < 512 and p.exists():         # a path (guard against huge inline text)
+        return Blueprint.load(p)
+    doc = yaml.safe_load(text)                  # inline YAML
+    if not isinstance(doc, dict):
+        raise ValueError("blueprint must be a path, inline YAML mapping, or dict")
+    return Blueprint.from_dict(doc)
+
+
 @composite_generator(
     name="sego_crossparadigm",
     description=(
@@ -41,11 +63,12 @@ _SEGO = _BLUEPRINTS / "influenza_sego2022.yaml"
         "backend": {"type": "string", "default": "cpm",
                     "description": "mechanics substrate: 'cpm' or 'vertex'"},
         "blueprint": {"type": "string", "default": str(_SEGO),
-                      "description": "path to the backend-neutral blueprint YAML"},
+                      "description": "backend-neutral blueprint: a path to a YAML file, "
+                                     "inline YAML text, or a dict (Blueprint Studio sends inline YAML)"},
     },
     core_extensions=[register_workspace_processes],
     default_n_steps=80,
 )
 def sego_crossparadigm(core=None, backend: str = "cpm", blueprint: str | None = None) -> dict:
-    bp = Blueprint.load(blueprint or _SEGO)
+    bp = _load_blueprint(blueprint)
     return _compile(bp, backend=backend)        # {"state": {...}} envelope

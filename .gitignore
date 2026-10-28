@@ -29,7 +29,10 @@ __pycache__/
 # regenerated from vivarium-workbench on each report render. Only .keep is tracked.
 workspace/reports/assets/*
 !workspace/reports/assets/.keep
+# Blueprint Studio is a committed tool page, not a regenerated report asset.
+!workspace/reports/assets/blueprint_studio.html
 # Transient brainstorm session artifacts (server PIDs, logs, rendered HTML).
 .superpowers/brainstorm/
 # Scratch TODO list agents keep per-workspace; not tracked content.
 todo.md
+!workspace/reports/assets/sego_blueprint.yaml
