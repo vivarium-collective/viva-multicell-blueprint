@@ -1,0 +1,200 @@
+schema_version: 4
+name: substrate-divergence-counterfactual
+created: "2026-10-27"
+status: in-progress
+phase: Evaluate
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: passed
+design_status: drafted
+title: "Mechanics-dominated counterfactual (positive control)"
+kind: adversarial
+confidence: Accepted
+
+claim: >
+  In a MECHANICS-DOMINATED regime (strong differential adhesion + a strong
+  chemoattractant gradient, no shared rules/ODE), the two substrates DIVERGE: the
+  spatial equivalence test REJECTS equivalence (cross-backend spatial agreement
+  0.20 vs same-backend 1.00; TOST diff +0.80, margin +/-0.10). The divergence is
+  mechanistically attributable -- the vertex fork's ActiveMigration climbs the
+  gradient (type-A mean y 7 -> 17.9) while CPM's Metropolis chemotaxis barely moves
+  it (y -> 10.7). This is the POSITIVE CONTROL for crossparadigm-equivalence: it
+  proves the equivalence test can detect a real substrate difference, so the
+  equivalence verdict on the Sego model is informative, not an artifact of an
+  insensitive metric.
+
+experiment: >
+  Run a mechanics-only blueprint (workspace/blueprints/mechanics_divergence.yaml:
+  types A/B, A self-adhesive and repelled by B, a chemo field secreted by B with
+  strong chemotaxis on A) on BOTH backends over rules-seeds {0,1,2} (N=80). Score
+  the same-backend and cross-backend exact-position spatial agreement and apply the
+  SAME metrics.equivalence_tost used by crossparadigm-equivalence (margin +/-0.10).
+
+result: >
+  Spatial agreement: same-backend 1.000 (mechanics-only runs are deterministic per
+  backend, so seeds reproduce exactly), cross-backend 0.20; TOST diff +0.80, far
+  outside +/-0.10 -> NOT equivalent. Mechanistic cause: type-A cells migrate up the
+  chemo gradient under the vertex ActiveMigration director (mean final y ~17.9 from
+  a start of ~7) but barely move under CPM's Metropolis chemotaxis bias (y ~10.7),
+  so the two substrates place the population very differently.
+
+purpose:
+  question: >
+    When MECHANICS (not the shared mechanism) drives the outcome, does the
+    equivalence test correctly REJECT -- i.e. does it have the power to detect a real
+    substrate difference?
+  mechanism: >
+    CPM moves cells by Metropolis acceptance of lattice copies (chemotaxis as an
+    energy bias); the vertex fork moves them by the ActiveMigration director sampled
+    from the field gradient. Under a strong gradient these displace cells by
+    different amounts, and CPM's Potts neighbour-swapping sorts differentially-
+    adhesive cells in a way the vertex topology resists -- so the spatial outcome
+    genuinely depends on the substrate.
+  expected_outcome: >
+    Cross-backend spatial agreement well below the same-backend baseline; the TOST
+    REJECTS equivalence.
+
+key_assumptions:
+  - "Mechanics-only (no rules/ODE/immune) so nothing shared forces agreement; the knobs are deliberately strong to enter a mechanics-dominated regime."
+  - "Nothing is tuned to hit a target; the study reports whatever the TOST returns (it rejected)."
+  - "Same spatial metric + TOST + margin as crossparadigm-equivalence, so the two verdicts are directly comparable."
+
+baseline:
+  - name: mechanics-divergence
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    description: The mechanics-dominated blueprint compiled onto each backend (adhesion + chemotaxis only).
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/mechanics_divergence.yaml
+
+variants:
+  - name: both-backends-seeds
+    description: rules-seeds {0,1,2} on each backend (confirms the divergence is structural, not seed noise).
+    params: {}
+
+simulation_set:
+  - name: counterfactual-divergence
+    status: completed
+    base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    seeds: [0, 1, 2]
+    metrics:
+      spatial_same_mean: 1.000
+      spatial_cross_mean: 0.200
+      spatial_tost_diff: 0.800
+      spatial_tost_margin: 0.10
+      spatial_equivalent: false
+      typeA_mean_final_y_cpm: 10.7
+      typeA_mean_final_y_vertex: 17.9
+      typeA_start_y: 7
+    pass_fail_tests:
+      - "spatial-equivalence-rejected: pass (test has power)"
+      - "migration-direction-differs: pass (vertex climbs gradient, cpm does not)"
+
+readouts:
+  - name: spatial_agreement
+    description: Fraction of the t0 cohort whose final centroids are within 5 um between two runs.
+    store_path: "mechanics/positions"
+    units: fraction
+    status: measured
+  - name: typeA_mean_final_y
+    description: Mean final y of the migrating type-A population, per backend (migration readout).
+    store_path: "mechanics/positions"
+    units: um
+    status: measured
+
+behavior_tests:
+  - name: spatial-equivalence-rejected
+    classification: primary
+    description: The spatial equivalence TOST REJECTS in this mechanics-dominated regime (the test has power).
+    measure: {kind: equivalence, field: spatial_agreement, margin: 0.10}
+    pass_if: {op: tost_not_equivalent, note: "cross spatial agreement << same; diff > margin"}
+    units: fraction
+    requires_simulation: "true"
+  - name: migration-direction-differs
+    classification: primary
+    description: Type-A migrates up the gradient under vertex but not CPM (mechanistic cause of the divergence).
+    measure: {kind: comparison, field: typeA_mean_final_y, low: 0.0, high: 40.0}
+    pass_if: {op: strictly_greater, note: "vertex final y > cpm final y"}
+    units: um
+    requires_simulation: "true"
+
+controls:
+  - name: same-backend-null
+    kind: negative
+    description: Same-backend pairs give spatial agreement 1.000 (deterministic), the matched null the cross term is judged against.
+
+alternative_hypotheses:
+  - hypothesis: "The divergence is just seed noise."
+    excluded_by: "Same-backend agreement is 1.000 across seeds (mechanics-only is deterministic); the cross gap is structural."
+  - hypothesis: "The divergence is a raster/metric artifact."
+    excluded_by: "The raw migration readout (type-A mean y 10.7 cpm vs 17.9 vertex) shows the populations physically end up in different places."
+
+conclusion_logic:
+  if_primary_tests_pass:
+    implementation_status: "The equivalence test has demonstrated power: it rejects when the substrate genuinely matters."
+    biological_validation: "When mechanics drives the outcome (migration/sorting), the substrate choice changes the spatial result -- use both backends and compare."
+    pipeline_unblocks:
+      - "Validates the positive equivalence verdict of crossparadigm-equivalence as informative."
+  if_primary_tests_fail:
+    diagnose:
+      - "If the test did NOT reject here, the metric/margin is too insensitive -- tighten before trusting any equivalence verdict."
+
+limitations:
+  - "An engineered extreme regime (deliberately strong adhesion + chemotaxis), chosen to make the substrate decisive -- not a biological claim about influenza."
+  - "Mechanics-only, so fate is static; the divergence is spatial/positional by construction."
+  - "Demonstrates the test's POWER and that mechanics-driven outcomes are substrate-sensitive; it does not quantify a biological effect size."
+
+report:
+  title: "A mechanics-dominated regime where the substrates DIVERGE (test has power)"
+  verdict: >
+    In a deliberately mechanics-dominated regime the substrates diverge: spatial
+    equivalence is REJECTED (cross 0.20 vs same 1.00, TOST diff +0.80 vs +/-0.10),
+    driven by a real migration difference (vertex A climbs the chemo gradient to
+    y~17.9, CPM A stays near y~10.7). This is the positive control for the
+    equivalence study: the same test that calls the Sego model fate-equivalent
+    correctly rejects here, so that equivalence verdict is informative.
+  confidence: high
+  evidence_quality: solid
+  main_insight: >
+    The equivalence test is not rigged to say "equivalent": when mechanics drives the
+    outcome, it detects the substrate difference. Substrate choice matters exactly
+    when the mechanics (migration, sorting) -- not the shared mechanism -- sets the
+    result.
+  caveat: >
+    An engineered extreme; mechanics-only (fate static). It demonstrates the test's
+    power and substrate-sensitivity of mechanics-driven outcomes, not a biological
+    effect size.
+
+findings:
+  - id: F1-equivalence-test-has-power
+    kind: computational
+    status: confirms
+    tier: interpretation
+    mechanism_origin: engineered
+    statement: >
+      In a mechanics-dominated regime the spatial equivalence TOST REJECTS (cross
+      0.20 vs same 1.00, diff +0.80 vs margin 0.10), driven by a directed migration
+      difference (vertex A to y~17.9, CPM A to y~10.7). The equivalence test can
+      detect a real substrate difference, so crossparadigm-equivalence's positive
+      verdict is informative, not an insensitivity artifact.
+    evidence:
+      observed: "spatial same 1.000, cross 0.200; type-A mean final y cpm 10.7 vs vertex 17.9 (start 7); N=80, seeds {0,1,2}"
+      expected: {range: "cross << same; TOST rejects"}
+    explanation: "Vertex ActiveMigration climbs the field gradient; CPM Metropolis chemotaxis barely moves cells at this strength, and Potts sorting differs from vertex topology."
+    next_action: "none -- serves as the positive control; could be swept over gradient strength to map where equivalence breaks."
+    provenance:
+      run_ids: [counterfactual-divergence]
+
+bibliography:
+  sources:
+    - key: sego2022
+      note: "Adhesion / chemotaxis knobs are the Sego-blueprint mechanisms, driven into a mechanics-dominated regime as a control."
+
+visualizations:
+  - name: "Spatial equivalence — REJECTED (TOST)"
+    address: "html:equivalence-spatial.html"
+    config: {title: "Cross- vs same-backend spatial agreement in the divergent regime"}
+  - name: "Mechanics-dominated playback — CPM vs vertex"
+    address: "html:spatial-playback.html"
+    config: {title: "Divergent migration/sorting: CPM voxel | vertex polygon"}

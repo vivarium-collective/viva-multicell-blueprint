@@ -139,4 +139,44 @@ def t0_fidelity(residuals, *, type_ok=None, n_cells=None, cell_radius_um=2.8,
     return fig
 
 
-__all__ = ["adhesion_sweep", "dose_response", "t0_fidelity"]
+def equivalence_plot(same, cross, tost, *, metric="fate agreement",
+                     title="Backend equivalence (TOST)"):
+    """Same-backend vs cross-backend agreement distributions with the equivalence
+    margin band and the TOST verdict.
+
+    ``same`` / ``cross`` are the agreement samples; ``tost`` is the dict from
+    :func:`metrics.equivalence_tost`. The grey band is the equivalence region
+    (same-backend mean ± margin); when the cross-backend box sits inside it and
+    the TOST rejects, the backends are statistically equivalent.
+    """
+    import numpy as np
+    same = np.asarray(same, float)
+    cross = np.asarray(cross, float)
+    ms = tost.get("mean_same", float(same.mean()))
+    margin = tost.get("margin", 0.05)
+    equiv = tost.get("equivalent", False)
+    fig = go.Figure()
+    # equivalence region: same-backend mean +/- margin
+    fig.add_hrect(y0=ms - margin, y1=ms + margin, line_width=0,
+                  fillcolor="rgba(0,158,115,0.10)" if equiv else "rgba(213,94,0,0.10)",
+                  annotation_text=f"equivalence region (±{margin:g})",
+                  annotation_position="top left")
+    fig.add_hline(y=ms, line=dict(color=_GREY, dash="dash"),
+                  annotation_text="same-backend mean", annotation_position="bottom left")
+    fig.add_trace(go.Box(y=rnd(same, 4), name="same-backend<br>(seed↔seed)", boxpoints="all",
+                         jitter=0.5, pointpos=0, marker=dict(color=_CPM), line=dict(color=_CPM),
+                         hovertemplate="%{y:.3f}<extra></extra>"))
+    fig.add_trace(go.Box(y=rnd(cross, 4), name="cross-backend<br>(CPM↔vertex)", boxpoints="all",
+                         jitter=0.5, pointpos=0, marker=dict(color=_VERTEX), line=dict(color=_VERTEX),
+                         hovertemplate="%{y:.3f}<extra></extra>"))
+    verdict = "EQUIVALENT" if equiv else "NOT equivalent"
+    diff, lo, hi = tost.get("diff"), tost.get("ci_low"), tost.get("ci_high")
+    sub = (f"{verdict}: Δ(same−cross)={diff:+.3f}, "
+           f"90% CI [{lo:+.3f}, {hi:+.3f}] vs ±{margin:g}, p_TOST={tost.get('p_tost', float('nan')):.3g}")
+    fig.update_layout(
+        title=f"{title}<br><sub>{sub}</sub>", template="plotly_white",
+        yaxis_title=metric, showlegend=False, height=480, boxgap=0.4)
+    return fig
+
+
+__all__ = ["adhesion_sweep", "dose_response", "t0_fidelity", "equivalence_plot"]
