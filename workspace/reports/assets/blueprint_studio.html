@@ -88,6 +88,10 @@
 
 <script>
 const COMPOSITE = "viva_multicell_blueprint.composites.sego.sego_crossparadigm";
+// The page is served at <base>/assets/blueprint_studio.html; the API lives at
+// <base>/api/... - derive it so POSTs don't resolve under /assets/ (405) and so
+// a reverse-proxy base path is honored.
+const API = location.pathname.replace(/\/assets\/blueprint_studio\.html$/, "") + "/api";
 const TEMPLATES = {
   default: {readonly:true, hint:"Runs the committed Sego 2022 blueprint unchanged. Switch to an editable template to customize.",
     yaml:"# Sego 2022 flu-lung — the committed canonical blueprint is run as-is.\n# (Too large to edit inline; pick an editable template to customize.)\n"},
@@ -168,7 +172,7 @@ async function poll(runId){
   for(let i=0;i<120;i++){
     await new Promise(r=>setTimeout(r,2500));
     try{
-      const d = await (await fetch("api/simulations")).json();
+      const d = await (await fetch(`${API}/simulations`)).json();
       const rows = (d.simulations||[]);
       const row = rows.find(r => [r.id,r.run_id,r.simulation_id,r.database_id].map(String).includes(String(runId)));
       const st = row && (row.status||row.state||"").toLowerCase();
@@ -197,7 +201,7 @@ $("#run").addEventListener("click", async () => {
   $("#run").disabled = true;
   setStatus(`Starting ${engine} run (${steps} steps)…`, "");
   try{
-    const resp = await fetch("api/composite-test-run", {
+    const resp = await fetch(`${API}/composite-test-run`, {
       method:"POST", headers:{"content-type":"application/json"},
       body: JSON.stringify({id: COMPOSITE, steps, overrides,
                             label: `blueprint-studio ${engine} ${tpl}`}),
