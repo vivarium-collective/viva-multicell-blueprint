@@ -60,3 +60,11 @@ def test_registered_generator_builds_with_core_kwarg():
     assert spec is not None, "generator not registered under the expected id"
     doc = build_generator(spec, overrides={"backend": "cpm", "blueprint": _INLINE})
     assert isinstance(doc, dict)
+
+
+def test_served_sego_copy_matches_source():
+    """The Studio serves a copy of the Sego blueprint at reports/assets/ (the
+    blueprints dir isn't web-served). Guard against it drifting from the source."""
+    src = yaml.safe_load((ROOT / "workspace" / "blueprints" / "influenza_sego2022.yaml").read_text())
+    served = yaml.safe_load((ROOT / "workspace" / "reports" / "assets" / "sego_blueprint.yaml").read_text())
+    assert served == src, "reports/assets/sego_blueprint.yaml drifted from the source blueprint; re-copy it"

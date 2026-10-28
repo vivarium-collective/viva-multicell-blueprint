@@ -93,8 +93,9 @@ const COMPOSITE = "viva_multicell_blueprint.composites.sego.sego_crossparadigm";
 // a reverse-proxy base path is honored.
 const API = location.pathname.replace(/\/assets\/blueprint_studio\.html$/, "") + "/api";
 const TEMPLATES = {
-  default: {readonly:true, hint:"Runs the committed Sego 2022 blueprint unchanged. Switch to an editable template to customize.",
-    yaml:"# Sego 2022 flu-lung — the committed canonical blueprint is run as-is.\n# (Too large to edit inline; pick an editable template to customize.)\n"},
+  default: {readonly:false, fetch:"sego_blueprint.yaml",
+    hint:"The committed Sego 2022 flu-lung blueprint (loaded below). Edit and run it, or pick a smaller template.",
+    yaml:"# loading the Sego 2022 blueprint…\n"},
   simple: {readonly:false, hint:"A single epithelial type on a small sheet. Static (no fields/rules) → a run has no time-series; see the Composites Explorer for its structure.",
     yaml:`blueprint_version: "1.0"
 domain: {extent_um: [20, 20], grid_resolution_um: 1, boundary: noflux}
@@ -152,11 +153,15 @@ initial_state:
 const $ = s => document.querySelector(s);
 let engine = "cpm";
 
-function applyTemplate(){
+async function applyTemplate(){
   const t = TEMPLATES[$("#tpl").value];
   $("#bp").value = t.yaml;
   $("#bp").readOnly = !!t.readonly;
   $("#tplhint").textContent = t.hint;
+  if(t.fetch){
+    try{ const r = await fetch(t.fetch); if(r.ok) $("#bp").value = await r.text(); }
+    catch(e){ $("#bp").value = "# could not load the Sego blueprint ("+e+")\n"; }
+  }
 }
 $("#tpl").addEventListener("change", applyTemplate);
 applyTemplate();
@@ -197,13 +202,18 @@ $("#run").addEventListener("click", async () => {
   const tpl = $("#tpl").value;
   const steps = parseFloat($("#steps").value) || 60;
   const overrides = {backend: engine};
-  if(tpl !== "default") overrides.blueprint = $("#bp").value;   // inline YAML; default uses the committed file
+  const bp = $("#bp").value.trim();
+  // Send the editor's YAML inline, UNLESS it's empty or still a loading/error
+  // placeholder (then the generator falls back to the committed default).
+  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overrides.blueprint = $("#bp").value;
   $("#run").disabled = true;
   setStatus(`Starting ${engine} run (${steps} steps)…`, "");
   try{
     const resp = await fetch(`${API}/composite-test-run`, {
       method:"POST", headers:{"content-type":"application/json"},
-      body: JSON.stringify({id: COMPOSITE, steps, overrides,
+      // emit_paths: cell populations — a well-shaped scalar observable the xarray
+      // emitter can persist (the full state has empty-list stores that break zarr).
+      body: JSON.stringify({id: COMPOSITE, steps, overrides, emit_paths:["cell_counts"],
                             label: `blueprint-studio ${engine} ${tpl}`}),
     });
     const data = await resp.json().catch(()=>({}));

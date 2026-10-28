@@ -35,3 +35,4 @@ workspace/reports/assets/*
 .superpowers/brainstorm/
 # Scratch TODO list agents keep per-workspace; not tracked content.
 todo.md
+!workspace/reports/assets/sego_blueprint.yaml
