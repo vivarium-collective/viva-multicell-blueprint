@@ -18,6 +18,7 @@
 # strong to put the model in a mechanics-dominated regime. The study reports whatever
 # the equivalence test actually returns.
 
+blueprint_version: "1.0"   # BP-01 canonical schema version
 domain:
   extent_um: [40, 40]
   grid_resolution_um: 1

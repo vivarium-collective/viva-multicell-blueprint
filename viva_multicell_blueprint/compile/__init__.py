@@ -10,13 +10,21 @@ from __future__ import annotations
 _COMPILERS = {"cpm": "to_cpm", "vertex": "to_vertex"}
 
 
-def compile(blueprint, backend: str = "cpm") -> dict:
+def compile(blueprint, backend: str = "cpm", options=None) -> dict:
     """Compile ``blueprint`` onto ``backend`` (``"cpm"`` or ``"vertex"``).
 
-    Returns a process-bigraph composite document ``{"state": {...}}``.
+    ``options`` is an optional :class:`~viva_multicell_blueprint.blueprint.canonical.CompileOptions`
+    carrying backend/run parameters (``tension_scale``, ``rules_seed``) that are kept
+    OUT of the canonical blueprint (BP-01). When given, they override any legacy
+    values still in ``blueprint.mechanics_mapping``; the canonical blueprint itself
+    is never mutated. Returns a process-bigraph composite document ``{"state": {...}}``.
     """
     if backend not in _COMPILERS:
         raise ValueError(f"unknown backend {backend!r}; expected one of {sorted(_COMPILERS)}")
+    if options is not None:
+        import dataclasses
+        merged = {**(blueprint.mechanics_mapping or {}), **options.as_mechanics_mapping()}
+        blueprint = dataclasses.replace(blueprint, mechanics_mapping=merged)
     import importlib
 
     mod = importlib.import_module(f"{__name__}.{_COMPILERS[backend]}")

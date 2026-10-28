@@ -1,0 +1,19 @@
+# BP-01 worked example 2 — MIXED POPULATIONS + contacts.
+# Two epithelial types with differential adhesion (biological contact prefs).
+# Still no backend/run params: the canonical state is identical for both backends.
+blueprint_version: "1.0"
+domain: {extent_um: [30, 30], grid_resolution_um: 1, boundary: noflux}
+cell_types:
+  - {name: A, target_size: 25}
+  - {name: B, target_size: 25}
+adhesion:
+  - {a: A, b: A, strength: 4}
+  - {a: B, b: B, strength: 4}
+  - {a: A, b: B, strength: 12}
+  - {a: A, b: medium, strength: 16}
+  - {a: B, b: medium, strength: 16}
+initial_state:
+  kind: blocks
+  block: {type: A, origin: [6, 6], shape: [3, 2], spacing: 5, size: 25}
+  extra_blocks:
+    - {type: B, origin: [6, 18], shape: [3, 2], spacing: 5, size: 25}

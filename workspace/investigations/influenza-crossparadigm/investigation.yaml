@@ -49,6 +49,7 @@ description: |
 
 studies:
   - adhesion-calibration
+  - bp-01-blueprint-schema
   - initial-state-fidelity
   - flu-lung-crossparadigm
   - dose-response-crossparadigm
