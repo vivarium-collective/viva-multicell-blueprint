@@ -96,6 +96,16 @@
       "mean_same": 0.9887568870523414,
       "mean_cross": 0.9902242118151209,
       "alpha": 0.05
+    },
+    "cluster": {
+      "diff": -0.0014673247627794428,
+      "ci_low": -0.003321195773158597,
+      "ci_high": 0.0007303543643506372,
+      "n_boot": 4000,
+      "alpha": 0.05,
+      "n_cpm_runs": 6,
+      "n_vtx_runs": 6,
+      "method": "run-cluster percentile bootstrap"
     }
   },
   "spatial": {
@@ -185,6 +195,16 @@
       "mean_same": 1.0,
       "mean_cross": 0.08333333333333334,
       "alpha": 0.05
+    },
+    "cluster": {
+      "diff": 0.9166666666666666,
+      "ci_low": 0.9166666666666666,
+      "ci_high": 0.9166666666666666,
+      "n_boot": 4000,
+      "alpha": 0.05,
+      "n_cpm_runs": 6,
+      "n_vtx_runs": 6,
+      "method": "run-cluster percentile bootstrap"
     }
   }
 }

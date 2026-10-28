@@ -41,3 +41,16 @@ def test_equivalence_plot_renders_under_cap():
     boxes = [t for t in fig.data if t.type == "box"]
     assert len(boxes) == 2
     assert len(fig.to_html(include_plotlyjs="cdn").encode()) < HTML_CAP
+
+
+def test_run_cluster_bootstrap_ci_shapes_and_direction():
+    import numpy as np
+    rng = np.random.default_rng(0)
+    # near-equivalent: cross ~ same, small diff; CI should straddle ~0 and be small
+    C = 0.98 + rng.normal(0, 0.003, (6, 6))
+    Sc = 0.985 + rng.normal(0, 0.003, (6, 6))
+    Sv = 0.985 + rng.normal(0, 0.003, (6, 6))
+    r = __import__("viva_multicell_blueprint.compare.metrics", fromlist=["run_cluster_bootstrap_ci"]).run_cluster_bootstrap_ci(C, Sc, Sv, n_boot=1000)
+    assert r["ci_low"] <= r["diff"] <= r["ci_high"]
+    assert abs(r["diff"]) < 0.05
+    assert r["n_cpm_runs"] == 6 and r["n_vtx_runs"] == 6
