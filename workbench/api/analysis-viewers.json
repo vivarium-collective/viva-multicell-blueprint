@@ -1,1 +1,1 @@
-{"viewers": []}
+{"viewers": [{"uid": "viva_multicell_blueprint::blueprint-studio", "id": "blueprint-studio", "package": "viva_multicell_blueprint", "title": "Blueprint Studio", "description": "Fill in a backend-neutral blueprint, pick the mechanics engine (CPM or vertex), and run it \u2014 results land in the Simulations DB.", "kind": "launcher", "requires": [], "targets": [], "assets": null}]}
