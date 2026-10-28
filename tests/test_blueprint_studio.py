@@ -44,6 +44,10 @@ def test_workbench_viewers_registers_blueprint_studio():
     assert out["url"] == "https://x.test/wb/assets/blueprint_studio.html"
     # root-relative fallback when no public_base
     assert v["launch"](ROOT, None, None, {})["url"] == "/assets/blueprint_studio.html"
+    # a study-anchored target with a root-absolute href keeps the Explore card
+    # clickable in the published read-only snapshot
+    tgt = (v.get("targets") or [])
+    assert tgt and tgt[0].get("href") == "/assets/blueprint_studio.html" and tgt[0].get("study")
 
 
 def test_studio_app_is_served_file():
