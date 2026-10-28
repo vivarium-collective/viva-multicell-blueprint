@@ -544,7 +544,7 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Claim</h2>
-      <p class="ctr-text">A mechanics-only neutral sheet, compiled from one blueprint onto both backends, reaches COMPARABLE cell-shape statistics on the CPM and vertex substrates. The neutral adhesion strength lowers DIRECTLY to the CPM contact energy J and MONOTONICALLY to the vertex line tension; the J&lt;-&gt;tension mapping is directional (same sign), not a sharply pinned constant at this scale.
+      <p class="ctr-text">REVISED per the 2026-10-27 review: this is NOT a calibration of CPM contact energy J to vertex line tension, and the sheets are NOT established as physically matched. The CPM (23.6 um^2) and vertex (34.9 um^2) mean areas differ by ~48%, and the vertex shape statistics are nearly INSENSITIVE to tension_scale over 0.5..8 -- so tension is weakly/non-identifiable from this test. What this study honestly shows: the neutral adhesion strength lowers DIRECTLY to J and MONOTONICALLY (same sign) to line tension, a DIRECTIONAL relation only. A proper physical-observable calibration (relaxation time, interfacial length, deformation under force, migration mobility, neighbour exchange) with identifiability analysis is deferred to Stage 3 / BP-07.
 </p>
       
     </div>
@@ -570,7 +570,7 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Result</h2>
-      <p class="ctr-text">The CPM sheet relaxes to mean area 23.6 (CV 0.098). The vertex sheet relaxes to mean area ~34.9 (CV ~0.064) and -- critically -- its shape statistics are nearly INSENSITIVE to the line-tension scale over 0.5..8 (CV spread &lt; 0.01): area is set by the area-elasticity + Voronoi tessellation, not by line tension at this scale. Mean areas are the same order of magnitude (ratio ~1.5) and both dispersions are small, so the sheets are comparable; but the J&lt;-&gt;tension mapping is only DIRECTIONAL (monotone), not pinned. tension_scale = 1.0 is retained as the faithful default; the small nominal best (|dCV| ~0.03 at scale 8) is within noise.
+      <p class="ctr-text">The CPM sheet relaxes to mean area 23.6 (CV 0.098). The vertex sheet relaxes to mean area ~34.9 (CV ~0.064) and -- critically -- its shape statistics are nearly INSENSITIVE to the line-tension scale over 0.5..8 (CV spread &lt; 0.01): area is set by the area-elasticity + Voronoi tessellation, not by line tension at this scale. Mean areas are the same ORDER of magnitude (ratio ~1.5) but differ by ~48%, which is NOT a match; and because vertex shape is tension-insensitive, the J&lt;-&gt;tension mapping is only DIRECTIONAL (monotone), NOT pinned and NOT identifiable here. tension_scale = 1.0 is retained only as a provisional default; the nominal best (|dCV| ~0.03 at scale 8) is within noise. This does not calibrate the mechanics.
 </p>
       
       
@@ -1328,7 +1328,7 @@ pass_if: {"note": "tension(scale2) \u003e tension(scale1); tension(strength25) \
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "648e7a49fae4bc821ac9386405c5927a3a4219d4", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/648e7a49fae4bc821ac9386405c5927a3a4219d4", "branch": "main", "lockfile": "uv.lock@7c453b95ffdb", "generated_at": "2026-10-28 01:20 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "fb31d213c119e3661a6359bd9e74f0dea40ef4c7", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/fb31d213c119e3661a6359bd9e74f0dea40ef4c7", "branch": "main", "lockfile": "uv.lock@7c453b95ffdb", "generated_at": "2026-10-28 02:01 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>

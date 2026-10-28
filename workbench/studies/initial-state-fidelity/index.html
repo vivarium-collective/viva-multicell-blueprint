@@ -639,7 +639,7 @@
       <div class="ctr-meta ctr-assess">
         
         
-        <div class="ctr-meta-row"><span class="ctr-meta-k">Caveat</span> <span class="ctr-meta-item">Vertex t0 face area is the un-relaxed Voronoi area (~46), larger than prefered_area 25; fidelity scores centroids + types, not that transient area.</span></div>
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Caveat</span> <span class="ctr-meta-item">REVIEW: centroid + cell-count + type identity is necessary but NOT sufficient for BLUEPRINT FIDELITY (Claim 1). Per-cell area, perimeter, footprint IoU, contact-surface, adjacency, boundary, polygon validity, coverage and round-trip (serialize-&gt;compile-&gt;inspect-&gt;reconstruct) are untested (Stage 2 / BP-02).</span></div>
         
       </div>
       
@@ -1246,7 +1246,7 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
       <h3 class="overview-label">Limitations</h3>
       <p class="muted" style="margin:0 0 6px 0;font-size:0.85em">What this study explicitly does NOT validate (prevents overclaim).</p>
       <ul style="margin:0 0 0 18px;padding:0;font-size:0.93em">
-        <li style="margin:2px 0">Vertex t0 face area is the un-relaxed Voronoi area (~46), larger than prefered_area 25; fidelity scores centroids + types, not that transient area.</li><li style="margin:2px 0">The clean fraction_clean = 1.0 holds at this margin spacing; denser packing could contest faces (the residual would then report it).</li>
+        <li style="margin:2px 0">REVIEW: centroid + cell-count + type identity is necessary but NOT sufficient for BLUEPRINT FIDELITY (Claim 1). Per-cell area, perimeter, footprint IoU, contact-surface, adjacency, boundary, polygon validity, coverage and round-trip (serialize-&gt;compile-&gt;inspect-&gt;reconstruct) are untested (Stage 2 / BP-02).</li><li style="margin:2px 0">REVIEW: matching is by immutable ID; latent immune cells and epithelial cells should be checked for whether they may physically co-occupy the sheet.</li><li style="margin:2px 0">Vertex t0 face area is the un-relaxed Voronoi area (~46), larger than prefered_area 25; fidelity scores centroids + types, not that transient area.</li><li style="margin:2px 0">The clean fraction_clean = 1.0 holds at this margin spacing; denser packing could contest faces (the residual would then report it).</li>
       </ul>
     </div>
     
@@ -1287,7 +1287,7 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "648e7a49fae4bc821ac9386405c5927a3a4219d4", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/648e7a49fae4bc821ac9386405c5927a3a4219d4", "branch": "main", "lockfile": "uv.lock@7c453b95ffdb", "generated_at": "2026-10-28 01:20 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "fb31d213c119e3661a6359bd9e74f0dea40ef4c7", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/fb31d213c119e3661a6359bd9e74f0dea40ef4c7", "branch": "main", "lockfile": "uv.lock@7c453b95ffdb", "generated_at": "2026-10-28 02:01 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>
