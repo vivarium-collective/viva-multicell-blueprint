@@ -141,6 +141,8 @@ conclusion_logic:
       - "If the test did NOT reject here, the metric/margin is too insensitive -- tighten before trusting any equivalence verdict."
 
 limitations:
+  - "REVIEW: an artificial mechanics-only regime with a strong gradient + differential adhesion -- it proves the test has POWER but cannot establish sensitivity to realistic influenza-relevant discrepancies."
+  - "REVIEW: mechanics-only rules-seeds are DETERMINISTIC, so repeated pairs are not independent stochastic replicates; power should be measured by graded injected deviations (effect-size sweep) and a matched-physical-response control (Stage 4 / BP-06,BP-07)."
   - "An engineered extreme regime (deliberately strong adhesion + chemotaxis), chosen to make the substrate decisive -- not a biological claim about influenza."
   - "Mechanics-only, so fate is static; the divergence is spatial/positional by construction."
   - "Demonstrates the test's POWER and that mechanics-driven outcomes are substrate-sensitive; it does not quantify a biological effect size."
@@ -154,7 +156,7 @@ report:
     y~17.9, CPM A stays near y~10.7). This is the positive control for the
     equivalence study: the same test that calls the Sego model fate-equivalent
     correctly rejects here, so that equivalence verdict is informative.
-  confidence: high
+  confidence: medium
   evidence_quality: solid
   main_insight: >
     The equivalence test is not rigged to say "equivalent": when mechanics drives the

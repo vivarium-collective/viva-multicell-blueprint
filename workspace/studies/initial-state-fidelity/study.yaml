@@ -132,6 +132,8 @@ conclusion_logic:
     block_downstream: "A non-shared t0 would confound the fate-agreement metric."
 
 limitations:
+  - "REVIEW: centroid + cell-count + type identity is necessary but NOT sufficient for BLUEPRINT FIDELITY (Claim 1). Per-cell area, perimeter, footprint IoU, contact-surface, adjacency, boundary, polygon validity, coverage and round-trip (serialize->compile->inspect->reconstruct) are untested (Stage 2 / BP-02)."
+  - "REVIEW: matching is by immutable ID; latent immune cells and epithelial cells should be checked for whether they may physically co-occupy the sheet."
   - "Vertex t0 face area is the un-relaxed Voronoi area (~46), larger than prefered_area 25; fidelity scores centroids + types, not that transient area."
   - "The clean fraction_clean = 1.0 holds at this margin spacing; denser packing could contest faces (the residual would then report it)."
 

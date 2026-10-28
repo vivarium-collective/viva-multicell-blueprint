@@ -1,0 +1,461 @@
+feedback_report:
+  investigation: influenza-crossparadigm
+  title: Influenza cross-paradigm — one Sego 2022 blueprint, two mechanical substrates
+  reviewer: Scientific and architecture critique
+  date: '2026-10-27'
+  overall:
+    disposition: revise
+    note: Shift the principal claim from cross-backend simulation agreement to a declarative, backend-neutral, testable
+      multicellular blueprint with faithful and auditable lowering to CPM and vertex geometries. Treat dynamic equivalence
+      as a separate scientific question, not proof that blueprint specification is correct.
+    priority: critical
+  sections:
+  - section: research-question
+    disposition: revise
+    note: 'Use three separately falsifiable claims: (A) one canonical blueprint specifies an initial biological
+      world independently of simulator, (B) two compilers preserve explicitly defined semantics and report representation
+      loss, (C) dynamics agree only on observables for which equivalence is scientifically justified. Define a benchmark
+      suite spanning simple geometry, mixed populations, infection field and coupled mechanics.'
+  - section: abstract
+    disposition: revise
+    note: Lead with the blueprint artifact, schema, transformations and fidelity evidence, then report influenza-specific
+      fate/spatial results. Replace unqualified FULL Sego model wording while V/L/C/F input producers and physical
+      immune insertion are absent. Separate source literature fidelity from within-project backend comparability.
+  - section: executive-summary
+    disposition: revise
+    note: 'Correct the apparently conflicting chronology: executive verdict describes an initial fail-to-reject
+      and subsequent TOST positive equivalence, while evidence register calls flu-lung-crossparadigm refuted despite
+      its run succeeding. State clearly which claim was refuted, which run passed and which results supersede earlier
+      provisional readings. Avoid calling an exact-location failure merely a representation artifact without direct
+      causal isolation.'
+  - section: blueprint-definition
+    disposition: revise
+    note: Introduce a versioned formal schema and rendered example. Specify domain dimensionality, length/time units,
+      coordinate frame, boundaries, tessellation-independent cell IDs, positions and/or footprints, shape/size/volume,
+      cell types and latent states, extracellular fields, distributions, contact/adjacency relations, compartments,
+      random seeds, initialization order, mechanism bindings, provenance and allowable loss. Distinguish biological
+      desired state from realized backend geometry and from dynamic rules.
+  - section: validation
+    disposition: revise
+    note: Implement compile/inspect/validate/round-trip for each backend, with invariant tolerances and representation-loss
+      reports. Expose errors not only a success badge. Test schema versioning, missing fields, impossible packings,
+      boundary cells, overlaps, ties, ID collisions, incompatible units, topological constraints and unsupported
+      features.
+  - section: claim-evidence
+    disposition: revise
+    note: Separate code-level evidence (compiler execution), numerical evidence (invariants and statistical outcomes),
+      and external biological evidence (measured flu-lung data or published Sego figures). A computational test
+      supporting a port does not establish that the deployed mechanism reproduces Sego 2022 biology.
+  - section: synthesis-gaps
+    disposition: revise
+    note: 'Replace the currently empty roadmap with a dependency-ordered program: formal schema -> construction
+      invariants -> round-trip fidelity -> isolated mechanics calibration -> complete infection circuit -> properly
+      powered comparisons -> external validation -> transfer to independent tissue geometry.'
+  - section: references
+    disposition: revise
+    note: Separate Sego 2022 target evidence from simulator/software documentation and statistical methods; provide
+      exact figure/table/parameter anchors, data extraction, versions and licensing. Document what is taken verbatim,
+      approximated, or newly engineered.
+  - section: investigation-visualizations
+    disposition: revise
+    note: The central figure should present one biological blueprint in the middle, two independent lowering paths
+      to CPM and vertex on each side, explicit transformation and loss reports, and common readouts. Clearly distinguish
+      biological world, intermediate representation and simulation outputs; add scale bars and consistent color/identity
+      legends.
+  studies:
+  - study: adhesion-calibration
+    verdict: passed
+    disposition: revise
+    note: 'Current claim that sheets are comparable is too generous: 23.6 vs 34.9 mean area is a ~48% difference,
+      while vertex CV barely responds to tension_scale (0.5–8). This does NOT calibrate contact energy J to line
+      tension. Do not use a directional parameter relation as an established physical mapping.'
+    sections:
+    - section: methods
+      disposition: revise
+      note: Separate geometry initialization, elastic-area parameter, line tension, junction dynamics, boundary
+        guard effects and relaxation duration. Match physical target area first, then tune/estimate independently
+        meaningful mechanical observables. Run multi-objective sensitivity and identifiability analyses with many
+        independent mechanics seeds and much longer relaxation.
+    - section: visualizations
+      disposition: revise
+      note: Show side-by-side labeled sheets at t0 and equilibrium, distributions of area/perimeter/shape index/edge
+        length/neighbors, J-by-Lambda response surface with uncertainty, and sensitivity heatmap. Mark nonidentifiable
+        parameter regions.
+    - section: evidence
+      disposition: revise
+      note: Add independent reference benchmarks for both mechanics implementations, dimensional analysis of energy
+        vs tension, matching physical domain sizes, solver timestep/convergence tests and boundary exclusion sensitivity.
+  - study: initial-state-fidelity
+    verdict: passed
+    disposition: revise
+    note: Excellent identity smoke test (48/48 cells, all types mapped; CPM RMS 0, vertex RMS about 1.2 um), but
+      neither centroid nor cell-count fidelity is sufficient to establish blueprint fidelity. Initial cell area,
+      overlap, topology, boundary, immune-cell state and representation loss require direct tests.
+    sections:
+    - section: methods
+      disposition: revise
+      note: Require per-cell area and perimeter residuals, target vs realized centroid displacements, nearest-neighbor
+        rank, adjacency preservation, contact surface distribution, cell-footprint intersection/union, polygon validity,
+        density and coverage. Separate latent immune cells from epithelial cells if they should not physically occupy
+        the same epithelial sheet. Define an explicit matching by immutable ID, not just nearest centroid.
+    - section: visualizations
+      disposition: revise
+      note: 'Three-way registered view: blueprint centers/contours, CPM voxel mask, vertex polygons. Overlay displacement
+        arrows for each ID, error heat map, distributions and QQ plots, size/shape parity plots, adjacency matrix
+        differences and failed-mapping audit table.'
+    - section: evidence
+      disposition: revise
+      note: Add randomized/perturbed/edge-heavy tissue fixtures, irregular organ boundaries, multi-cell-type interfaces
+        and failure-mode tests. Verify after serialize -> compile -> inspect -> reconstruct, and explicitly quantify
+        noninvertible transformations.
+  - study: flu-lung-crossparadigm
+    verdict: not_started
+    disposition: revise
+    note: 'The report calls this run executed while its grade is refuted and verdict not_started: reconcile status
+      for each actual test. FULL Sego execution is overstated until V/L/C/F production and immune recruitment semantics
+      are implemented or clearly designated deviations. Biological fidelity to Sego figures is not yet validated
+      by a CPM self-envelope.'
+    sections:
+    - section: methods
+      disposition: revise
+      note: Create full mechanism-to-producer-to-consumer ledger for V,L,C,F and recruitment flux. Instrument every
+        state variable and source term. Couple spatial exposure to actual cell footprints/contact and explicitly
+        test update order. Quantify the differences caused by frozen/zero systemic inputs with ablations. Compare
+        same initial blueprint and matched physical units, not just matching code/config.
+    - section: visualizations
+      disposition: revise
+      note: Synchronize paired CPM/vertex movies at equal physical times, infected-foci masks in common coordinates,
+        fields/fluxes, macrophage recruitment events, cell fate trajectories with independent-seed bands, patch
+        IoU and topology metrics across time. A visual callout should explicitly label missing ODE producers and
+        latent recruitment as approximations.
+    - section: evidence
+      disposition: revise
+      note: Digitize Sego 2022 experimental/model figure panels with traceable figure IDs and extract accepted distributions,
+        qualitative ordering and uncertainties; state up front which phenomena are genuinely reproduced. Run a complete-circuit
+        vs approximated-circuit comparison.
+  - study: dose-response-crossparadigm
+    verdict: not_started
+    disposition: revise
+    note: Two endpoint conditions plus one intermediate and only two seeds do not identify a dose-response relationship;
+      seeded infected-cell fraction is not virion inoculum. The intermediate CPM seed1 result (1/3/2 infected) explicitly
+      violates a monotonic-curve claim.
+    sections:
+    - section: methods
+      disposition: revise
+      note: 'Define two different experiments: initial infected-cell fraction versus initial extracellular virus
+        concentration. Use at least 6-10 graded doses with independent replicate seeds; distinguish total infected,
+        peak, area under infection curve and time to peak; stratify by inoculum realization, spatial topology and
+        backend. Predeclare dose-response hypotheses and error model.'
+    - section: visualizations
+      disposition: revise
+      note: Plot dose vs infection fraction (not just counts), independent-seed points and intervals, bootstrap
+        bands, time-course fan plots and two-dose seeded-pattern maps; mark true virion dose separately from infected-cell
+        seeding.
+    - section: evidence
+      disposition: revise
+      note: Add published Sego/epithelial influenza viral-load or infected fraction references if available; otherwise
+        clearly describe an internal computational sanity test. Repeat after V producer is connected.
+  - study: crossparadigm-equivalence
+    verdict: passed
+    disposition: revise
+    note: The 6x6 grid is a crossed pairwise comparison based on six runs per backend; 36 cross pairs and 30 same-backend
+      pairs are dependent, and should not be treated as independent replicates. Reported p_TOST 5.6e-36 and narrow
+      CI need a hierarchical, paired, or seed-cluster bootstrap reanalysis. A +/-0.05 fate margin requires biological
+      justification. Exact-position agreement may be a poorly posed cross-representation observable.
+    sections:
+    - section: methods
+      disposition: revise
+      note: Make the run/seed (not pair) the unit of resampling; use hierarchical bootstrap over backend run sets,
+        or run-level mixed effects with dependence-aware uncertainty. Explicitly define fate agreement denominator,
+        identity matching and class imbalance; provide confusion matrices and per-class infection/death hazards.
+        For spatial measures, register domains then use scale-aware occupancy/shape descriptors and distributional
+        distances; pre-register acceptable margins for each.
+    - section: visualizations
+      disposition: revise
+      note: Show all run-level results and dependence structure, difference vs equivalence margins with 90% CI,
+        raw fate confusion matrices, rare-infection class sensitivity, centroid displacement over time, focus size/location
+        metrics and threshold sensitivity curves.
+    - section: evidence
+      disposition: revise
+      note: Demonstrate the selected margin through domain tolerances or effect thresholds, quantify power under
+        biologically meaningful perturbations, and re-run after missing infection/immune feedback is restored.
+  - study: substrate-divergence-counterfactual
+    verdict: passed
+    disposition: revise
+    note: Useful falsification control but it changes to an artificial mechanics-only regime with a strong gradient
+      and differential adhesion; it cannot prove high sensitivity to realistic influenza-relevant discrepancies.
+      Mechanics-only rules seeds are deterministic, so repeated pairs do not provide independent stochastic evidence.
+    sections:
+    - section: methods
+      disposition: revise
+      note: Factorially vary adhesion, migration, geometry, chemotactic sensitivity, crowding and mechanics update
+        rate over biologically plausible as well as extreme ranges. Isolate implementation inequivalence (different
+        migration algorithms) from representation inequivalence (grid vs polygon) and from initialization differences.
+        Include counterfactual with identical physical response law implemented in each substrate.
+    - section: visualizations
+      disposition: revise
+      note: Add divergence phase diagram, trajectories and speeds with gradient vectors, cell-cell contact evolution,
+        run-level uncertainties and a boundary separating agreement from divergence. Plot both a calibrated matched-response
+        case and engineered strong-difference case.
+    - section: evidence
+      disposition: revise
+      note: Measure sensitivity/power by injected, known deviations of increasing effect size rather than only one
+        deliberately huge perturbation. Link a plausible physiological regime to cited cell migration values if
+        claiming relevance to infection.
+  proposed_studies:
+  - id: BP-01
+    title: Blueprint language and canonical intermediate representation
+    priority: P0
+    question: What can a multicellular blueprint express, independently of CPM/vertex implementations?
+    design: Publish versioned schema; canonical units and coordinate system; mandatory vs optional fields; explicit
+      semantic types for cells, extracellular fields, compartments, contacts, latent populations, distributions
+      and initialization constraints. Validate three hand-authored examples.
+    deliverables:
+    - schema and normative specification
+    - worked influenza blueprint with annotations
+    - static validator and diagnostic messages
+    acceptance:
+    - both backends take precisely the same immutable canonical blueprint
+    - no backend-specific geometry or dynamics parameters appear in canonical biological state
+    - all compiler defaults and losses are recorded separately
+  - id: BP-02
+    title: Round-trip and metamorphic blueprint fidelity
+    priority: P0
+    question: Does lowering preserve the specified state under transforms and reconstruction?
+    design: 'Generate synthetic fixtures: packed sheet, irregular tissue, mixed size/type, wound, hole, boundary
+      contacts, clustered immune populations. Compile to both representations; inspect emitted t0; reconstruct canonical
+      summaries. Test translation, rotation, scaling, cell order permutations and deterministic reseeding.'
+    deliverables:
+    - golden fixtures
+    - metamorphic/property-based tests
+    - per-backend loss report
+    acceptance:
+    - 100% stable IDs/types where representable
+    - quantitative tolerances on area/coverage/centroid/contact distributions
+    - explicit and tested failures for unrealizable configurations
+  - id: BP-03
+    title: Constraint solver and physical initialization
+    priority: P0
+    question: Can biological priors be realized as non-overlapping, mechanically viable configurations rather than
+      merely assigning centroids?
+    design: Evaluate constrained packing, CVT/power diagram, vertex relaxation and CPM painting; compare exact vs
+      approximate realizations. Measure residual geometry and post-init relaxation artifacts.
+    deliverables:
+    - initialization options
+    - constraint-satisfaction diagnostics
+    - initial stress/energy report
+    acceptance:
+    - no invalid polygons/overlaps or unaccounted cells
+    - target area and tissue occupancy tolerance per fixture
+    - post-relaxation displacement and stress reported
+  - id: BP-04
+    title: Canonical contact topology and field sampling
+    priority: P0
+    question: Are the two backends consuming physically equivalent contact and extracellular exposures?
+    design: Set identical analytic fields and fixed geometry; compare point, centroid, footprint-integrated field
+      sampling, neighbor graph and contact-length normalization. Include boundary cells and moving cells.
+    deliverables:
+    - adapter conformance tests
+    - side-by-side field sampling maps
+    - sensitivity to discretization
+    acceptance:
+    - specified sampling contracts match analytic expectations at grid/mesh refinement
+    - contact measures normalized by physical dimension
+    - no silent difference in update order
+  - id: BP-05
+    title: Complete influenza mechanism circuit
+    priority: P0
+    question: What currently drives V/L/C/F and immune recruitment, and how do missing links distort outcomes?
+    design: Mechanism ledger with every state producer/consumer and conservation checks. Implement missing ODE producers
+      or label unsupported; replace/test latent pool with real topology insertion where required. Perform full-vs-ablated
+      comparisons.
+    deliverables:
+    - executable wiring audit
+    - complete/approximate mechanism modes
+    - ablation plot
+    acceptance:
+    - no unexplained dead input channels
+    - recruitment conservation and event semantics tested
+    - literature-relevant response re-evaluated after integration
+  - id: BP-06
+    title: Dependency-aware equivalence and operational envelope
+    priority: P1
+    question: On what observables and regimes are backends equivalent at an acceptable effect size?
+    design: Reanalyze TOST using independent run bootstrap or hierarchical model. Sweep tissue size, time horizon,
+      density, cell motion, contact dependence and infection feedback. Distinguish categorical, aggregate and geometrical
+      outputs.
+    deliverables:
+    - predeclared estimands and margins
+    - equivalence and uncertainty report
+    - regime map
+    acceptance:
+    - independence assumptions explicit and validated
+    - equivalence only claimed for estimands passing power-aware tests
+    - negative controls detect plausible injected deviations
+  - id: BP-07
+    title: Mechanics identification and controlled matching
+    priority: P1
+    question: Can two representations be matched on physical response instead of arbitrary parameter labels?
+    design: 'Calibrate against same target observables from mechanics-only standardized tests: relaxation time,
+      interfacial length, deformation under force, migration mobility, neighbor exchanges and strain response. Explore
+      parameter identifiability.'
+    deliverables:
+    - calibration objective and uncertainty
+    - parameter-to-observable response surfaces
+    - matched physical test set
+    acceptance:
+    - identifiable or explicitly unidentifiable parameter combinations
+    - agreement within preregistered physical-response bands
+    - separate geometric and kinetic calibration
+  - id: BP-08
+    title: Real-data Sego and lung epithelial validation
+    priority: P1
+    question: Does either compiled model reproduce the intended influenza biology?
+    design: Extract and annotate digitized Sego 2022 figures/parameters, appropriate infection time courses and
+      tissue images if licensed/available. Compare observed patterns to simulation predictive intervals without
+      tuning on holdout data.
+    deliverables:
+    - literature benchmark data with figure provenance
+    - posterior predictive or predictive-check plots
+    - calibration/holdout split
+    acceptance:
+    - model targets and missing targets transparently listed
+    - held-out discrepancy metrics reported
+    - no biological validity inferred from cross-backend agreement
+  - id: BP-09
+    title: Blueprint transfer to a second geometry and a third backend
+    priority: P1
+    question: Is the blueprint specification general beyond one influenza case and two hand-tuned adapters?
+    design: Use a distinct irregular epithelial patch or wound healing fixture; compile through the same schema,
+      ideally to a third substrate or independent backend implementation. Count required source edits and backend-specific
+      exceptions.
+    deliverables:
+    - new model fixture
+    - adapter conformance tests
+    - portability cost metrics
+    acceptance:
+    - canonical blueprint unchanged across backends
+    - representation losses and unsupported constructs explicit
+    - transfer possible without influenza-specific custom compiler branching
+  - id: BP-10
+    title: Stochastic realization and uncertainty separation
+    priority: P1
+    question: How much variation comes from biological initial-state uncertainty, stochastic rules and mechanical
+      substrate?
+    design: Cross-factored design of blueprint realization seed, rules seed and mechanics seed; use common random
+      numbers where meaningful, explicit stream isolation and independent replication.
+    deliverables:
+    - seed/provenance manifest
+    - variance decomposition
+    - fate and morphology uncertainty bands
+    acceptance:
+    - no seed-dependent confounding between backend and initial geometry
+    - uncertainty decomposition separates biological vs numerical sources
+    - reproducible exact reruns from archived config
+  - id: BP-11
+    title: Performance and scaling of blueprint compilation
+    priority: P2
+    question: How expensive is portable initialization for large tissues?
+    design: Benchmark 10^2 to 10^5 cells where feasible; record compile time, memory, geometric error and relaxation.
+      Compare CPM resolution and vertex mesh complexity.
+    deliverables:
+    - scaling curves
+    - quality vs runtime Pareto chart
+    acceptance:
+    - no unreported pathological scaling
+    - precision-performance choices documented
+  figure_plan:
+  - figure: F1
+    priority: P0
+    title: One blueprint, two substrates
+    spec: Draw canonical cell/field/type/geometry specification in central panel; left CPM pixel raster, right vertex
+      polygon mesh; draw arrows through compiler adapters; surface ID and loss diagnostics; no implication of equal
+      trajectories.
+  - figure: F2
+    priority: P0
+    title: Blueprint versus realized t0
+    spec: Registered 3-view spatial overlay with per-cell ID colors/shape labels; vectors for centroid residual,
+      footprint segmentation, guard-ring region, size/contact errors and color-coded failures.
+  - figure: F3
+    priority: P0
+    title: Blueprint fidelity dashboard
+    spec: Small-multiple parity + distribution plots for area, perimeter, centroid, neighborhood adjacency, contact
+      length and coverage; report tolerances and violations.
+  - figure: F4
+    priority: P1
+    title: Mechanics calibration and identifiability
+    spec: Show CPM/vertex physical response curves, J and tension parameter surfaces, convergence duration, area
+      mismatch, and flat or weakly identified dimensions.
+  - figure: F5
+    priority: P1
+    title: Shared mechanism wiring and missing producers
+    spec: Process-bigraph diagram showing mechanics in a swap slot, shared fields/rules/ODE/recruitment, actual
+      producers for V/L/C/F and explicit missing/approximate paths; overlay read/write timing.
+  - figure: F6
+    priority: P1
+    title: Replicated influenza dynamics and observation scales
+    spec: Synchronized physical-time snapshots of CPM/vertex, foci, field maps and fate traces, with separate within-backend
+      envelopes, cross-backend contrasts, spatial scale bars and infection-event markers.
+  - figure: F7
+    priority: P1
+    title: Equivalence and dependence-aware uncertainty
+    spec: Forest plots of estimands with predeclared equivalence margins and run-level clustered intervals; confusion
+      matrix by cell fate; avoid treating all seed-pairs as independent points.
+  - figure: F8
+    priority: P1
+    title: Phase diagram of when substrate matters
+    spec: Map across mobility, contact coupling and tissue density or mechanics strength; display fate/spatial discrepancy
+      and uncertainty, highlight influenza operating point and positive-control point.
+  - figure: F9
+    priority: P1
+    title: Dose-response with explicit inoculum definition
+    spec: Separate inoculum virion concentration from initially infected fraction; independent-seed scatter, fitted
+      curves only if data warrant, prediction bands and infection-map samples.
+  - figure: F10
+    priority: P2
+    title: Portability benchmark across blueprints
+    spec: Matrix of fixture x backend showing compilation success, semantic invariant errors, unsupported features,
+      dynamics outcome metrics and computational overhead.
+  implementation_sequence:
+  - phase: 1
+    name: Make blueprint specification a first-class tested artifact
+    work:
+    - BP-01
+    - BP-02
+    - BP-03
+    exit_gate: Canonical schema and portable initial-state fidelity tests pass for pathological and normal fixtures.
+  - phase: 2
+    name: Make backend interfaces scientifically comparable
+    work:
+    - BP-04
+    - BP-07
+    - BP-10
+    exit_gate: Geometry/contact/field adapter conformance, physically grounded calibration and independent randomness
+      established.
+  - phase: 3
+    name: Repair biological completeness and statistical inference
+    work:
+    - BP-05
+    - BP-06
+    - BP-08
+    exit_gate: No missing causal inputs, properly powered equivalence on justified observables, measured biology
+      benchmarked.
+  - phase: 4
+    name: Demonstrate generality and practical utility
+    work:
+    - BP-09
+    - BP-11
+    exit_gate: Another independent blueprint compiles without bespoke influenza changes; portability costs and performance
+      quantified.
+  nonnegotiable_claim_guardrails:
+  - Passing the same code on two backends is not evidence of biological validity.
+  - Equal total counts can conceal substantial infection-pattern and rare-cell behavior differences.
+  - 'Seed-pair comparisons reuse simulation trajectories: treat statistical dependence explicitly.'
+  - TOST failure to reject equivalence is not proof of a difference; report confidence bounds and test power.
+  - CPM contact energy and vertex line tension cannot be equated by a monotonic label mapping without shared physical
+    observables.
+  - The biological blueprint, compiler mapping, initialized mechanical state, dynamic mechanism and readout must
+    remain distinct objects.
+  - Every declared semantic invariant should have a pass/fail test and a quantified tolerance.
+  - Call missing viral/systemic producers and latent immune pools approximations until their causal roles are implemented
+    and validated.

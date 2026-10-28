@@ -140,7 +140,7 @@ def t0_fidelity(residuals, *, type_ok=None, n_cells=None, cell_radius_um=2.8,
 
 
 def equivalence_plot(same, cross, tost, *, metric="fate agreement",
-                     title="Backend equivalence (TOST)"):
+                     title="Backend equivalence (TOST)", cluster_ci=None):
     """Same-backend vs cross-backend agreement distributions with the equivalence
     margin band and the TOST verdict.
 
@@ -171,8 +171,16 @@ def equivalence_plot(same, cross, tost, *, metric="fate agreement",
                          hovertemplate="%{y:.3f}<extra></extra>"))
     verdict = "EQUIVALENT" if equiv else "NOT equivalent"
     diff, lo, hi = tost.get("diff"), tost.get("ci_low"), tost.get("ci_high")
-    sub = (f"{verdict}: Δ(same−cross)={diff:+.3f}, "
-           f"90% CI [{lo:+.3f}, {hi:+.3f}] vs ±{margin:g}, p_TOST={tost.get('p_tost', float('nan')):.3g}")
+    if cluster_ci is not None:
+        # Dependence-aware (run-cluster bootstrap) is the PRIMARY uncertainty;
+        # the pair-level t-test overstates it (dependent seed-pairs).
+        cl, ch = cluster_ci.get("ci_low"), cluster_ci.get("ci_high")
+        sub = (f"{verdict}: Δ(same−cross)={diff:+.3f}, run-cluster 90% CI "
+               f"[{cl:+.3f}, {ch:+.3f}] vs margin ±{margin:g} "
+               f"(pair-level CI [{lo:+.3f}, {hi:+.3f}] shown for contrast)")
+    else:
+        sub = (f"{verdict}: Δ(same−cross)={diff:+.3f}, "
+               f"90% CI [{lo:+.3f}, {hi:+.3f}] vs ±{margin:g}, p_TOST={tost.get('p_tost', float('nan')):.3g}")
     fig.update_layout(
         title=f"{title}<br><sub>{sub}</sub>", template="plotly_white",
         yaxis_title=metric, showlegend=False, height=480, boxgap=0.4)

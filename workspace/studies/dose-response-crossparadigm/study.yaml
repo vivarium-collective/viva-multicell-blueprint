@@ -113,6 +113,8 @@ conclusion_logic:
     block_downstream: "Report only directional agreement until magnitudes are reconciled."
 
 limitations:
+  - "REVIEW: this is NOT a dose-response relationship -- 3 doses x 2 seeds with an intermediate CPM seed1 (1/3/2) that breaks monotonicity support only a strict lowest-vs-highest DIRECTION. A real dose-response needs 6-10 graded doses x replicate seeds (Stage 4 / BP-05)."
+  - "REVIEW: the dose axis is SEEDED INFECTED-CELL FRACTION, which is NOT a virion inoculum; define initial extracellular-virus concentration as a separate experiment once the V producer lands (BP-05/BP-08)."
   - "Directional (lowest-vs-highest) only: intermediate-dose monotonicity is seed-dependent (CPM seed1 is 1/3/2), so a dose-response CURVE is not claimed."
   - "Initial load is proxied by seeded infected cells; the ODE v0 virus input has no producer, so a true viral-titre dose axis is deferred (Task 21)."
   - "Three doses, two seeds, reduced scale/steps -- enough to establish the direction, not a dose-response fit; magnitudes are within the capstone's same-seed spread."

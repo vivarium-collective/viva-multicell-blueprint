@@ -92,18 +92,26 @@ def equivalence_study(fast: bool) -> None:
     def spatial(a, b):
         return metrics.per_cell_spatial_agreement(a.frames, b.frames, _reg(ids, a, b), tol_um=5.0)["mean"]
 
+    sc = sorted(cpm); sv = sorted(vtx)
     out = {"study": study, "n_steps": n, "seeds": list(seeds)}
     for label, score, margin in (("fate", fate, margin_fate), ("spatial", spatial, margin_spatial)):
         same = _pairs_same({"cpm": cpm, "vertex": vtx}, score)
         cross = _pairs_cross(cpm, vtx, score)
         tost = metrics.equivalence_tost(same, cross, margin=margin)
-        out[label] = {"same": same, "cross": cross, "tost": tost}
+        # Dependence-aware (run-cluster) reanalysis: the seed-pairs reuse the same
+        # 6+6 runs, so resample RUNS, not pairs (reviewer guardrail).
+        C = [[score(cpm[i], vtx[j]) for j in sv] for i in sc]
+        Sc = [[score(cpm[i], cpm[j]) if i != j else 1.0 for j in sc] for i in sc]
+        Sv = [[score(vtx[i], vtx[j]) if i != j else 1.0 for j in sv] for i in sv]
+        cluster = metrics.run_cluster_bootstrap_ci(C, Sc, Sv, n_boot=4000)
+        out[label] = {"same": same, "cross": cross, "tost": tost, "cluster": cluster}
         _write(study, f"equivalence-{label}", equivalence_plot(
             same, cross, tost, metric=f"{label} agreement",
-            title=f"Backend equivalence — {label} (TOST)"))
+            title=f"Backend equivalence — {label}", cluster_ci=cluster))
         print(f"  {label}: same={tost['mean_same']:.4f} cross={tost['mean_cross']:.4f} "
-              f"diff={tost['diff']:+.4f} CI[{tost['ci_low']:+.4f},{tost['ci_high']:+.4f}] "
-              f"margin={margin} -> equivalent={tost['equivalent']} p_tost={tost['p_tost']:.3g}")
+              f"diff={tost['diff']:+.4f} | pair-CI[{tost['ci_low']:+.4f},{tost['ci_high']:+.4f}] "
+              f"CLUSTER-CI[{cluster['ci_low']:+.4f},{cluster['ci_high']:+.4f}] margin={margin} "
+              f"-> equivalent={tost['equivalent']}")
     _results(study, out)
 
 

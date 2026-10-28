@@ -9,22 +9,26 @@ evaluation_status: evaluated
 gate_status: passed
 design_status: drafted
 title: "Backend equivalence (TOST)"
-confidence: Accepted
+confidence: Investigating
 
 parent_studies:
   - {study: flu-lung-crossparadigm, condition: ran, relation: builds-on}
   - {study: substrate-divergence-counterfactual, condition: ran, relation: tests}
 
 claim: >
-  With replicates (a 6x6 CPM x vertex seed grid, 30 same-backend pairs and 36
-  cross-backend pairs), the two substrates are STATISTICALLY EQUIVALENT on cell
-  fate: cross-backend fate agreement (0.990) is within a pre-declared +/-0.05
-  margin of the same-backend seed-to-seed baseline (0.989) by a two-one-sided-test
-  (diff -0.0015, 90% CI [-0.004, +0.002], p_TOST = 5.6e-36). This upgrades the
-  capstone's "fail to reject a difference" to a positive equivalence claim. Exact
-  spatial position is NOT equivalent (cross 0.08 vs same 1.00; median cross-backend
-  drift ~8.5 um by the final frame) -- a representation difference (lattice voxel
-  COM vs relaxing polygon centroid), not a fate difference.
+  SCOPED to Claim 3 (scientific equivalence) — NOT blueprint fidelity, NOT
+  biological validity. On cell FATE the two substrates are equivalent under a
+  DEPENDENCE-AWARE reanalysis: the 6x6 grid's 36 cross + 30 same pairs reuse only
+  6+6 runs and are statistically dependent, so the unit of resampling is the RUN.
+  A run-cluster percentile bootstrap gives Delta(same-cross) -0.0015, 90% CI
+  [-0.003, +0.001], inside a +/-0.05 margin -- so fate agreement is equivalent.
+  CAVEATS (reviewer): the +/-0.05 margin is NOT yet biologically justified; the
+  tight CI reflects LOW between-run variance at this reduced scale, not strong
+  power. The earlier pair-level TOST (p=5.6e-36) treated dependent pairs as
+  independent and OVERSTATED significance -- retired as the headline. Exact spatial
+  position is NOT equivalent (cross 0.08 vs same 1.00; ~8.5 um median drift; 1.0 at
+  t0) -- a CANDIDATE representation effect (lattice COM vs relaxing polygon
+  centroid), NOT yet causally isolated (BP-02/BP-04 will isolate it).
 
 experiment: >
   Run the full Sego blueprint on BOTH backends over rules-seeds {0..5} (N=120).
@@ -88,7 +92,9 @@ simulation_set:
       fate_tost_ci: "[-0.0045, +0.0016]"
       fate_tost_margin: 0.05
       fate_equivalent: true
-      fate_p_tost: "5.6e-36"
+      fate_cluster_ci: "[-0.003, +0.001] (run-cluster bootstrap, PRIMARY)"
+      fate_pair_tost_p: "5.6e-36 (RETIRED: treats dependent pairs as independent)"
+      fate_margin_biologically_justified: false
       spatial_same_mean: 1.000
       spatial_cross_mean: 0.083
       spatial_cross_t0: 1.000
@@ -170,8 +176,8 @@ report:
     0.08 vs same 1.00; ~8.5 um median drift) -- a representation difference, not a
     fate one. This upgrades the capstone's "fail to reject" to a positive
     equivalence claim and gives the IoU "candidate signal" a clear reading.
-  confidence: high
-  evidence_quality: solid
+  confidence: medium
+  evidence_quality: preliminary
   main_insight: >
     The shared mechanism makes the two substrates equivalent for what cells BECOME;
     their native mechanics still place cells differently (where cells ARE). Fate
@@ -188,12 +194,13 @@ findings:
     tier: interpretation
     mechanism_origin: engineered
     statement: >
-      Cross-backend fate agreement is statistically EQUIVALENT to the same-backend
-      seed baseline within +/-0.05 (TOST diff -0.0015, 90% CI [-0.004,+0.002],
-      p=5.6e-36; 30 same vs 36 cross pairs) -- a positive equivalence claim, not just
-      a failure to reject a difference.
+      Cross-backend fate agreement is EQUIVALENT to the same-backend baseline within
+      +/-0.05 under a DEPENDENCE-AWARE run-cluster bootstrap (diff -0.0015, 90% CI
+      [-0.003,+0.001]; resampling the 6+6 runs, not the dependent pairs). The margin
+      is not yet biologically justified and the CI is tight mainly because between-run
+      variance is low at this scale. The pair-level p=5.6e-36 is retired as overstated.
     evidence:
-      observed: "fate same 0.9888 (n=30), cross 0.9902 (n=36); TOST margin 0.05, equivalent=True"
+      observed: "fate same 0.9888, cross 0.9902; run-cluster 90% CI [-0.003,+0.001]; margin 0.05; equivalent=True (pair-TOST p=5.6e-36 retired)"
       expected: {range: "cross within +/-0.05 of same"}
     explanation: "Fate is driven by the shared field/rule/ODE mechanism, identical across backends."
     next_action: "none -- resolves the capstone's F1 fail-to-reject into a positive equivalence; re-confirm at larger scale if a spatial-coupled rule is added."

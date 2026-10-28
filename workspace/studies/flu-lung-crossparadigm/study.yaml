@@ -11,7 +11,7 @@ design_status: drafted
 
 claim: >
   The ONE backend-neutral Sego 2022 influenza blueprint compiles to BOTH the CPM
-  (viva-cpm) and vertex (vivarium-tyssue) substrates and runs the FULL model
+  (viva-cpm) and vertex (vivarium-tyssue) substrates and runs the Sego model WITH NAMED DEVIATIONS (V/L/C/F producers absent, latent-pool recruitment approximation)
   end-to-end on each. Because the field / rules / systemic-ODE / recruitment
   mechanism is shared byte-for-byte across the two compiles, we test for a
   substrate effect against a NULL CONTROL (same-backend seed-to-seed spread). On
@@ -37,7 +37,7 @@ experiment: >
   baseline-relative relationship at N=150.
 
 result: >
-  Both backends run the full model end-to-end. The NULL CONTROL is decisive: at
+  Both backends run the Sego model (with named deviations) end-to-end. The NULL CONTROL is decisive: at
   N=400 the cross-backend fate agreement is 0.942 (0.890-1.000), which is WITHIN the
   same-backend seed baselines (CPM-vs-CPM 0.934 [0.906-0.967]; vertex-vs-vertex 0.943
   [0.935-0.949]) -- the two substrates agree on cell fate no less than two CPM seeds
@@ -158,7 +158,7 @@ readouts:
 behavior_tests:
   - name: both-backends-run-end-to-end
     classification: primary
-    description: The full Sego blueprint compiles and runs on BOTH backends for N coupled steps (N+1 frames) with the whole 48-cell cohort intact.
+    description: The Sego blueprint (with named deviations) compiles and runs on BOTH backends for N coupled steps (N+1 frames) with the whole 48-cell cohort intact.
     measure: {kind: count, field: frames, when: end-of-run}
     pass_if: {op: eq, value: 151, field: n_frames_at_N150}
     units: frames
@@ -204,7 +204,7 @@ behavior_tests:
 
 conclusion_logic:
   if_primary_tests_pass:
-    implementation_status: "One blueprint runs the full Sego model on both substrates; the comparison spine (with a null control) is operational."
+    implementation_status: "One blueprint runs the Sego model (named deviations) on both substrates; the comparison spine (with a null control) is operational."
     biological_validation: "Backend-neutral to within seed noise -- cell fate and patch location agree across substrates as well as across seeds."
     pipeline_unblocks:
       - "dose-response-crossparadigm (directional agreement over initial viral load)."
@@ -216,6 +216,8 @@ conclusion_logic:
     block_downstream: "Do not report a cross-paradigm result without the same-backend null control."
 
 limitations:
+  - "REVIEW: biological fidelity to Sego 2022 is NOT validated here -- a CPM self-envelope is an internal consistency check, not a match to digitized Sego figures/measured flu-lung data (Stage 4 / BP-08)."
+  - "REVIEW: 'runs the model' carries NAMED DEVIATIONS -- V/L/C/F have no producer (sit at 0) and immune recruitment is a latent-pool approximation; quantify their effect by ablation (Stage 4 / BP-05)."
   - "Reduced scale + modest steps: a demonstration, not paper scale; the epidemic is in slow onset, so any substrate signal is small relative to seed noise -- a larger/longer run could resolve a signal this scale cannot."
   - "The headline is a NULL result (no substrate-driven divergence beyond seed noise), which is scale-dependent: absence of evidence here is not proof the substrates never diverge."
   - "Immune recruitment is a latent-pool approximation (T20-RECRUIT); at this scale the ODE drive rounds to ~0 activations, so the immune arm is barely exercised."
@@ -227,7 +229,7 @@ limitations:
 report:
   title: "Flu-lung cross-paradigm: one blueprint, two substrates, no substrate effect rejected (with one caveat)"
   verdict: >
-    The capstone works: the single Sego 2022 influenza blueprint runs the FULL model
+    The capstone works: the single Sego 2022 influenza blueprint runs the Sego model WITH NAMED DEVIATIONS (V/L/C/F producers absent, latent-pool recruitment approximation)
     (fields, rules, live systemic ODE, latent-pool recruitment) on both the CPM and
     vertex backends. Judged against a NULL CONTROL (same-backend seed-to-seed spread),
     on cell fate and infected-patch LOCATION the cross-backend difference falls inside

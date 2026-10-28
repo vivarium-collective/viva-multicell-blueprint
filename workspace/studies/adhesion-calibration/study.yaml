@@ -10,11 +10,16 @@ gate_status: passed
 design_status: drafted
 
 claim: >
-  A mechanics-only neutral sheet, compiled from one blueprint onto both backends,
-  reaches COMPARABLE cell-shape statistics on the CPM and vertex substrates. The
-  neutral adhesion strength lowers DIRECTLY to the CPM contact energy J and
-  MONOTONICALLY to the vertex line tension; the J<->tension mapping is directional
-  (same sign), not a sharply pinned constant at this scale.
+  REVISED per the 2026-10-27 review: this is NOT a calibration of CPM contact
+  energy J to vertex line tension, and the sheets are NOT established as physically
+  matched. The CPM (23.6 um^2) and vertex (34.9 um^2) mean areas differ by ~48%,
+  and the vertex shape statistics are nearly INSENSITIVE to tension_scale over
+  0.5..8 -- so tension is weakly/non-identifiable from this test. What this study
+  honestly shows: the neutral adhesion strength lowers DIRECTLY to J and
+  MONOTONICALLY (same sign) to line tension, a DIRECTIONAL relation only. A proper
+  physical-observable calibration (relaxation time, interfacial length, deformation
+  under force, migration mobility, neighbour exchange) with identifiability
+  analysis is deferred to Stage 3 / BP-07.
 
 experiment: >
   Compile `workspace/blueprints/mechanics_sheet.yaml` (a 4x4 size-25 H sheet, two
@@ -30,10 +35,11 @@ result: >
   mean area ~34.9 (CV ~0.064) and -- critically -- its shape statistics are nearly
   INSENSITIVE to the line-tension scale over 0.5..8 (CV spread < 0.01): area is set
   by the area-elasticity + Voronoi tessellation, not by line tension at this scale.
-  Mean areas are the same order of magnitude (ratio ~1.5) and both dispersions are
-  small, so the sheets are comparable; but the J<->tension mapping is only
-  DIRECTIONAL (monotone), not pinned. tension_scale = 1.0 is retained as the
-  faithful default; the small nominal best (|dCV| ~0.03 at scale 8) is within noise.
+  Mean areas are the same ORDER of magnitude (ratio ~1.5) but differ by ~48%, which
+  is NOT a match; and because vertex shape is tension-insensitive, the J<->tension
+  mapping is only DIRECTIONAL (monotone), NOT pinned and NOT identifiable here.
+  tension_scale = 1.0 is retained only as a provisional default; the nominal best
+  (|dCV| ~0.03 at scale 8) is within noise. This does not calibrate the mechanics.
 
 purpose:
   question: >
@@ -154,25 +160,29 @@ limitations:
   - "A few relaxation steps on a small sheet; a larger sheet / longer relaxation would tighten the estimate."
 
 report:
-  title: "Adhesion calibration: a directional J<->tension mapping"
+  title: "Adhesion: a directional (NOT calibrated) J<->tension relation"
   verdict: >
-    One mechanics-only blueprint produces comparable cell-shape statistics on both
-    substrates (mean area 23.6 CPM vs ~34.9 vertex, CV 0.10 vs 0.06), confirming the
-    neutral adhesion lowers sensibly to both the CPM contact energy and the vertex
-    line tension. But the vertex shape statistics are nearly insensitive to the
-    tension scale (CV spread < 0.01 over 0.5..8), so the J<->tension mapping is
-    reported as DIRECTIONAL (monotone, same sign), not a pinned constant;
-    tension_scale = 1.0 is kept as the faithful default.
+    REVISED (review): this is NOT a mechanics calibration and the sheets are NOT
+    physically matched. CPM mean area 23.6 vs vertex ~34.9 um^2 is a ~48% gap, and
+    vertex shape is nearly insensitive to tension_scale (CV spread < 0.01 over
+    0.5..8), so line tension is weakly/non-identifiable from this test. What holds:
+    the neutral adhesion lowers DIRECTLY to J and MONOTONICALLY (same sign) to line
+    tension -- a DIRECTIONAL relation only. A physical-observable calibration with
+    identifiability analysis is deferred to Stage 3 / BP-07; tension_scale = 1.0 is a
+    provisional default, not a fitted value.
   confidence: medium
   evidence_quality: preliminary
   main_insight: >
     Interface energy maps monotonically between the substrates, but J (per contact)
-    and Lambda (per edge length) are not unit-commensurable, so the calibration is
-    directional. Cell area on the vertex side is governed by area-elasticity +
-    tessellation, not tension -- which is why the scale is weakly identified.
+    and Lambda (per edge length) are not unit-commensurable, so a monotone label
+    mapping is NOT a physical calibration (guardrail 5). Cell area on the vertex side
+    is governed by area-elasticity + tessellation, not tension -- which is why the
+    scale is weakly/non-identifiable here.
   caveat: >
-    Reduced scale, few steps; mean areas differ ~1.5x; a larger/longer sheet would
-    sharpen the estimate but not change the directional conclusion.
+    Reduced scale, few steps; mean areas differ ~48%, which is not a match; the
+    mapping is directional and non-identifiable. Proper calibration to shared
+    physical observables (relaxation, interfacial length, deformation, mobility) with
+    identifiability analysis is Stage 3 / BP-07.
 
 findings:
   - id: F1-directional-J-tension-mapping

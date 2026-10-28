@@ -215,3 +215,57 @@ def per_cell_spatial_agreement(runA, runB, registry, tol_um=5.0) -> dict:
         if float(np.hypot(pa[0] - pb[0], pa[1] - pb[1])) <= tol_um:
             close += 1
     return {"mean": close / len(ids), "n_cohort": len(ids), "tol_um": float(tol_um)}
+
+
+def run_cluster_bootstrap_ci(cross_mat, same_cpm_mat, same_vtx_mat, *,
+                             n_boot=4000, alpha=0.05, seed=0) -> dict:
+    """Dependence-aware CI for diff = mean(same) - mean(cross), resampling RUNS
+    (clusters), not run-PAIRS.
+
+    The 6x6 seed grid yields 36 cross pairs and 30 same-backend pairs, but these
+    reuse only 6 CPM + 6 vertex trajectories, so the pairs are statistically
+    DEPENDENT and a pair-level t-test (TOST) badly understates the uncertainty
+    (reviewer guardrail). This resamples the CPM and vertex RUN indices with
+    replacement and recomputes the diff on each bootstrap tissue, giving a
+    cluster-robust percentile CI.
+
+    ``cross_mat[i][j]``     = agreement(cpm_run_i, vtx_run_j).
+    ``same_cpm_mat[i][j]``  = agreement(cpm_run_i, cpm_run_j) (diag ignored).
+    ``same_vtx_mat[i][j]``  = agreement(vtx_run_i, vtx_run_j) (diag ignored).
+    Returns the observed diff and the (1-2*alpha) percentile CI over run resamples.
+    """
+    import numpy as _np
+    rng = _np.random.default_rng(seed)
+    C = _np.asarray(cross_mat, float)
+    Sc = _np.asarray(same_cpm_mat, float)
+    Sv = _np.asarray(same_vtx_mat, float)
+    nc, nv = C.shape
+
+    def _same_mean(idx_c, idx_v):
+        vals = []
+        for a in range(len(idx_c)):
+            for b in range(a + 1, len(idx_c)):
+                if idx_c[a] != idx_c[b]:
+                    vals.append(Sc[idx_c[a], idx_c[b]])
+        for a in range(len(idx_v)):
+            for b in range(a + 1, len(idx_v)):
+                if idx_v[a] != idx_v[b]:
+                    vals.append(Sv[idx_v[a], idx_v[b]])
+        return float(_np.mean(vals)) if vals else _np.nan
+
+    def _cross_mean(idx_c, idx_v):
+        return float(_np.mean([C[i, j] for i in idx_c for j in idx_v]))
+
+    all_c, all_v = list(range(nc)), list(range(nv))
+    obs = _same_mean(all_c, all_v) - _cross_mean(all_c, all_v)
+    diffs = []
+    for _ in range(n_boot):
+        ic = rng.integers(0, nc, nc).tolist()
+        iv = rng.integers(0, nv, nv).tolist()
+        d = _same_mean(ic, iv) - _cross_mean(ic, iv)
+        if not _np.isnan(d):
+            diffs.append(d)
+    lo, hi = _np.percentile(diffs, [100 * alpha, 100 * (1 - alpha)])
+    return {"diff": obs, "ci_low": float(lo), "ci_high": float(hi),
+            "n_boot": len(diffs), "alpha": alpha, "n_cpm_runs": nc, "n_vtx_runs": nv,
+            "method": "run-cluster percentile bootstrap"}

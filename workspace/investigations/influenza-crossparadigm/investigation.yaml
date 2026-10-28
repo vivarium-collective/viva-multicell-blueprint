@@ -154,10 +154,24 @@ executive:
     influenza blueprint, compiled and run on both a Cellular Potts and a vertex
     substrate, with a full three-family comparison and three interactive figures.
   verdict: >
-    The architecture holds. One blueprint runs the FULL Sego model (fields, rules,
-    live systemic ODE, latent-pool recruitment) on both backends, and because the
-    mechanism is shared byte-for-byte the mechanical substrate is the only possible
-    source of cross-paradigm difference. Judged against a NULL CONTROL (same-backend
+    REFRAMED per the 2026-10-27 review (see feedback-response.md). The contribution
+    is a declarative, backend-neutral BLUEPRINT with auditable lowering to CPM and
+    vertex — organized around three DISTINCT claims: (1) blueprint fidelity,
+    (2) model portability, (3) scientific equivalence. Cross-backend agreement is
+    Claim 3 evidence, NOT the headline, and never implies (1) or biological validity.
+    Status by claim: (1) PARTIAL — t0 centroid/ID/type identity shown; area/footprint/
+    contact/adjacency/topology/round-trip not yet tested (Stage 2). (2) PARTIAL — one
+    blueprint compiles to both with a byte-shared mechanism, but V/L/C/F producers are
+    absent and immune recruitment is a latent-pool approximation (named deviations, so
+    "Sego model with deviations", NOT "FULL Sego"; Stage 4). (3) SCOPED — on cell
+    FATE the backends are equivalent under a DEPENDENCE-AWARE reanalysis (run-cluster
+    bootstrap over the 6x6 grid: Δ -0.0015, 90% CI [-0.003,+0.001], within a ±0.05
+    margin that is NOT yet biologically justified); exact POSITION is not equivalent
+    (a candidate representation effect, not yet causally isolated); the mechanics-
+    dominated counterfactual shows the test has power. The earlier pair-level
+    p=5.6e-36 overstated significance (dependent seed-pairs) and is retired.
+    --- Prior reduced-scale reading (superseded as the headline, kept for provenance):
+    Judged against a NULL CONTROL (same-backend
     seed-to-seed spread), on cell fate and infected-patch LOCATION the cross-backend
     difference falls inside the same-backend seed spread, so we FAIL TO REJECT a
     substrate effect at this scale and seed count (a null result, NOT proof of
@@ -183,11 +197,14 @@ executive:
     V/L/C/F (Task 21), and the directional adhesion calibration.
   verdict_status: preliminary
   decisions_needed:
-    - "RESOLVED by crossparadigm-equivalence: the spatial/IoU gap is a real but REPRESENTATION-level difference, not a fate one. Replicated (6x6 seeds) TOST shows fate is EQUIVALENT (cross 0.990 vs same 0.989, ±0.05, p=5.6e-36) while exact position is NOT (cross 0.08 vs same 1.00, ~8.5 um drift, 1.0 at t0). substrate-divergence-counterfactual confirms the test has power (it rejects when mechanics drives the outcome). Remaining: a larger-scale re-test if a spatial-coupled rule is later added."
-    - "ODE inputs V/L/C/F have no producer (Task 21) — the immune arm is barely exercised at this scale; land the producers to drive recruitment."
-    - "Immune recruitment is a latent-pool approximation (T20-RECRUIT) — confirm this is the intended mechanism or replace with topology insertion."
-    - "Sego acceptance bands are the CPM stochastic envelope, not digitized Sego 2022 figures — digitize the paper curves for a literature band."
-    - "The J<->tension calibration is directional, not pinned — decide whether a sharper calibration (larger sheet) is worth it."
+    - "STAGE 1 (BP-01): formalize a versioned blueprint schema + canonical IR, separate from backend geometric init (units, coord frame, boundaries, tessellation-independent IDs, footprints, fields, contacts, latent states, seeds, init order, mechanism bindings, provenance, allowable loss)."
+    - "STAGE 2 (BP-02/BP-04, extend initial-state-fidelity): prove blueprint fidelity beyond centroids/IDs — area, footprint, contact, adjacency, boundary, topology, round-trip, with explicit error measures and loss reports."
+    - "STAGE 3 (BP-07, supersede adhesion-calibration): the adhesion J<->tension mapping is NOT a calibration (~48% area gap, tension-insensitive CV). Calibrate to common physical observables; separate geometry/init/mechanics/numerical differences; identifiability analysis."
+    - "STAGE 4 (BP-05): V/L/C/F inputs have no producer and immune recruitment is a latent-pool approximation — build a producer/consumer ledger, implement or clearly designate deviations, and ablate frozen inputs."
+    - "STAGE 4 (BP-06): the ±0.05 fate-equivalence margin is NOT yet biologically justified; the dependence-aware reanalysis is done (cluster bootstrap) but power under biologically meaningful perturbations is not established."
+    - "STAGE 4 (BP-08): biological fidelity to Sego 2022 is NOT validated — digitize figure/table/parameter anchors and compare predictive intervals on held-out data; no biology inferred from cross-backend agreement."
+    - "STAGE 4 (dose-response redefine): separate virion inoculum from seeded infected fraction; 6-10 graded doses x replicate seeds; it is currently directional-only, NOT a dose-response curve."
+    - "STAGE 5 (BP-09): compile a SECOND independent tissue blueprint through the same schema with no influenza-specific adaptations — the decisive generality test."
 
 glossary:
   - term: cross-paradigm
@@ -198,3 +215,89 @@ glossary:
     definition: Fraction of the t0 cohort in the same state (type, or alive-vs-dead) at each step across the two backends.
   - term: occupancy IoU
     definition: Intersection-over-union of the two backends' rasterized cell footprints (CPM voxel occupancy vs vertex face polygons).
+
+# ============================================================================
+# Reframe per the 2026-10-27 review (feedback-response.md + references/reviews/).
+# Three distinct claims + a five-stage program. Cross-backend agreement is
+# Claim-3 evidence only; it never implies Claim 1 or biological validity.
+# ============================================================================
+claims:
+  - id: 1
+    name: Blueprint fidelity
+    question: Can an independently specified biological initial state be represented faithfully in either mechanical substrate?
+    status: partial
+    evidence: "initial-state-fidelity (t0 centroid/ID/type identity). Area/footprint/contact/adjacency/topology/round-trip not yet tested."
+    stage: 2
+  - id: 2
+    name: Model portability
+    question: Can the same biological mechanisms be connected to each backend without changing their intended semantics?
+    status: partial
+    evidence: "One blueprint compiles to both with a byte-shared mechanism; V/L/C/F producers absent and recruitment is a latent-pool approximation (named deviations)."
+    stage: 4
+  - id: 3
+    name: Scientific equivalence
+    question: Under which conditions should the two simulations agree, and when do differences reflect meaningful mechanical assumptions?
+    status: scoped
+    evidence: "crossparadigm-equivalence (fate equivalent under run-cluster bootstrap, margin not yet biologically justified; position not equivalent) + substrate-divergence-counterfactual (test has power)."
+    stage: 4
+
+roadmap:
+  order: dependency-ordered (review's recommended order of work)
+  stages:
+    - stage: 1
+      name: Formalize the blueprint
+      studies: [BP-01, BP-02, BP-03]
+      exit_gate: Canonical schema + portable initial-state fidelity pass for pathological and normal fixtures.
+    - stage: 2
+      name: Prove initialization fidelity
+      studies: [initial-state-fidelity (extend), BP-02, BP-04]
+      exit_gate: Geometry/contact/field adapters conform at refinement; per-backend losses quantified.
+    - stage: 3
+      name: Establish scientifically comparable mechanics
+      studies: [adhesion-calibration (supersede), BP-07, BP-10]
+      exit_gate: Identifiable (or explicitly unidentifiable) parameters; agreement within pre-registered physical-response bands.
+    - stage: 4
+      name: Complete and validate the influenza mechanism
+      studies: [BP-05, BP-06, BP-08, dose-response (redefine), flu-lung (reconcile), substrate-divergence-counterfactual (extend)]
+      exit_gate: No missing causal inputs; powered equivalence on justified observables; measured biology benchmarked.
+    - stage: 5
+      name: Demonstrate generality
+      studies: [BP-09, BP-11]
+      exit_gate: A second independent blueprint compiles without influenza-specific branching; losses + portability cost quantified.
+
+claim_guardrails:
+  - Passing the same code on two backends is not evidence of biological validity.
+  - Equal total counts can conceal infection-pattern and rare-cell behavior differences.
+  - Seed-pair comparisons reuse trajectories — treat statistical dependence explicitly.
+  - Failing to reject equivalence is not proof of a difference — report bounds and power.
+  - CPM contact energy and vertex line tension cannot be equated by a monotonic label mapping without shared physical observables.
+  - Biological blueprint, compiler mapping, initialized state, dynamic mechanism, and readout remain distinct objects.
+  - Every declared semantic invariant has a pass/fail test and a quantified tolerance.
+  - Missing viral/systemic producers and the latent immune pool are approximations until implemented and validated.
+
+# Proposed studies (full design in references/reviews/influenza_blueprint_feedback.yaml).
+proposed_studies:
+  - {id: BP-01, priority: P0, stage: 1, title: Blueprint language and canonical intermediate representation}
+  - {id: BP-02, priority: P0, stage: 1, title: Round-trip and metamorphic blueprint fidelity}
+  - {id: BP-03, priority: P0, stage: 1, title: Constraint solver and physical initialization}
+  - {id: BP-04, priority: P0, stage: 2, title: Canonical contact topology and field sampling}
+  - {id: BP-05, priority: P0, stage: 4, title: Complete influenza mechanism circuit}
+  - {id: BP-06, priority: P1, stage: 4, title: Dependency-aware equivalence and operational envelope}
+  - {id: BP-07, priority: P1, stage: 3, title: Mechanics identification and controlled matching}
+  - {id: BP-08, priority: P1, stage: 4, title: Real-data Sego and lung epithelial validation}
+  - {id: BP-09, priority: P1, stage: 5, title: Blueprint transfer to a second geometry and a third backend}
+  - {id: BP-10, priority: P1, stage: 2, title: Stochastic realization and uncertainty separation}
+  - {id: BP-11, priority: P2, stage: 5, title: Performance and scaling of blueprint compilation}
+
+# Figure plan (full spec in the review file). F1 is the P0 central figure.
+figure_plan:
+  - {id: F1, priority: P0, title: "One blueprint, two substrates (central figure)"}
+  - {id: F2, priority: P0, title: "Blueprint versus realized t0 (registered 3-view)"}
+  - {id: F3, priority: P0, title: "Blueprint fidelity dashboard (parity + distributions)"}
+  - {id: F4, priority: P1, title: "Mechanics calibration and identifiability"}
+  - {id: F5, priority: P1, title: "Shared mechanism wiring and missing producers"}
+  - {id: F6, priority: P1, title: "Replicated influenza dynamics and observation scales"}
+  - {id: F7, priority: P1, title: "Equivalence and dependence-aware uncertainty"}
+  - {id: F8, priority: P1, title: "Phase diagram of when substrate matters"}
+  - {id: F9, priority: P1, title: "Dose-response with explicit inoculum definition"}
+  - {id: F10, priority: P2, title: "Portability benchmark across blueprints"}
