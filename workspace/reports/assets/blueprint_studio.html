@@ -30,16 +30,21 @@
   .engine{flex:1;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
   .engine.sel[data-e=cpm]{border-color:var(--cpm);background:color-mix(in srgb,var(--cpm) 10%,transparent)}
   .engine.sel[data-e=vertex]{border-color:var(--vertex);background:color-mix(in srgb,var(--vertex) 10%,transparent)}
+  .engine.sel[data-e=both]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  .btn-mini{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .btn-mini:hover{border-color:var(--muted)}
+  .result{margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--code);font-size:13px}
+  .result.ok{background:var(--accentbg);border-color:var(--accent)}
+  .result.err{background:color-mix(in srgb,var(--err) 10%,transparent);border-color:var(--err)}
   .engine small{display:block;color:var(--muted);font-weight:400;margin-top:3px}
   button.run{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:12px 22px;font-size:15px;font-weight:600;cursor:pointer}
   button.run:disabled{opacity:.5;cursor:default}
-  #status{margin-top:14px;padding:12px 14px;border-radius:9px;border:1px solid var(--line);background:var(--code);font-size:13px;display:none}
+  #status{margin-top:4px;font-size:13px;display:none}
   #status.show{display:block}
-  #status.ok{background:var(--accentbg);border-color:var(--accent)}
-  #status.err{background:color-mix(in srgb,var(--err) 10%,transparent);border-color:var(--err)}
   code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:12px}
   a{color:var(--cpm)}
   .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  .muted{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -59,8 +64,14 @@
   </div>
 
   <div class="card">
-    <label for="bp">Blueprint (YAML)</label>
-    <textarea id="bp" spellcheck="false"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <label for="bp" style="margin:0">Blueprint (YAML)</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn-mini" id="copy">Copy spec</button>
+        <button class="btn-mini" id="download">Download .yaml</button>
+      </div>
+    </div>
+    <textarea id="bp" spellcheck="false" style="margin-top:8px"></textarea>
     <p class="hint">Edit freely. Backend/run parameters (<code>tension_scale</code>, <code>rules_seed</code>) are not part of the canonical blueprint — set the engine below.</p>
   </div>
 
@@ -71,6 +82,7 @@
         <div class="engines">
           <div class="engine sel" data-e="cpm" id="eng-cpm">CPM<small>Cellular Potts (voxel)</small></div>
           <div class="engine" data-e="vertex" id="eng-vertex">Vertex<small>tyssue (polygon)</small></div>
+          <div class="engine" data-e="both" id="eng-both">Both<small>run CPM + vertex</small></div>
         </div>
       </div>
       <div>
@@ -190,55 +202,82 @@ document.querySelectorAll(".engine").forEach(el => el.addEventListener("click", 
 
 function setStatus(msg, cls){ const s=$("#status"); s.className="show "+(cls||""); s.innerHTML=msg; }
 
-async function poll(runId){
+// --- Copy / Download the spec -------------------------------------------------
+$("#copy").addEventListener("click", async () => {
+  try{ await navigator.clipboard.writeText($("#bp").value); $("#copy").textContent="Copied ✓";
+       setTimeout(()=>$("#copy").textContent="Copy spec",1200); }
+  catch(e){ $("#copy").textContent="Copy failed"; }
+});
+$("#download").addEventListener("click", () => {
+  const blob = new Blob([$("#bp").value], {type:"text/yaml"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = ($("#tpl").value||"blueprint") + ".yaml";
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+async function pollRun(runId, el, eng){
   for(let i=0;i<120;i++){
     await new Promise(r=>setTimeout(r,2500));
     try{
       const d = await (await fetch(`${API}/simulations`)).json();
-      const rows = (d.simulations||[]);
-      const row = rows.find(r => [r.id,r.run_id,r.simulation_id,r.database_id].map(String).includes(String(runId)));
+      const row = (d.simulations||[]).find(r => [r.id,r.run_id,r.simulation_id,r.database_id].map(String).includes(String(runId)));
       const st = row && (row.status||row.state||"").toLowerCase();
-      if(st) setStatus(`Run <code>${runId}</code> — status: <b>${st}</b> · <a href="#simulations">open Simulations DB</a>`, "");
       if(st && /complete|done|finished|success/.test(st)){
-        setStatus(`✓ Run <code>${runId}</code> complete (${engine}). <a href="#simulations">Open it in the Simulations DB</a> to see observables and charts.`, "ok");
-        return;
+        el.className="result ok";
+        el.innerHTML = `✓ <b>${eng}</b> run complete — <a href="#simulations" target="_blank">open in Simulations DB</a> <span class="muted">(${runId})</span>`;
+        return true;
       }
       if(st && /fail|error/.test(st)){
-        const staticBp = ($("#tpl").value!=="default" && !/fields:|rules:/.test($("#bp").value));
-        setStatus(staticBp
-          ? `Run <code>${runId}</code> produced no time-series — this blueprint is <b>static</b> (no fields/rules). Add a field + rule to get dynamics, or view its structure in the Composites Explorer.`
-          : `✗ Run <code>${runId}</code> ${st}. Check the Simulations DB for the error.`, staticBp?"":"err");
-        return;
+        el.className="result err"; el.innerHTML = `✗ <b>${eng}</b> run ${st} — see the Simulations DB. <span class="muted">(${runId})</span>`;
+        return false;
       }
+      if(st) el.innerHTML = `⏳ <b>${eng}</b> — ${st}… <span class="muted">(${runId})</span>`;
     }catch(e){ /* keep polling */ }
   }
-  setStatus(`Run <code>${runId}</code> started (${engine}). It's taking a while — follow it in the <a href="#simulations">Simulations DB</a>.`, "");
+  el.innerHTML = `⏳ <b>${eng}</b> still running — follow it in the <a href="#simulations">Simulations DB</a>.`;
+  return false;
+}
+
+async function startRun(eng, steps, overridesBase, tpl){
+  const el = document.createElement("div"); el.className="result";
+  el.innerHTML = `⏳ <b>${eng}</b> — starting (${steps} steps)…`;
+  $("#status").appendChild(el);
+  try{
+    const resp = await fetch(`${API}/composite-test-run`, {
+      method:"POST", headers:{"content-type":"application/json"},
+      // emit_paths: cell-population counts — a well-shaped scalar observable the
+      // xarray emitter can persist (the full state has empty-list stores → zarr 0-chunk).
+      body: JSON.stringify({id: COMPOSITE, steps, overrides:{...overridesBase, backend:eng},
+                            emit_paths:["cell_counts"], label:`blueprint-studio ${eng} ${tpl}`}),
+    });
+    const data = await resp.json().catch(()=>({}));
+    if(!resp.ok){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${data.error||resp.statusText}`; return; }
+    const runId = data.run_id || data.simulation_id || data.database_id || data.id || "(started)";
+    el.innerHTML = `⏳ <b>${eng}</b> — running… <span class="muted">(${runId})</span>`;
+    return {runId, el, eng};
+  }catch(e){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${e}`; }
 }
 
 $("#run").addEventListener("click", async () => {
   const tpl = $("#tpl").value;
   const steps = parseFloat($("#steps").value) || 60;
-  const overrides = {backend: engine};
+  const engines = engine==="both" ? ["cpm","vertex"] : [engine];
+  const overridesBase = {};
   const bp = $("#bp").value.trim();
-  // Send the editor's YAML inline, UNLESS it's empty or still a loading/error
-  // placeholder (then the generator falls back to the committed default).
-  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overrides.blueprint = $("#bp").value;
+  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = $("#bp").value;
   $("#run").disabled = true;
-  setStatus(`Starting ${engine} run (${steps} steps)…`, "");
-  try{
-    const resp = await fetch(`${API}/composite-test-run`, {
-      method:"POST", headers:{"content-type":"application/json"},
-      // emit_paths: cell populations — a well-shaped scalar observable the xarray
-      // emitter can persist (the full state has empty-list stores that break zarr).
-      body: JSON.stringify({id: COMPOSITE, steps, overrides, emit_paths:["cell_counts"],
-                            label: `blueprint-studio ${engine} ${tpl}`}),
-    });
-    const data = await resp.json().catch(()=>({}));
-    if(!resp.ok){ setStatus(`✗ ${data.error || resp.statusText}`, "err"); $("#run").disabled=false; return; }
-    const runId = data.run_id || data.simulation_id || data.database_id || data.experiment_id || data.id || "(started)";
-    setStatus(`Run <code>${runId}</code> started (${engine}). Watching…`, "");
-    await poll(runId);
-  }catch(e){ setStatus(`✗ ${e}`, "err"); }
+  $("#status").className = "show"; $("#status").innerHTML = "";
+  // launch all requested engines (concurrently), then poll each to completion
+  const started = [];
+  for(const eng of engines){ const r = await startRun(eng, steps, overridesBase, tpl); if(r) started.push(r); }
+  await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng)));
+  // results footer: where the spatial playback + charts live
+  const foot = document.createElement("div"); foot.className="result"; foot.style.marginTop="12px";
+  foot.innerHTML = `📊 Population dynamics + charts for each run are in the <a href="#simulations">Simulations DB</a>. `
+    + `Spatial playback videos of the cross-paradigm runs are embedded in the `
+    + `<a href="../investigations/influenza-crossparadigm.html" target="_blank">investigation report</a>.`;
+  $("#status").appendChild(foot);
   $("#run").disabled = false;
 });
 </script>
