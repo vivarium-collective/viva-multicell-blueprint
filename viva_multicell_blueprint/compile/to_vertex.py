@@ -65,7 +65,7 @@ def vertex_mechanics_node(blueprint) -> dict:
     }
 
 
-def compile(blueprint, backend: str = "vertex") -> dict:
+def compile(blueprint, backend: str = "vertex", video_out=None) -> dict:
     if backend != "vertex":
         raise ValueError(f"to_vertex.compile only builds the vertex backend, got backend={backend!r}")
-    return assemble(blueprint, vertex_mechanics_node(blueprint))
+    return assemble(blueprint, vertex_mechanics_node(blueprint), video_out=video_out, backend="vertex")

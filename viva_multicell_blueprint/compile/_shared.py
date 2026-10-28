@@ -374,8 +374,52 @@ def build_mechanism_state(blueprint) -> dict:
     return state
 
 
-def assemble(blueprint, mechanics_node: dict) -> dict:
-    """Combine the shared mechanism with the ONE backend-specific mechanics node."""
+import re as _re
+from pathlib import Path as _Path
+
+# Where the per-run spatial videos are written: workspace/reports/assets/_studio_runs/
+# is served by the workbench at /assets/_studio_runs/, so the Studio UI can open them.
+_STUDIO_RUNS = _Path(__file__).resolve().parents[2] / "workspace" / "reports" / "assets" / "_studio_runs"
+
+
+def _safe_name(name: str) -> str:
+    """A path-traversal-safe basename for a user-supplied video output name."""
+    base = _re.sub(r"[^A-Za-z0-9_.-]", "_", str(name)).strip("._") or "run"
+    return base[:120]
+
+
+def _video_node(blueprint, backend: str, video_out: str) -> dict:
+    """A SpatialVideoStep that records this run's geometry and writes a spatial
+    playback HTML to reports/assets/_studio_runs/<video_out>.html."""
+    dom = blueprint.domain or {}
+    fields = blueprint.fields or []
+    out_path = str(_STUDIO_RUNS / f"{_safe_name(video_out)}.html")
+    return {
+        "_type": "step",
+        "address": "local:SpatialVideoStep",
+        "config": {
+            "out_path": out_path,
+            "extent_um": [float(x) for x in (dom.get("extent_um") or [50.0, 50.0])],
+            "grid_resolution_um": float(dom.get("grid_resolution_um", 1.0)),
+            "backend": backend,
+            "underlay": (fields[0].get("name") if fields and isinstance(fields[0], dict) else ""),
+            "max_frames": 28,
+        },
+        "inputs": {"positions": ["positions"], "sizes": ["sizes"], "types": ["types"],
+                   "alive": ["alive"], "footprints": ["footprints"], "field_grid": ["field_grid"]},
+        "outputs": {"n_frames": ["video_state"]},
+    }
+
+
+def assemble(blueprint, mechanics_node: dict, video_out: "str | None" = None,
+             backend: str = "cpm") -> dict:
+    """Combine the shared mechanism with the ONE backend-specific mechanics node.
+
+    When ``video_out`` is set (Blueprint Studio), also add a SpatialVideoStep that
+    records the run and writes a downloadable spatial-playback HTML.
+    """
     state = build_mechanism_state(blueprint)
     state["mechanics"] = mechanics_node
+    if video_out:
+        state["spatial_video"] = _video_node(blueprint, backend, video_out)
     return {"state": state}

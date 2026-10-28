@@ -217,7 +217,7 @@ $("#download").addEventListener("click", () => {
   a.click(); URL.revokeObjectURL(a.href);
 });
 
-async function pollRun(runId, el, eng){
+async function pollRun(runId, el, eng, videoOut){
   for(let i=0;i<120;i++){
     await new Promise(r=>setTimeout(r,2500));
     try{
@@ -227,8 +227,11 @@ async function pollRun(runId, el, eng){
       if(st && /complete|done|finished|success/.test(st)){
         el.className="result ok";
         const dl = `${API}/simulation-run-download?run_id=${encodeURIComponent(runId)}`;
+        const vid = videoOut ? `_studio_runs/${encodeURIComponent(videoOut)}.html` : null;
         el.innerHTML = `✓ <b>${eng}</b> run complete <span class="muted">(${runId})</span>`
           + `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">`
+          + (vid ? `<a class="btn-mini" href="${vid}" target="_blank" rel="noopener">▶ View video ↗</a>` : "")
+          + (vid ? `<a class="btn-mini" href="${vid}" download="${eng}-playback.html">Download video ⬇</a>` : "")
           + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">View results ↗</a>`
           + `<a class="btn-mini" href="${dl}" download>Download results ⬇</a>`
           + `</div>`;
@@ -249,19 +252,23 @@ async function startRun(eng, steps, overridesBase, tpl){
   const el = document.createElement("div"); el.className="result";
   el.innerHTML = `⏳ <b>${eng}</b> — starting (${steps} steps)…`;
   $("#status").appendChild(el);
+  // unique output name so the recorder writes a per-run spatial video we can open.
+  const videoOut = `studio_${Date.now()}_${eng}`;
   try{
     const resp = await fetch(`${API}/composite-test-run`, {
       method:"POST", headers:{"content-type":"application/json"},
       // emit_paths: cell-population counts — a well-shaped scalar observable the
       // xarray emitter can persist (the full state has empty-list stores → zarr 0-chunk).
-      body: JSON.stringify({id: COMPOSITE, steps, overrides:{...overridesBase, backend:eng},
+      // video_out: record a spatial-playback video to /assets/_studio_runs/<name>.html.
+      body: JSON.stringify({id: COMPOSITE, steps,
+                            overrides:{...overridesBase, backend:eng, video_out:videoOut},
                             emit_paths:["cell_counts"], label:`blueprint-studio ${eng} ${tpl}`}),
     });
     const data = await resp.json().catch(()=>({}));
     if(!resp.ok){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${data.error||resp.statusText}`; return; }
     const runId = data.run_id || data.simulation_id || data.database_id || data.id || "(started)";
     el.innerHTML = `⏳ <b>${eng}</b> — running… <span class="muted">(${runId})</span>`;
-    return {runId, el, eng};
+    return {runId, el, eng, videoOut};
   }catch(e){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${e}`; }
 }
 
@@ -277,12 +284,11 @@ $("#run").addEventListener("click", async () => {
   // launch all requested engines (concurrently), then poll each to completion
   const started = [];
   for(const eng of engines){ const r = await startRun(eng, steps, overridesBase, tpl); if(r) started.push(r); }
-  await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng)));
-  // results footer: where the spatial playback + charts live
+  await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng, r.videoOut)));
+  // results footer: where the population charts live
   const foot = document.createElement("div"); foot.className="result"; foot.style.marginTop="12px";
-  foot.innerHTML = `📊 Population dynamics + charts for each run are in the <a href="#simulations">Simulations DB</a>. `
-    + `Spatial playback videos of the cross-paradigm runs are embedded in the `
-    + `<a href="../investigations/influenza-crossparadigm.html" target="_blank">investigation report</a>.`;
+  foot.innerHTML = `📊 Each run records a spatial playback <b>video</b> (buttons above) and its `
+    + `population charts are in the <a href="${SPA}/#simulations" target="_blank">Simulations DB</a>.`;
   $("#status").appendChild(foot);
   $("#run").disabled = false;
 });
