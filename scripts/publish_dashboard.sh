@@ -44,4 +44,18 @@ PYTHONPATH="$WS_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
 find "$OUT" -name '*.map' -delete
 touch "$OUT/.nojekyll"
 
+# Include the Blueprint Studio tool page (+ its served Sego copy) in the static
+# bundle so it is browsable on the published site at <base>/blueprint_studio.html.
+# NOTE: the published site is STATIC (no /api backend), so the page renders and
+# loads the Sego blueprint but its Run is disabled there (the page detects the
+# missing API and says so); running needs a live `vivarium-workbench serve`.
+STUDIO="$WS_ROOT/workspace/reports/assets/blueprint_studio.html"
+if [ -f "$STUDIO" ]; then
+  mkdir -p "$OUT/assets"
+  cp "$STUDIO" "$OUT/assets/blueprint_studio.html"
+  [ -f "$WS_ROOT/workspace/reports/assets/sego_blueprint.yaml" ] \
+    && cp "$WS_ROOT/workspace/reports/assets/sego_blueprint.yaml" "$OUT/assets/sego_blueprint.yaml"
+  echo "included Blueprint Studio page at assets/ (view-only; runs need a live server)"
+fi
+
 echo "built read-only workbench bundle at $OUT ($(du -sh "$OUT" | cut -f1))"

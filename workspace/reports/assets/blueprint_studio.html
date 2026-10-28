@@ -82,6 +82,11 @@
     <div style="margin-top:16px">
       <button class="run" id="run">Run ▸</button>
     </div>
+    <div id="nobackend" style="display:none;margin-top:12px;padding:12px 14px;border-radius:9px;border:1px solid var(--line);background:var(--code);font-size:13px">
+      📄 <b>Read-only view.</b> This is the published static snapshot — there is no live server to run on.
+      To run a simulation, open this workspace's <b>live</b> workbench
+      (<code>vivarium-workbench serve</code>) → Explore → Blueprint Studio.
+    </div>
     <div id="status"></div>
   </div>
 </div>
@@ -165,6 +170,18 @@ async function applyTemplate(){
 }
 $("#tpl").addEventListener("change", applyTemplate);
 applyTemplate();
+
+// Detect a missing backend (the published static snapshot has no /api). If the
+// run endpoint isn't reachable, show the read-only banner and disable Run so the
+// page is honest instead of failing on click.
+(async function checkBackend(){
+  try{
+    const r = await fetch(`${API}/analysis-viewers`, {method:"GET"});
+    if(r.ok) return;                       // live server — Run stays enabled
+  }catch(e){ /* unreachable */ }
+  $("#nobackend").style.display = "block";
+  const run = $("#run"); run.disabled = true; run.textContent = "Run (live server only)";
+})();
 
 document.querySelectorAll(".engine").forEach(el => el.addEventListener("click", () => {
   document.querySelectorAll(".engine").forEach(e => e.classList.remove("sel"));
