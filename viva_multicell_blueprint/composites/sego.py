@@ -65,10 +65,14 @@ def _load_blueprint(blueprint):
         "blueprint": {"type": "string", "default": str(_SEGO),
                       "description": "backend-neutral blueprint: a path to a YAML file, "
                                      "inline YAML text, or a dict (Blueprint Studio sends inline YAML)"},
+        "video_out": {"type": "string", "default": "",
+                      "description": "if set, record a spatial-playback video to "
+                                     "reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)"},
     },
     core_extensions=[register_workspace_processes],
     default_n_steps=80,
 )
-def sego_crossparadigm(core=None, backend: str = "cpm", blueprint: str | None = None) -> dict:
+def sego_crossparadigm(core=None, backend: str = "cpm", blueprint: str | None = None,
+                       video_out: str = "") -> dict:
     bp = _load_blueprint(blueprint)
-    return _compile(bp, backend=backend)        # {"state": {...}} envelope
+    return _compile(bp, backend=backend, video_out=(video_out or None))   # {"state": {...}} envelope

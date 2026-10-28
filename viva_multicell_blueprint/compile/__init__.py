@@ -10,7 +10,7 @@ from __future__ import annotations
 _COMPILERS = {"cpm": "to_cpm", "vertex": "to_vertex"}
 
 
-def compile(blueprint, backend: str = "cpm", options=None) -> dict:
+def compile(blueprint, backend: str = "cpm", options=None, video_out=None) -> dict:
     """Compile ``blueprint`` onto ``backend`` (``"cpm"`` or ``"vertex"``).
 
     ``options`` is an optional :class:`~viva_multicell_blueprint.blueprint.canonical.CompileOptions`
@@ -28,7 +28,7 @@ def compile(blueprint, backend: str = "cpm", options=None) -> dict:
     import importlib
 
     mod = importlib.import_module(f"{__name__}.{_COMPILERS[backend]}")
-    return mod.compile(blueprint, backend=backend)
+    return mod.compile(blueprint, backend=backend, video_out=video_out)
 
 
 __all__ = ["compile"]

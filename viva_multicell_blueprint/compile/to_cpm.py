@@ -69,7 +69,7 @@ def cpm_mechanics_node(blueprint) -> dict:
     }
 
 
-def compile(blueprint, backend: str = "cpm") -> dict:
+def compile(blueprint, backend: str = "cpm", video_out=None) -> dict:
     if backend != "cpm":
         raise ValueError(f"to_cpm.compile only builds the cpm backend, got backend={backend!r}")
-    return assemble(blueprint, cpm_mechanics_node(blueprint))
+    return assemble(blueprint, cpm_mechanics_node(blueprint), video_out=video_out, backend="cpm")

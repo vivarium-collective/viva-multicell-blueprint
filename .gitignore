@@ -36,3 +36,7 @@ workspace/reports/assets/*
 # Scratch TODO list agents keep per-workspace; not tracked content.
 todo.md
 !workspace/reports/assets/sego_blueprint.yaml
+# Blueprint Studio per-run videos are generated at runtime — keep the dir, not the files.
+!workspace/reports/assets/_studio_runs/
+workspace/reports/assets/_studio_runs/*
+!workspace/reports/assets/_studio_runs/.keep

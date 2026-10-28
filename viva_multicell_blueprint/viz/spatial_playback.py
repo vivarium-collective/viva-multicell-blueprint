@@ -206,3 +206,94 @@ def spatial_playback(run_cpm, run_vertex, grid_spec, *, max_frames=MAX_FRAMES, b
                           "figure may exceed the workbench inline cap", RuntimeWarning)
             return fig
         mf = max(2, mf // 2)
+
+
+def _single_playback(run, grid_spec, *, backend="cpm", dt_days=1.0, max_frames=MAX_FRAMES,
+                     title=None):
+    """One animated panel of a SINGLE backend run (for the Blueprint Studio per-run
+    video). Voxel heatmap when the frames carry occupancy (CPM); filled cell
+    polygons when they carry polygons (vertex); a field underlay when present.
+
+    ``run`` is a list of frames (``compare.runner`` / ``frame_from_backend`` shape).
+    """
+    codes = type_codes(run)
+    grid = dict(grid_spec, type_codes=codes)
+    shape = grid_shape(grid)
+    n = len(run)
+    idx = decimate_indices(n, max_frames)
+    ts = times(n, dt_days, idx)
+    colors = {t: state_color(t, i) for i, t in enumerate(codes)}
+    cs = discrete_colorscale(codes, colors)
+    res = float(grid["grid_resolution_um"])
+    xs = rnd(np.arange(shape[1]) * res + res / 2, 2).tolist()
+    ys = rnd(np.arange(shape[0]) * res + res / 2, 2).tolist()
+    has_field = run and run[0].get("field") is not None
+    use_poly = _has_polygons(run)
+    title = title or f"Spatial playback — {backend}"
+
+    fig = go.Figure()
+    anim = []
+    if has_field:
+        fz = _field_underlay(run[idx[0]], shape)
+        fig.add_trace(go.Heatmap(x=xs, y=ys, z=None if fz is None else fz, colorscale="Greys",
+                                 opacity=0.6, showscale=False, hoverinfo="skip", name="field"))
+        anim.append(len(fig.data) - 1)
+    if use_poly:
+        paths = _poly_paths_by_type(run[idx[0]], codes)
+        for t in codes:
+            px, py = paths[t]
+            fig.add_trace(_poly_trace(px, py, colors[t], t))
+            anim.append(len(fig.data) - 1)
+    else:
+        fig.add_trace(go.Heatmap(x=xs, y=ys, z=_state_z(run[idx[0]], grid), colorscale=cs,
+                                 zmin=0, zmax=len(codes), showscale=False, xgap=0, ygap=0,
+                                 name="state", hovertemplate="x=%{x} um<br>y=%{y} um<extra></extra>"))
+        anim.append(len(fig.data) - 1)
+    fig.update_xaxes(title_text="x (um)", range=[0, shape[1] * res])
+    fig.update_yaxes(title_text="y (um)", scaleanchor="x", constrain="domain",
+                     range=[0, shape[0] * res])
+    for t in codes:   # legend
+        fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers", name=t,
+                                 marker=dict(size=10, color=colors[t], symbol="square")))
+
+    frames = []
+    for k, i in enumerate(idx):
+        data = []
+        if has_field:
+            fz = _field_underlay(run[i], shape)
+            data.append(go.Heatmap(z=None if fz is None else fz))
+        if use_poly:
+            paths = _poly_paths_by_type(run[i], codes)
+            for t in codes:
+                px, py = paths[t]
+                data.append(go.Scatter(x=px or [None], y=py or [None]))
+        else:
+            data.append(go.Heatmap(z=_state_z(run[i], grid)))
+        frames.append(go.Frame(name=str(k), data=data, traces=anim))
+    fig.frames = frames
+    steps = [dict(method="animate", label=f"{t:g}",
+                  args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=True),
+                                       transition=dict(duration=0))]) for k, t in enumerate(ts)]
+    fig.update_layout(
+        title=title,
+        sliders=[dict(active=0, steps=steps, currentvalue=dict(prefix="time (days): "), pad=dict(t=40))],
+        updatemenus=[dict(type="buttons", direction="left", x=0.0, y=-0.05, showactive=False,
+                          buttons=[dict(label="Play", method="animate",
+                                        args=[None, dict(frame=dict(duration=250, redraw=True),
+                                                         fromcurrent=True, transition=dict(duration=0))]),
+                                   dict(label="Pause", method="animate",
+                                        args=[[None], dict(mode="immediate", frame=dict(duration=0, redraw=False),
+                                                           transition=dict(duration=0))])])],
+        legend=dict(title="Cell state"), height=560, template="plotly_white")
+    return fig
+
+
+def single_playback(run, grid_spec, *, backend="cpm", max_frames=MAX_FRAMES,
+                    budget=2_200_000, **kw):
+    """Single-backend animated playback, decimated until it fits the inline cap."""
+    mf = max_frames
+    while True:
+        fig = _single_playback(run, grid_spec, backend=backend, max_frames=mf, **kw)
+        if len(fig.to_json()) < budget or mf <= 2:
+            return fig
+        mf = max(2, mf // 2)
