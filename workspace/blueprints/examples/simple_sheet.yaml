@@ -1,0 +1,10 @@
+# BP-01 worked example 1 — SIMPLE GEOMETRY.
+# A single epithelial type on a small sheet, no fields/rules/immune/ODE. The
+# minimal canonical blueprint: biological state only, backend-neutral.
+blueprint_version: "1.0"
+domain: {extent_um: [20, 20], grid_resolution_um: 1, boundary: noflux}
+cell_types:
+  - {name: H, target_size: 25}
+initial_state:
+  kind: blocks
+  block: {type: H, origin: [5, 5], shape: [3, 3], spacing: 5, size: 25}

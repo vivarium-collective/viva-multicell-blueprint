@@ -1,0 +1,31 @@
+# BP-01 worked example 3 — INFECTION FIELD + a contact-independent rule.
+# An epithelial sheet, a diffusing virus field (secretion + chemotaxis), and one
+# transition rule driven by the field. Exercises fields + rules in the canonical
+# schema; rule constants live under mechanics_mapping.const (model dynamics, NOT a
+# backend/run parameter, so the canonical state stays backend-neutral).
+blueprint_version: "1.0"
+domain: {extent_um: [30, 30], grid_resolution_um: 1, boundary: noflux}
+cell_types:
+  - {name: H, target_size: 25}
+  - {name: I, target_size: 25}
+adhesion:
+  - {a: H, b: H, strength: 5}
+  - {a: H, b: I, strength: 5}
+  - {a: I, b: I, strength: 5}
+  - {a: H, b: medium, strength: 20}
+  - {a: I, b: medium, strength: 20}
+fields:
+  - name: virus
+    D: 0.15
+    decay: 0.01
+    dynamics: {dt: 0.2, substeps: 5}
+    secretion:
+      - {type: I, rate: 0.5}
+rules:
+  - {type: transition, from: H, to: I, rate_expr: "g_hv * field['virus']"}
+mechanics_mapping:
+  const: {g_hv: 0.002}
+initial_state:
+  kind: blocks
+  block: {type: H, origin: [8, 8], shape: [4, 3], spacing: 5, size: 25}
+  infected_seed: {type: I, fraction: 0.1, seed: 0}

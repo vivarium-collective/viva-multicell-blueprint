@@ -7,6 +7,11 @@
   "required": ["domain", "cell_types", "initial_state"],
   "additionalProperties": false,
   "properties": {
+    "blueprint_version": {
+      "type": "string",
+      "description": "Version of the canonical blueprint schema this document targets (BP-01). Optional for back-compat; recommended on every canonical artifact.",
+      "minLength": 1
+    },
     "domain": {
       "type": "object",
       "required": ["extent_um", "grid_resolution_um"],

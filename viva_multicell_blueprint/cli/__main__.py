@@ -142,6 +142,36 @@ def run_composite(
         console.print(composite.state)
 
 
+@app.command(name="validate")
+def validate_blueprint_cmd(
+    path: str = typer.Argument(..., help="Path to a blueprint YAML to validate."),
+    strict: bool = typer.Option(
+        False, "--strict", help="Exit non-zero on warnings too, not only errors."
+    ),
+) -> None:
+    """Statically validate a canonical blueprint and print diagnostics (BP-01).
+
+    Reports schema ERRORS and canonical-contract WARNINGS (missing
+    blueprint_version; backend/run parameters that do not belong in the canonical
+    biological state). Exits 1 if any error (or any warning under --strict).
+    """
+    from viva_multicell_blueprint.blueprint.schema import validate_blueprint
+
+    doc = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    diags = validate_blueprint(doc)
+    errors = [d for d in diags if d["severity"] == "error"]
+    warnings = [d for d in diags if d["severity"] == "warning"]
+    for d in diags:
+        tag = "[red]ERROR[/red]" if d["severity"] == "error" else "[yellow]WARN[/yellow]"
+        console.print(f"{tag} {d['path']}: {d['message']}")
+    if not diags:
+        console.print(f"[green]OK[/green] {path}: valid and canonical-contract clean.")
+    else:
+        console.print(f"\n{len(errors)} error(s), {len(warnings)} warning(s).")
+    if errors or (strict and warnings):
+        raise typer.Exit(code=1)
+
+
 def main() -> None:
     app()
 

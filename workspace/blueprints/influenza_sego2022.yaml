@@ -14,6 +14,7 @@
 # lattice^2/MCS and per-MCS values (params.yaml *_lat2_per_mcs / *_per_mcs).
 # Tractable scale: a 50x50-site patch with a 6x6 block of epithelium.
 
+blueprint_version: "1.0"   # BP-01 canonical schema version
 domain:
   extent_um: [50, 50]           # tractable patch (source patches: 0.3 mm / 1 mm, params.yaml scenarios)
   grid_resolution_um: 1         # 1 unit = 1 lattice site (see UNITS)
@@ -179,7 +180,6 @@ mechanics_mapping:
     g_ik: 2.1401636386747083e-08      # nk.g_ik
     g_ie: 6.840166937615132e-07       # cd8.g_ie
     tot_ec: 250000                    # scaling.ode_epithelial_population (tot_ec_ODE)
-  rules_seed: 0
 
 # Immune component (ImmuneRecruitmentProcess): ODE-driven M/NK/CD8 recruitment. The inflow/
 # outflow laws and Hill constants come from the price_ode block below (asymmetric per
