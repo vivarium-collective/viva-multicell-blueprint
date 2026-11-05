@@ -82,22 +82,6 @@ key_assumptions:
   - "Sego rates are carried verbatim (no tuning); at faithful rates the infection probability is ~0.004/step, so the epidemic is a slow onset."
   - "1 grid unit = 1 um (grid_resolution_um = 1); the vertex Voronoi t0 faces are larger (~46) but relax to the target (~25) by the end, so the final-frame spatial comparison is fair."
 
-baseline:
-  - name: sego-influenza-crossparadigm
-    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
-    description: >
-      The Sego 2022 influenza blueprint compiled onto each backend and run for N
-      coupled steps; the comparison is computed by viva_multicell_blueprint.compare
-      over a shared identity registry, against a same-backend seed null control.
-    params:
-      backend: cpm
-      blueprint: workspace/blueprints/influenza_sego2022.yaml
-
-variants:
-  - name: cpm-vs-vertex
-    description: The two mechanical substrates sharing one compiled mechanism, each over >=3 rules-seeds.
-    params: {}
-
 simulation_set:
   - name: crossparadigm-nullcontrol-N400
     status: completed
@@ -358,3 +342,26 @@ bibliography:
       note: "Sego et al. 2022 ViralInfectionVTM; the influenza model this blueprint transcribes (params.yaml @ b952eec2)."
     - key: price2015
       note: "Price/Mochan-Keef 2015 in-host immune ODE; the systemic component coupled per Sego 2022."
+conditions:
+  baseline:
+    name: sego-influenza-crossparadigm
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    description: >
+      The Sego 2022 influenza blueprint compiled onto each backend and run for N
+      coupled steps; the comparison is computed by viva_multicell_blueprint.compare
+      over a shared identity registry, against a same-backend seed null control.
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/influenza_sego2022.yaml
+
+  variants:
+    - name: cpm-vs-vertex
+      description: The two mechanical substrates sharing one compiled mechanism, each over >=3 rules-seeds.
+      params: {}
+      composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+
+  model_settings: []
+question: >
+  Does one backend-neutral blueprint reproduce the Sego 2022 influenza model on two
+  different mechanical substrates, and -- judged against same-backend seed noise --
+  do the substrates diverge?

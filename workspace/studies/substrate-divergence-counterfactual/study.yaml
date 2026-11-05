@@ -63,19 +63,6 @@ key_assumptions:
   - "Nothing is tuned to hit a target; the study reports whatever the TOST returns (it rejected)."
   - "Same spatial metric + TOST + margin as crossparadigm-equivalence, so the two verdicts are directly comparable."
 
-baseline:
-  - name: mechanics-divergence
-    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
-    description: The mechanics-dominated blueprint compiled onto each backend (adhesion + chemotaxis only).
-    params:
-      backend: cpm
-      blueprint: workspace/blueprints/mechanics_divergence.yaml
-
-variants:
-  - name: both-backends-seeds
-    description: rules-seeds {0,1,2} on each backend (confirms the divergence is structural, not seed noise).
-    params: {}
-
 simulation_set:
   - name: counterfactual-divergence
     status: completed
@@ -222,3 +209,23 @@ visualizations:
   - name: "Mechanics-dominated playback — CPM vs vertex"
     address: "html:spatial-playback.html"
     config: {title: "Divergent migration/sorting: CPM voxel | vertex polygon"}
+conditions:
+  baseline:
+    name: mechanics-divergence
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    description: The mechanics-dominated blueprint compiled onto each backend (adhesion + chemotaxis only).
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/mechanics_divergence.yaml
+
+  variants:
+    - name: both-backends-seeds
+      description: rules-seeds {0,1,2} on each backend (confirms the divergence is structural, not seed noise).
+      params: {}
+      composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+
+  model_settings: []
+question: >
+  When MECHANICS (not the shared mechanism) drives the outcome, does the
+  equivalence test correctly REJECT -- i.e. does it have the power to detect a real
+  substrate difference?

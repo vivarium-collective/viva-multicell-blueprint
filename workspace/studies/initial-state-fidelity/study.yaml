@@ -61,19 +61,6 @@ key_assumptions:
   - "The vertex epithelium is a regular hexagonal tiling (cell area = target size); the blueprint's square block cannot be tiled by regular hexagons without a sub-cell displacement, which is reported, not hidden."
   - "Immune (and latent immune) cells are overlay cells above the sheet (Sego's 2-layer immune geometry), not sheet polygons."
 
-baseline:
-  - name: sego-t0-fidelity
-    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
-    description: The Sego blueprint's t0 emission on each backend, compared to the resolved blueprint cells.
-    params:
-      backend: cpm
-      blueprint: workspace/blueprints/influenza_sego2022.yaml
-
-variants:
-  - name: cpm-vs-vertex-t0
-    description: The two backends' t0 placement of the same 48-cell initial state.
-    params: {}
-
 simulation_set:
   - name: t0-fidelity
     status: completed
@@ -211,3 +198,22 @@ visualizations:
   - name: "t0 side-by-side"
     address: "html:t0-side-by-side.html"
     config: {title: "Initial state: CPM | vertex"}
+conditions:
+  baseline:
+    name: sego-t0-fidelity
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    description: The Sego blueprint's t0 emission on each backend, compared to the resolved blueprint cells.
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/influenza_sego2022.yaml
+
+  variants:
+    - name: cpm-vs-vertex-t0
+      description: The two backends' t0 placement of the same 48-cell initial state.
+      params: {}
+      composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+
+  model_settings: []
+question: >
+  Do both substrates faithfully reproduce the blueprint's initial centroids, sizes
+  and types, with one vertex polygon per blueprint cell?

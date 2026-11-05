@@ -49,19 +49,6 @@ key_assumptions:
   - "Rates are the faithful Sego values (no tuning); the epidemic is slow, so the demonstration runs 120 steps over seeds {0,1}."
   - "Directional (lowest-vs-highest, strict) agreement is the target; intermediate-dose monotonicity is seed-dependent and NOT claimed."
 
-baseline:
-  - name: sego-dose-sweep
-    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
-    description: The Sego blueprint run at three initial viral loads on each backend, over rules-seeds {0,1}.
-    params:
-      backend: cpm
-      blueprint: workspace/blueprints/influenza_sego2022.yaml
-
-variants:
-  - name: initial-load-sweep
-    description: infected_seed.fraction in {0.03, 0.08, 0.15} (seeds 1/3/5 infected cells), rules-seeds {0,1}.
-    params: {}
-
 simulation_set:
   - name: dose-response
     status: completed
@@ -165,3 +152,22 @@ visualizations:
   - name: "Dose response — initial load → final infection"
     address: "html:dose-response.html"
     config: {title: "Final infected count vs initial dose, both backends and seeds"}
+conditions:
+  baseline:
+    name: sego-dose-sweep
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    description: The Sego blueprint run at three initial viral loads on each backend, over rules-seeds {0,1}.
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/influenza_sego2022.yaml
+
+  variants:
+    - name: initial-load-sweep
+      description: infected_seed.fraction in {0.03, 0.08, 0.15} (seeds 1/3/5 infected cells), rules-seeds {0,1}.
+      params: {}
+      composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+
+  model_settings: []
+question: >
+  Do the two substrates agree on the SIGN of the dose response over initial viral
+  load (more load -> more infection), robustly across seeds?

@@ -47,15 +47,6 @@ description: |
   **Anti-goal respected.** No parameter is tuned to force the two backends to
   agree. Honest divergence is reported.
 
-studies:
-  - adhesion-calibration
-  - bp-01-blueprint-schema
-  - initial-state-fidelity
-  - flu-lung-crossparadigm
-  - dose-response-crossparadigm
-  - crossparadigm-equivalence
-  - substrate-divergence-counterfactual
-
 at_a_glance:
   - study: adhesion-calibration
     role: >
@@ -321,3 +312,12 @@ figure_plan:
   - {id: F8, priority: P1, title: "Phase diagram of when substrate matters"}
   - {id: F9, priority: P1, title: "Dose-response with explicit inoculum definition"}
   - {id: F10, priority: P2, title: "Portability benchmark across blueprints"}
+members:
+  - adhesion-calibration
+  - bp-01-blueprint-schema
+  - initial-state-fidelity
+  - flu-lung-crossparadigm
+  - dose-response-crossparadigm
+  - crossparadigm-equivalence
+  - substrate-divergence-counterfactual
+

@@ -88,27 +88,6 @@ key_assumptions:
   - "A type pair absent from the adhesion table is J = 0 on CPM (viva-cpm default) and Lambda = 0 on vertex."
   - "Immune cells are overlay islands on the vertex substrate; their random walk is fitted on the LATENT pool (no chemotaxis), their drift on an active macrophage."
 
-baseline:
-  - name: neutral-mechanics-sheet
-    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
-    description: >
-      The mechanics-only neutral sheet compiled onto each backend (the generator's
-      `blueprint` parameter points at workspace/blueprints/mechanics_sheet.yaml).
-    params:
-      backend: cpm
-      blueprint: workspace/blueprints/mechanics_sheet.yaml
-
-variants:
-  - name: tension-scale-sweep
-    description: Vertex tension_scale in {0.5, 1, 1.74, 2, 4, 8} against the fixed CPM sheet (60 steps).
-    params: {}
-  - name: vertex-mechanics-calibration
-    description: >
-      scripts/calibrate_vertex_mechanics.py on the Sego initial state (with the
-      fold-free constraint); fitted values become compile/to_vertex.py
-      CALIBRATED_DEFAULTS.
-    params: {}
-
 simulation_set:
   - name: vertex-mechanics-calibration
     status: completed
@@ -321,3 +300,32 @@ visualizations:
   - name: "Neutral sheet playback — CPM vs vertex"
     address: "html:neutral-sheet-playback.html"
     config: {title: "Mechanics-only sheet relaxation, both backends"}
+conditions:
+  baseline:
+    name: neutral-mechanics-sheet
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    description: >
+      The mechanics-only neutral sheet compiled onto each backend (the generator's
+      `blueprint` parameter points at workspace/blueprints/mechanics_sheet.yaml).
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/mechanics_sheet.yaml
+
+  variants:
+    - name: tension-scale-sweep
+      description: Vertex tension_scale in {0.5, 1, 1.74, 2, 4, 8} against the fixed CPM sheet (60 steps).
+      params: {}
+      composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    - name: vertex-mechanics-calibration
+      description: >
+        scripts/calibrate_vertex_mechanics.py on the Sego initial state (with the
+        fold-free constraint); fitted values become compile/to_vertex.py
+        CALIBRATED_DEFAULTS.
+      params: {}
+      composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+
+  model_settings: []
+question: >
+  Are the two substrates' mechanics defined and parameterized so that they are
+  mechanically comparable -- per cell type and per type pair -- and which vertex
+  parameters are fixed by the CPM, which must be calibrated, and which cannot be?
