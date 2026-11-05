@@ -2,11 +2,18 @@
 time slider.
 
 The two backends have genuinely different spatial representations, and the figure
-shows each in its native form — **entirely with scatter traces**, so the whole
-animation runs with ``redraw=False``. That matters: an animated ``Heatmap`` can
-only update under a full per-frame ``redraw``, which clears the plot to white
-between frames (a disorienting strobe). Everything here is scatter, so Plotly
-transitions the traces in place with no flash.
+shows each in its native form — **entirely with scatter traces, no Heatmap**. That
+is what makes the animation legible:
+
+* An animated ``Heatmap`` can only update under a full per-frame ``redraw``, which
+  clears the plot's canvas to white between frames — a disorienting strobe. With
+  no Heatmap there is no canvas to clear, so a full redraw of these SVG traces is
+  flash-free.
+* The animation therefore uses ``redraw=True`` (a discrete redraw per frame), NOT
+  ``redraw=False``. ``redraw=False`` takes Plotly's transition path, which tries to
+  interpolate each scatter between frames; because cells grow and the point counts
+  change frame-to-frame, that makes the coloured regions morph and jump around.
+  ``redraw=True`` snaps cleanly to each frame.
 
 * **CPM** — a lattice model, drawn as filled voxel rectangles (``_type_fill_paths``
   run-length-encodes the type raster into one ``fill="toself"`` scatter per cell
@@ -211,7 +218,7 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
         frames.append(go.Frame(name=str(k), data=data, traces=anim))
     fig.frames = frames
     steps = [dict(method="animate", label=f"{t:g}",
-                  args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=False),
+                  args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=True),
                                        transition=dict(duration=0))])
              for k, t in enumerate(ts)]
     fig.update_layout(
@@ -220,7 +227,7 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
                       pad=dict(t=40))],
         updatemenus=[dict(type="buttons", direction="left", x=0.0, y=-0.05, showactive=False,
                           buttons=[dict(label="Play", method="animate",
-                                        args=[None, dict(frame=dict(duration=250, redraw=False),
+                                        args=[None, dict(frame=dict(duration=250, redraw=True),
                                                          fromcurrent=True, transition=dict(duration=0))]),
                                    dict(label="Pause", method="animate",
                                         args=[[None], dict(mode="immediate",
@@ -292,14 +299,14 @@ def _single_playback(run, grid_spec, *, backend="cpm", dt_days=1.0, max_frames=M
               for k, i in enumerate(idx)]
     fig.frames = frames
     steps = [dict(method="animate", label=f"{t:g}",
-                  args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=False),
+                  args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=True),
                                        transition=dict(duration=0))]) for k, t in enumerate(ts)]
     fig.update_layout(
         title=title,
         sliders=[dict(active=0, steps=steps, currentvalue=dict(prefix="time (days): "), pad=dict(t=40))],
         updatemenus=[dict(type="buttons", direction="left", x=0.0, y=-0.05, showactive=False,
                           buttons=[dict(label="Play", method="animate",
-                                        args=[None, dict(frame=dict(duration=250, redraw=False),
+                                        args=[None, dict(frame=dict(duration=250, redraw=True),
                                                          fromcurrent=True, transition=dict(duration=0))]),
                                    dict(label="Pause", method="animate",
                                         args=[[None], dict(mode="immediate", frame=dict(duration=0, redraw=False),
