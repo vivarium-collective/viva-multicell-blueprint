@@ -1,3 +1,122 @@
+# Response to the vertex-mechanics review (2026-10-28) — accepted, implemented
+
+**Review:** per-study feedback on adhesion-calibration, initial-state-fidelity,
+flu-lung-crossparadigm and crossparadigm-equivalence ·
+`workspace/references/reviews/influenza_vertex_mechanics_feedback_2026-10-28.yaml`
+**Disposition:** all four comments accepted and implemented. The vertex backend was
+rebuilt, both substrates' mechanics are now written down, and every vertex-dependent
+study was re-run. Design constraint kept: the vertex backend stays ONE standalone,
+swappable mechanics node, and all its coupling runs through vivarium-tyssue
+*behaviors* passed to its internal `EulerSolver`, the way the Gillespie regulator drives it.
+
+## Point by point
+
+**adhesion-calibration — "lacking neighbor exchanges; rerun with auto_reconnect; define the
+mechanical equations and parameters for both backends, including per-cell-type variation."**
+- `auto_reconnect` is ON. The T1 merge threshold is 0.1 × the hexagon side (tyssue's
+  default of 1e-3 never fires at this cell size). Neighbour exchanges now occur: 4–11 of
+  85 epithelial pairs swap by step 400, gains ≈ losses.
+- **docs/mechanics.md** defines the CPM Hamiltonian and the vertex energy + dynamics
+  term by term. It also lists every parameter per cell type and per type pair, and says
+  how each vertex value is set: energy-matched, lowered from the blueprint, or calibrated.
+- Defects found and fixed along the way:
+  - The compiler lowered adhesion per type pair, but the backend applied only **one
+    mean tension** to every edge. A new `junction_tension` behavior now applies the
+    full pair table on the live topology every step.
+  - Explicit Euler at viscosity 1 was **unstable** for size-25 cells. The
+    displacement clamp was hiding a two-state oscillation. Viscosity is now 2·K·A0,
+    with 4 sub-steps per coupled step.
+  - Vertex cells could leave the domain. The field domain is now a wall, as the lattice
+    edge is for the CPM.
+- Per-type parameters:
+  - Area stiffness is energy-matched per type (K = 2 λ_V).
+  - A pair missing from the adhesion table is tension-free on both substrates, since
+    viva-cpm's default is J = 0. Previously the vertex used the mean tension.
+- New `scripts/calibrate_vertex_mechanics.py` fits the vertex knobs that have no CPM
+  counterpart to CPM behaviour (5 seeds × 60 steps), under a **hard mesh-validity
+  constraint**: no inverted or self-intersecting face over 3 seeds × 400 steps.
+
+  | Knob | Fitted value | Vertex vs CPM |
+  |---|---|---|
+  | Tension scale | 1.74 | area 22.8 vs 23.0 |
+  | Immune motility | 236.5 | displacement 9.4 vs 9.4 µm |
+  | Saturating chemotaxis | — | drift within ~10% for g ≥ 0.003 |
+
+- **Not matched, reported as such:**
+  - **Epithelial wandering.** Every sheet motility that matches the CPM's epithelial
+    MSD folds the vertex mesh within a few hundred steps. I tried sub-stepping, a
+    perimeter stiffness, faster rosette resolution and larger T1 thresholds. The
+    motility is therefore capped at the fold-free value, and the vertex epithelium
+    wanders ~5× less (MSD 2.0 vs 9.5 µm²).
+  - Area CV (0.033 vs 0.093).
+  - The tension scale is geometry-dependent (~4 on the 4×4 sheet, which collapses at 8).
+- The tension sweep reverses the old finding: tension now **does** set cell area.
+
+**initial-state-fidelity — "hexagonal initial cells; auto_reconnect; one polygon per Sego
+cell; split cells sharing a polygon; overlay fields instead of polygons; create the
+processes connecting fields to the vertex model via behaviors (Gillespie)."**
+- **Hexagonal sheet.** The epithelium is a regular hexagonal tiling at the target
+  area. Each blueprint cell gets its own site by an optimal 1:1 assignment, alternated
+  with rigid recentring. Coincident centroids are **split** onto neighbouring
+  hexagons, never merged.
+- **No guard ring.** The 50 guard/medium polygons are gone: 48 faces for 48 cells (36
+  hexagons at area 25.0 in one connected sheet, plus 12 immune cells). Residual is
+  sub-cell (RMS 1.60 µm, max 2.44 µm).
+- **Immune overlay.** Immune cells (and their latent pools) form an **overlay layer**:
+  free polygons above the sheet, as in Sego's 2-layer immune geometry. Their contact
+  with the epithelium is the overlap area.
+- **Fields overlaid.** Fields are sampled onto each face (`field_<name>` columns) by an
+  `overlay_fields` behavior and are never meshed.
+- **Field coupling via behaviors.** Field → tissue coupling is
+  `viva_multicell_blueprint/backends/vertex_coupling.py`. Gillespie-style couplers
+  turn fields, fates, latent activations and lineage events into behavior nodes
+  (`overlay_fields`, `apply_gradient`, `differentiation`, `split_cells`,
+  `junction_tension`, `confine`) on the solver's `behaviors` port.
+
+**flu-lung-crossparadigm — "cells are not actually moving within the tissue; likely the
+mechanical parameters and the lack of auto-reconnect."**
+- Confirmed, with a third cause: the unstable integration above. Fixed by reconnection,
+  stable integration, and CPM-calibrated active motility (the counterpart of the CPM
+  temperature).
+- Vertex cells now move and exchange neighbours. Immune cells random-walk and chemotax
+  like CPM cells. The epithelium is less fluid than the CPM's (see above).
+- Re-run against a mechanics-stochastic null control:
+  - Fate (0.938 vs 0.926 / 0.944), occupancy IoU (0.135 vs 0.100 / 0.175) and patch
+    location (3.6 vs 3.3 µm) are all within seed noise.
+  - The old "IoU below both baselines" signal is gone.
+  - Remaining candidate: late I-count dynamics. The vertex is inside the narrow CPM
+    3-seed envelope at 55% of steps by N=400 (100% at N=150).
+
+**crossparadigm-equivalence — "equivalence is very bad between backends."**
+- Two causes found:
+  1. Vertex cells did not move.
+  2. The null was **degenerate**. Replicates varied only the rule seed, so each
+     backend's mechanics were identical across replicates and same-backend positional
+     agreement was 1.0 by construction.
+- Each backend's mechanics RNG now follows the run seed (`mechanics_seed`).
+- Result:
+  - Fate is still equivalent (run-cluster CI [−0.003, +0.001] within ±0.05).
+  - The exact-position gap fell from **0.92 to 0.135** (cross 0.472 vs same 0.608,
+    CI [0.071, 0.210]). That is **still not equivalent** at ±0.10. The remainder tracks
+    the less fluid vertex epithelium (replicate spread 2.3 vs 5.2 µm).
+- The counterfactual positive control still rejects (0.417 vs 0.775). Its old
+  "vertex climbs the gradient" mechanism was an uncalibrated-chemotaxis artifact and
+  is retired.
+
+## Still open
+- **Epithelial fluidity**: the tyssue sheet folds before it reaches CPM-level epithelial
+  wandering. Closing that needs a fold-aware topology handler (or a softer epithelium),
+  and it bounds the position-equivalence result.
+- Area dispersion: the vertex area CV is lower, and raising it with tension noise folds
+  the mesh.
+- The tension scale depends on geometry. The calibration holds at one cell size (25).
+- The position-equivalence margin needs more seeds, and both margins still need
+  biological justification (BP-06).
+- Immune contact is edge-on on the CPM but face-on overlap on the vertex, by design,
+  so kill rates read different contact units.
+
+---
+
 # Response to the cross-paradigm review — accepted, with revisions
 
 **Reviewer:** Scientific and architecture critique (2026-10-27) ·

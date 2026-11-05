@@ -7,8 +7,8 @@ now shows each in its native form:
 * **CPM** — a lattice model, drawn as a voxel heatmap (``rasterize`` of the
   per-cell occupancy; empty lattice sites are transparent so the field underlay
   shows through).
-* **Vertex** — a polygon model, drawn as the actual cell polygons (the Voronoi
-  faces from ``frame['polygons']``), filled by cell state with visible cell
+* **Vertex** — a polygon model, drawn as the actual cell polygons (the hexagonal
+  sheet faces and overlay islands from ``frame['polygons']``), filled by cell state with visible cell
   edges. Rasterizing those polygons (the old behaviour) filled the domain into an
   edgeless blob that did not read as "vertex" at all.
 

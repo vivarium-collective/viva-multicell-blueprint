@@ -1,8 +1,9 @@
 """VertexBackend: the tyssue vertex model behind the MechanicsBackend port.
 
 Small fixtures (a 3x3 cluster of centroids). These cover the four review-focus
-seams: mesh identity (interior 1:1 + residual), port-shape emission, field-driven
-migration via the ``behaviors`` port, and the all-one-type degenerate case.
+seams: the hexagonal one-polygon-per-cell mesh, overlay islands, per-pair junction
+tension, reconnection, port-shape emission, field-driven migration via the
+``behaviors`` port, and the all-one-type degenerate case.
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ from viva_multicell_blueprint.core import build_core
 
 
 def _grid_cells(types=None, spacing=1.0):
-    """A clean 3x3 grid of centroids (well-separated -> clean Voronoi interior)."""
+    """A clean 3x3 grid of centroids (mapped 1:1 onto a hexagonal sheet)."""
     xs = [0, 1, 2]
     pts = [(x * spacing, y * spacing) for y in xs for x in xs]
     if types is None:
@@ -38,20 +39,26 @@ def _make(cells, backend_params=None, domain=None):
     )
 
 
-def test_vertex_mesh_from_centroids_interior_1to1():
+def test_vertex_mesh_is_hexagonal_one_polygon_per_cell():
     cells = _grid_cells()
     b = _make(cells)
     rep = b.residual_report
-    assert rep["n_input"] == 9
-    # a clean, well-separated cluster -> every centroid gets its own interior face
-    assert rep["n_clean"] == 9
-    assert rep["n_collision"] == 0
-    assert rep["fraction_clean"] == 1.0
+    assert rep["mesh"] == "hex"
+    assert rep["n_input"] == rep["n_clean"] == 9
+    assert rep["n_collision"] == 0 and rep["fraction_clean"] == 1.0
+    # no guard ring / collar / medium polygons: exactly one face per blueprint cell
+    assert rep["n_guard_faces"] == 0
+    eptm = b._solver.eptm
+    assert len(eptm.face_df) == 9
     # identity registry maps every blueprint id to a distinct tyssue face unique_id
     assert len(b.identity) == 9
     assert len(set(b.identity.values())) == 9
-    # guard/collar faces are tagged and excluded, so there ARE extra faces
-    assert rep["n_guard_faces"] >= 1
+    # every cell starts as a regular hexagon at its target area
+    sides = eptm.edge_df.groupby("face").size()
+    assert set(sides.tolist()) == {6}
+    assert np.allclose(eptm.face_df["area"], 1.0)
+    # the hex block is centred on the blueprint cloud (sub-cell placement residual)
+    assert rep["sheet_centroid_max"] < 1.0
 
 
 def test_vertex_emits_port_shape():
@@ -83,51 +90,101 @@ def test_vertex_emits_port_shape():
     assert len(out["neighbors"]["5"]) >= 3
 
     # shared-edge-by-type is load-bearing (feeds the kill rule), so check it for
-    # real. The 3x3 grid alternates A/B; the center cell (id 5) is type A and its
-    # four orthogonal neighbors (ids 2,4,6,8) are all B. So its shared surface is
-    # keyed ONLY by "B" (it touches no A), and that B total is ~its own perimeter
-    # (an interior cell is fully surrounded, so every edge is a shared edge).
-    assert set(out["types"]["5"]) and out["types"]["5"] == "A"
+    # real. The centre cell (id 5, type A) is fully surrounded on the hex sheet, so
+    # its shared surface (all types) sums to its own perimeter; its 4 orthogonal
+    # blueprint neighbours (ids 2,4,6,8) are all B, so B contact is present.
+    assert out["types"]["5"] == "A"
     center_shared = out["shared_surface_by_type"]["5"]
-    assert set(center_shared) == {"B"}  # no "A" entry: it touches no same-type cell
-    import math as _m
-    # reconstruct the center face perimeter from the solver and compare
+    assert set(center_shared) <= {"A", "B"} and center_shared["B"] > 0
     fd = b._solver.eptm.face_df
     lab = fd.index[fd["unique_id"] == b.identity["5"]][0]
     perim = float(fd.loc[lab, "perimeter"])
-    assert center_shared["B"] == pytest.approx(perim, rel=1e-6)
-    assert center_shared["B"] > 0
+    assert sum(center_shared.values()) == pytest.approx(perim, rel=1e-6)
+    assert len(out["neighbors"]["5"]) == 6
 
 
-def test_contested_centroid_still_emitted_as_dead():
-    # two centroids close enough to collide onto one Voronoi face (plus a few
-    # spread-out cells so the mesh is well-formed). The loser is dropped from the
-    # identity map but MUST still appear in every port, alive=False.
+def test_coincident_centroids_get_separate_polygons():
+    # two centroids close enough to have shared ONE Voronoi face before. The hex
+    # assignment is 1:1, so they are split onto neighbouring sites: every cell has
+    # its own polygon, is alive, and touches its twin.
     cells = [
         {"id": 1, "type": "A", "centroid": [0.0, 0.0], "size": 1.0},
-        {"id": 2, "type": "A", "centroid": [0.02, 0.0], "size": 1.0},  # collides w/ 1
+        {"id": 2, "type": "A", "centroid": [0.02, 0.0], "size": 1.0},  # ~coincident w/ 1
         {"id": 3, "type": "A", "centroid": [3.0, 0.0], "size": 1.0},
         {"id": 4, "type": "A", "centroid": [0.0, 3.0], "size": 1.0},
         {"id": 5, "type": "A", "centroid": [3.0, 3.0], "size": 1.0},
     ]
     b = _make(cells)
     rep = b.residual_report
-    assert rep["n_collision"] >= 1
-    assert rep["unmapped_ids"]  # non-empty
-    unmapped = set(rep["unmapped_ids"])
+    assert rep["n_collision"] == 0 and rep["unmapped_ids"] == []
+    assert len(set(b.identity.values())) == 5
     out = b.update({}, 1.0)
     ids = {str(c["id"]) for c in cells}
-    # contract holds despite a non-zero residual: every cell in every port
     for port in OUTPUT_PORTS:
         assert set(out[port]) == ids
-    for cid in unmapped:
-        assert out["alive"][cid] is False
-        assert out["neighbors"][cid] == []
-        assert out["shared_surface_by_type"][cid] == {}
-        assert len(out["positions"][cid]) == 2  # real placeholder, not missing
-    # a mapped cell is still alive
-    mapped = ids - unmapped
-    assert any(out["alive"][c] for c in mapped)
+    assert all(out["alive"].values())
+    assert "2" in out["neighbors"]["1"]
+
+
+def test_overlay_cells_are_islands_with_overlap_contact():
+    """Overlay (immune-layer) cells are free polygons ON TOP of the sheet: no shared
+    vertices, and their contact with the epithelium is the overlap area."""
+    cells = _grid_cells(types=["H"] * 9)
+    cells.append({"id": 10, "type": "M", "centroid": [1.0, 1.0], "size": 1.0})   # over the centre
+    cells.append({"id": 11, "type": "M", "centroid": [9.0, 9.0], "size": 1.0})   # far away
+    b = _make(cells, backend_params={"overlay_types": ["M"]})
+    rep = b.residual_report
+    assert rep["n_sheet"] == 9 and rep["n_overlay"] == 2
+    # the island centred exactly on its blueprint centroid
+    out = b._emit()
+    assert out["positions"]["10"] == pytest.approx([1.0, 1.0])
+    # it shares no vertex with the sheet
+    ed = b._solver.eptm.edge_df
+    fd = b._solver.eptm.face_df
+    island = fd.index[fd["unique_id"] == b.identity["10"]][0]
+    sheet_faces = [fd.index[fd["unique_id"] == b.identity[str(i)]][0] for i in range(1, 10)]
+    island_verts = set(ed.loc[ed["face"] == island, "srce"])
+    sheet_verts = set(ed.loc[ed["face"].isin(sheet_faces), "srce"])
+    assert island_verts.isdisjoint(sheet_verts)
+    # contact = overlap area, credited both ways; total overlap ~ the island's area
+    m_contact = out["shared_surface_by_type"]["10"]
+    assert set(m_contact) == {"H"}
+    assert m_contact["H"] == pytest.approx(1.0, rel=0.05)
+    assert out["shared_surface_by_type"]["5"]["M"] > 0
+    assert "10" in out["neighbors"]["5"] and "5" in out["neighbors"]["10"]
+    # the far island touches nothing
+    assert out["shared_surface_by_type"]["11"] == {} and out["neighbors"]["11"] == []
+
+
+def test_junction_tension_follows_type_pairs():
+    """Per-pair adhesion is applied junction by junction (interior = J_ab, border =
+    2 x J_(a,medium) per half-edge), not collapsed to one mean tension."""
+    cells = _grid_cells()   # alternating A/B
+    tensions = {"A|A": 1.0, "A|B": 3.0, "B|B": 1.0, "A|medium": 5.0, "B|medium": 5.0}
+    b = _make(cells, backend_params={"tension_by_pair": tensions})
+    eptm = b._solver.eptm
+    ed, fd = eptm.edge_df, eptm.face_df
+    from viva_multicell_blueprint.backends.vertex_coupling import _opposite_positions
+    opp = _opposite_positions(ed)
+    own = fd["cell_type"].reindex(ed["face"]).to_numpy()
+    lt = ed["line_tension"].to_numpy()
+    for i in range(len(ed)):
+        if opp[i] < 0:
+            assert lt[i] == pytest.approx(10.0)
+        else:
+            want = 3.0 if own[i] != own[opp[i]] else 1.0
+            assert lt[i] == pytest.approx(want)
+
+
+def test_reconnect_enabled_and_scaled_to_cell_size():
+    b = _make(_grid_cells())
+    s = b._solver
+    assert any(fn.__name__ == "reconnect" for fn, _ in s.manager.next)
+    # merge threshold is a fraction of the hexagon side, not tyssue's 1e-3 default
+    side = b._side
+    assert s.eptm.settings["threshold_length"] == pytest.approx(0.1 * side)
+    off = _make(_grid_cells(), backend_params={"auto_reconnect": False})
+    assert not any(fn.__name__ == "reconnect" for fn, _ in off._solver.manager.next)
 
 
 def test_migration_director_moves_cell_up_gradient():

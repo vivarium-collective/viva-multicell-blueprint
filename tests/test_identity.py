@@ -65,22 +65,23 @@ def test_duplicate_values_rejected():
         IdentityRegistry.from_backends(IDS, {"c0": 5, "c1": 5}, VERTEX, {})
 
 
-def test_contested_cell_excluded_with_real_vertex_backend():
+def test_near_coincident_cells_both_in_cohort_with_real_vertex_backend():
+    """A centroid almost on top of another used to lose its Voronoi face and drop
+    out of the cohort; the hex sheet splits them onto separate polygons, so the
+    real vertex backend now reports NO contested cells and the whole t0 cohort
+    survives."""
     from viva_multicell_blueprint.backends.vertex_backend import VertexBackend
     from viva_multicell_blueprint.core import build_core
 
     pts = [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1), (0, 2), (1, 2), (2, 2),
-           (1.0001, 1.0001)]  # collides with the centre cell's face
+           (1.0001, 1.0001)]  # nearly coincident with the centre cell
     cells = [{"id": f"c{i}", "type": "A", "centroid": [float(x), float(y)], "size": 1.0}
              for i, (x, y) in enumerate(pts)]
     b = VertexBackend({"initial_state": cells, "backend_params": {}, "domain": {}},
                       core=build_core())
     rep = b.residual_report
-    assert rep["unmapped_ids"], "fixture must produce a contested cell"
+    assert rep["unmapped_ids"] == []
     ids = [c["id"] for c in cells]
     r = IdentityRegistry.from_backends(ids, {i: n for n, i in enumerate(ids)},
                                        b.identity, rep)
-    cohort = r.t0_cohort()
-    for u in rep["unmapped_ids"]:
-        assert u not in cohort
-    assert cohort == set(b.identity) - set(rep["unmapped_ids"])
+    assert r.t0_cohort() == set(ids)

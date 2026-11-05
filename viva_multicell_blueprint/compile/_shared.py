@@ -116,6 +116,15 @@ def field_process_fields(fields) -> list[dict]:
     return out
 
 
+def mechanics_seed(blueprint) -> int:
+    """Seed for a backend's own mechanical RNG (CPM Metropolis / vertex motility +
+    reconnection): ``mechanics_mapping.mechanics_seed``, else the run's
+    ``rules_seed``, so replicate runs are stochastic in mechanics as well as in
+    rule draws."""
+    mm = blueprint.mechanics_mapping or {}
+    return int(mm.get("mechanics_seed", mm.get("rules_seed", 0)))
+
+
 def field_names(fields) -> list[str]:
     return [f["name"] for f in (fields or [])]
 

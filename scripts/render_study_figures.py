@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import copy
 import itertools
+import json
 from pathlib import Path
 
 import numpy as np
@@ -26,7 +27,8 @@ from viva_multicell_blueprint.compare.identity import IdentityRegistry
 from viva_multicell_blueprint.compile._shared import resolve_initial_state
 from viva_multicell_blueprint.compare.runner import run_backend
 from viva_multicell_blueprint.viz import (
-    adhesion_sweep, divergence, dose_response, dynamics_overlay, spatial_playback, t0_fidelity,
+    adhesion_sweep, divergence, dose_response, dynamics_overlay, mechanics_calibration,
+    spatial_playback, t0_fidelity,
 )
 from viva_multicell_blueprint.viz._common import HTML_CAP
 
@@ -86,7 +88,8 @@ _MECH = {
     "initial_state": {"kind": "blocks",
                       "block": {"type": "H", "origin": [6, 6], "shape": [4, 4], "spacing": 5, "size": 25}},
 }
-_SCALES = (0.5, 1.0, 2.0, 4.0)
+_SCALES = (0.5, 1.0, 1.74, 2.0, 4.0, 8.0)
+CALIBRATION = STUDIES / "adhesion-calibration" / "results" / "vertex_mechanics_calibration.json"
 
 
 def _area_stats(run):
@@ -96,11 +99,10 @@ def _area_stats(run):
 
 
 def render_adhesion(fast: bool) -> None:
-    n = 6
+    n = 30 if fast else 60
     cpm = run_backend(Blueprint.from_dict(copy.deepcopy(_MECH)), "cpm", n)
     c_mean, c_cv = _area_stats(cpm)
     v_mean, v_cv = [], []
-    vtx_ref = None
     for scale in _SCALES:
         d = copy.deepcopy(_MECH)
         d["mechanics_mapping"] = {"tension_scale": scale}
@@ -108,13 +110,16 @@ def render_adhesion(fast: bool) -> None:
         m, cv = _area_stats(v)
         v_mean.append(m)
         v_cv.append(cv)
-        if scale == 1.0:
-            vtx_ref = v
     _write("adhesion-calibration", "adhesion-sweep",
            adhesion_sweep(_SCALES, v_mean, v_cv, c_mean, c_cv, target_size=25))
+    # playback at the calibrated default tension scale (no override)
+    vtx_ref = run_backend(Blueprint.from_dict(copy.deepcopy(_MECH)), "vertex", n)
     grid = {"extent_um": [30, 30], "grid_resolution_um": 1}
     _write("adhesion-calibration", "neutral-sheet-playback",
            spatial_playback(cpm.frames, vtx_ref.frames, grid))
+    if CALIBRATION.exists():   # produced by scripts/calibrate_vertex_mechanics.py
+        _write("adhesion-calibration", "mechanics-calibration",
+               mechanics_calibration(json.loads(CALIBRATION.read_text())))
 
 
 # --- dose-response-crossparadigm: initial-load → final infection --------------

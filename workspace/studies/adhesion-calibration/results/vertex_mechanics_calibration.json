@@ -1,0 +1,207 @@
+{
+  "n_steps": 60,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "cpm_target": {
+    "epi_msd": 9.53956327941938,
+    "immune_disp_median": 9.370128394167441,
+    "area_mean": 22.98333333333333,
+    "area_cv": 0.09255781100609346
+  },
+  "sweeps": {
+    "tension_scale": [
+      {
+        "tension_scale": 1.0,
+        "epi_msd": 0.520302082818733,
+        "immune_disp_median": 0.0,
+        "area_mean": 23.900933951836016,
+        "area_cv": 0.006572303616816823
+      },
+      {
+        "tension_scale": 2.0,
+        "epi_msd": 1.1875553751536971,
+        "immune_disp_median": 0.0,
+        "area_mean": 22.663573996610292,
+        "area_cv": 0.011259371898665146
+      },
+      {
+        "tension_scale": 3.0,
+        "epi_msd": 1.938443402438215,
+        "immune_disp_median": 0.0,
+        "area_mean": 21.35496178906414,
+        "area_cv": 0.01730178073659462
+      },
+      {
+        "tension_scale": 4.0,
+        "epi_msd": 2.919807948838987,
+        "immune_disp_median": 0.0,
+        "area_mean": 19.964436018867193,
+        "area_cv": 0.025210748407427215
+      },
+      {
+        "tension_scale": 6.0,
+        "epi_msd": 6.108816721958498,
+        "immune_disp_median": 0.0,
+        "area_mean": 16.845954224938524,
+        "area_cv": 0.050617764153481584
+      }
+    ],
+    "motility": [
+      {
+        "motility": 100,
+        "epi_msd": 1.0135314775347721,
+        "immune_disp_median": 4.9903939889341,
+        "area_mean": 22.99017048495654,
+        "area_cv": 0.009949099221020488
+      },
+      {
+        "motility": 150,
+        "epi_msd": 1.0135314775347721,
+        "immune_disp_median": 6.624482808547418,
+        "area_mean": 22.99017048495654,
+        "area_cv": 0.009949099221020488
+      },
+      {
+        "motility": 200,
+        "epi_msd": 1.0135314775347721,
+        "immune_disp_median": 8.06114807387215,
+        "area_mean": 22.99017048495654,
+        "area_cv": 0.009949099221020488
+      },
+      {
+        "motility": 250,
+        "epi_msd": 1.0135314775347721,
+        "immune_disp_median": 9.853280589890293,
+        "area_mean": 22.99017048495654,
+        "area_cv": 0.009949099221020488
+      },
+      {
+        "motility": 300,
+        "epi_msd": 1.0135314775347721,
+        "immune_disp_median": 11.755052752680237,
+        "area_mean": 22.99017048495654,
+        "area_cv": 0.009949099221020488
+      }
+    ],
+    "sheet_motility": [
+      {
+        "sheet_motility": 40,
+        "epi_msd": 2.4349482842690824,
+        "immune_disp_median": 9.357090937121129,
+        "area_mean": 22.734523509921722,
+        "area_cv": 0.037594846638616494
+      },
+      {
+        "sheet_motility": 55,
+        "epi_msd": 3.7517460210464,
+        "immune_disp_median": 9.356677919748241,
+        "area_mean": 22.634675914462893,
+        "area_cv": 0.053446645643396504
+      },
+      {
+        "sheet_motility": 70,
+        "epi_msd": 6.053560466383535,
+        "immune_disp_median": 9.356547012802563,
+        "area_mean": 22.853396450575076,
+        "area_cv": 0.06539687619835807
+      },
+      {
+        "sheet_motility": 85,
+        "epi_msd": 9.977580793534466,
+        "immune_disp_median": 9.356420216709797,
+        "area_mean": 23.281263558855024,
+        "area_cv": 0.076149111190378
+      },
+      {
+        "sheet_motility": 100,
+        "epi_msd": 15.271722908016423,
+        "immune_disp_median": 9.355187036472675,
+        "area_mean": 23.653111450600413,
+        "area_cv": 0.08215026456137181
+      }
+    ],
+    "tension_noise": [
+      {
+        "tension_noise": 0.0,
+        "epi_msd": 2.0426384723752804,
+        "immune_disp_median": 9.357044956464012,
+        "area_mean": 22.775830095800984,
+        "area_cv": 0.032746742038870326
+      },
+      {
+        "tension_noise": 5.0,
+        "epi_msd": 2.089804282262464,
+        "immune_disp_median": 9.356230250616646,
+        "area_mean": 22.75496502716376,
+        "area_cv": 0.036424813300421424
+      },
+      {
+        "tension_noise": 10.0,
+        "epi_msd": 2.357259372753414,
+        "immune_disp_median": 9.306364242262012,
+        "area_mean": 22.6497871753732,
+        "area_cv": 0.04266016939607382
+      },
+      {
+        "tension_noise": 20.0,
+        "epi_msd": 2.5820910330749025,
+        "immune_disp_median": 9.300686037120641,
+        "area_mean": 22.329236687809345,
+        "area_cv": 0.05621450002890714
+      }
+    ]
+  },
+  "fitted": {
+    "tension_scale": 1.742,
+    "tension_noise": 0.0,
+    "sheet_motility": 34.13,
+    "motility": 236.52,
+    "migration_scale": 3.5400000000000014,
+    "chemotaxis_saturation": 105.00000000000003
+  },
+  "fitted_observables": {
+    "epi_msd": 2.042841598968539,
+    "immune_disp_median": 9.357037729439499,
+    "area_mean": 22.775308682465464,
+    "area_cv": 0.032748191189162
+  },
+  "mesh_validity": {
+    "msd_fit_sheet_motility": 83.32562979700549,
+    "fold_free_sheet_motility": 34.13017796485345,
+    "validity_steps": 400,
+    "validity_seeds": [
+      0,
+      1,
+      2
+    ],
+    "tension_noise": 0.0
+  },
+  "chemotaxis": {
+    "gradients": [
+      0.001,
+      0.003,
+      0.01,
+      0.03
+    ],
+    "cpm_velocity": [
+      0.09806335282651073,
+      0.14450281280716065,
+      0.33147619047619037,
+      0.34983368347338933
+    ],
+    "vertex_velocity": [
+      0.058447425583425944,
+      0.16330974091935554,
+      0.3267597033816544,
+      0.3499716533345148
+    ],
+    "drag": 300.0000000000001,
+    "v_sat": 0.35,
+    "slope": 59.0
+  }
+}

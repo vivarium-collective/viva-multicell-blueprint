@@ -16,6 +16,7 @@ from ._shared import (
     _as_cell_nodes,
     assemble,
     field_names,
+    mechanics_seed,
     resolve_initial_state,
     type_ids_from_cell_types,
 )
@@ -48,6 +49,9 @@ def cpm_mechanics_node(blueprint) -> dict:
         "mcs_per_update": int(mm.get("mcs_per_update", 2)),
         "type_ids": type_ids,
         "fields": _cpm_fields(blueprint),
+        # the Metropolis RNG follows the run seed, so replicate runs differ in
+        # mechanics too (not only in rule draws)
+        "potts": {"seed": mechanics_seed(blueprint)},
     }
     if blueprint.adhesion:
         backend_params["contact"] = to_cpm_contact(blueprint.adhesion, dict(type_ids))

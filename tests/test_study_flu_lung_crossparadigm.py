@@ -13,8 +13,8 @@ than two runs of the SAME backend with different RNG seeds?". So we compute:
     model backend-neutral to within seed noise.
 
 It also (2) checks the final-frame cell areas match across backends (so the
-spatial comparison is NOT representation-confounded -- the vertex Voronoi faces
-relax to the target by the end), (3) checks the vertex trajectory lies within the
+spatial comparison is NOT representation-confounded -- the vertex hexagons hold
+the target area), (3) checks the vertex trajectory lies within the
 CPM stochastic I-count envelope (a non-circular dynamics check), and renders the
 three figures under the inline cap.
 """
@@ -91,7 +91,7 @@ def test_capstone_backend_neutral_within_seed_noise_and_figures():
     assert "type_counts_total" in dyn and "virus" in dyn.get("field_integrals_rms", {})
 
     # --- family 3: spatial pattern, with the representation confound CONTROLLED ---
-    # final-frame mean cell areas must match (vertex Voronoi faces relax to target),
+    # final-frame mean cell areas must match (vertex hexagons hold the target area),
     # so the occupancy comparison is a fair morphology comparison, not representation.
     area_ratio = _final_mean_area(vtx) / _final_mean_area(cpm[0])
     assert 0.6 < area_ratio < 1.6, area_ratio

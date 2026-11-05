@@ -5,6 +5,7 @@ The capstone (``flu-lung-crossparadigm``) uses the cross-paradigm trio
 builders cover the other three studies' headline results:
 
 * :func:`adhesion_sweep`  -- J<->tension calibration (adhesion-calibration)
+* :func:`mechanics_calibration` -- vertex knobs fitted to CPM behaviour (adhesion-calibration)
 * :func:`dose_response`   -- initial-load dose response (dose-response-crossparadigm)
 * :func:`t0_fidelity`     -- t0 centroid residuals (initial-state-fidelity)
 
@@ -31,8 +32,8 @@ def adhesion_sweep(scales, vertex_mean, vertex_cv, cpm_mean, cpm_cv, *,
 
     scales/vertex_mean/vertex_cv are equal-length sequences; cpm_mean/cpm_cv are
     scalars (CPM has no tension knob). Two stacked panels: mean cell area and
-    area CV vs the vertex tension scale. The mapping is directional, not pinned —
-    the figure shows the vertex statistics barely move, bracketing the CPM value.
+    area CV vs the vertex tension scale, against the CPM reference lines -- where
+    the vertex curve crosses the CPM line is the area-matching scale.
     """
     scales = [float(s) for s in scales]
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.08,
@@ -64,6 +65,54 @@ def adhesion_sweep(scales, vertex_mean, vertex_cv, cpm_mean, cpm_cv, *,
     fig.update_xaxes(title_text="vertex tension scale (× J mapping)", type="log", row=2, col=1)
     fig.update_layout(title=title, height=620, template="plotly_white",
                       legend=dict(title="Backend"))
+    return fig
+
+
+def mechanics_calibration(result, *, title="Vertex mechanics calibrated against the CPM"):
+    """The vertex calibration (``scripts/calibrate_vertex_mechanics.py`` JSON).
+
+    Left: each fitted observable, vertex vs CPM (CPM = target), with the knob it
+    fixes. Right: chemotactic drift speed vs field gradient -- the CPM curve
+    saturates and the fitted vertex tanh law tracks it.
+    """
+    labels = {
+        "area_mean": "mean area<br>(tension_scale)",
+        "epi_msd": "epithelial MSD<br>(sheet_motility)",
+        "immune_disp_median": "immune displacement<br>(motility)",
+        "area_cv": "area CV<br>(not identifiable)",
+    }
+    keys = [k for k in labels if k in result.get("cpm_target", {})]
+    cpm = [float(result["cpm_target"][k]) for k in keys]
+    vtx = [float(result["fitted_observables"][k]) for k in keys]
+    fig = make_subplots(rows=1, cols=2, column_widths=[0.55, 0.45], horizontal_spacing=0.12,
+                        subplot_titles=("Fitted observables (60 steps, mean over seeds)",
+                                        "Chemotactic drift vs gradient"))
+    x = [labels[k] for k in keys]
+    fig.add_trace(go.Bar(x=x, y=rnd(cpm, 3), name="cpm", marker_color=_CPM,
+                         hovertemplate="%{x}<br>CPM %{y}<extra></extra>"), row=1, col=1)
+    fig.add_trace(go.Bar(x=x, y=rnd(vtx, 3), name="vertex", marker_color=_VERTEX,
+                         hovertemplate="%{x}<br>vertex %{y}<extra></extra>"), row=1, col=1)
+    fig.update_yaxes(title_text="value (µm², µm, or dimensionless)", type="log", row=1, col=1)
+
+    ch = result.get("chemotaxis") or {}
+    g = [float(v) for v in ch.get("gradients", [])]
+    if g:
+        fig.add_trace(go.Scatter(x=g, y=rnd(ch["cpm_velocity"], 4), mode="markers+lines",
+                                 name="cpm", legendgroup="cpm", showlegend=False,
+                                 line=dict(color=_CPM), marker=dict(size=9),
+                                 hovertemplate="g %{x}<br>CPM %{y} µm/step<extra></extra>"),
+                      row=1, col=2)
+        fig.add_trace(go.Scatter(x=g, y=rnd(ch["vertex_velocity"], 4), mode="markers+lines",
+                                 name="vertex", legendgroup="vertex", showlegend=False,
+                                 line=dict(color=_VERTEX, dash="dash"), marker=dict(size=9),
+                                 hovertemplate="g %{x}<br>vertex %{y} µm/step<extra></extra>"),
+                      row=1, col=2)
+        fig.update_xaxes(title_text="virus field gradient (per µm)", type="log", row=1, col=2)
+        fig.update_yaxes(title_text="macrophage drift (µm/step)", row=1, col=2)
+    fitted = result.get("fitted", {})
+    note = ", ".join(f"{k}={float(v):.3g}" for k, v in fitted.items())
+    fig.update_layout(title=dict(text=f"{title}<br><sup>{note}</sup>"), height=480,
+                      template="plotly_white", barmode="group", legend=dict(title="Backend"))
     return fig
 
 
@@ -111,7 +160,7 @@ def t0_fidelity(residuals, *, type_ok=None, n_cells=None, cell_radius_um=2.8,
 
     residuals: ``{"cpm": [...], "vertex": [...]}`` per-cell distances between the
     backend's emitted centroid and the blueprint's. CPM seeds cells exactly
-    (≈0); the vertex Voronoi+collar is sub-cell. A reference line marks the cell
+    (≈0); the vertex hexagonal re-tiling is sub-cell. A reference line marks the cell
     radius so "sub-cell" is visually obvious; RMS (and optional type-match) are
     annotated per backend.
     """

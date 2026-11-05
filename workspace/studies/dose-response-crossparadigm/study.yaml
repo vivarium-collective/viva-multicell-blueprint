@@ -25,7 +25,8 @@ experiment: >
 
 result: >
   Seeding 1 / 3 / 5 infected cells, final infected counts (N=120): CPM seed0 1/2/7,
-  CPM seed1 1/3/2, vertex seed0 0/2/5, vertex seed1 1/3/6. The lowest-vs-highest
+  CPM seed1 1/3/2, vertex seed0 1/3/7, vertex seed1 1/5/6 (re-run 2026-10-28 on the
+  revised, calibrated vertex substrate). The lowest-vs-highest
   direction is STRICT in all four (backend, seed) cases (final_high > final_low), so
   both backends agree on the direction. Intermediate monotonicity is NOT universal
   (CPM seed1 is 1/3/2), so only the directional (low-vs-high) claim is made. CPM and
@@ -70,8 +71,9 @@ simulation_set:
       seed_infected: "1 / 3 / 5"
       final_infected_cpm_seed0: "1 / 2 / 7"
       final_infected_cpm_seed1: "1 / 3 / 2"
-      final_infected_vertex_seed0: "0 / 2 / 5"
-      final_infected_vertex_seed1: "1 / 3 / 6"
+      final_infected_vertex_seed0: "1 / 3 / 7"
+      final_infected_vertex_seed1: "1 / 5 / 6"
+      vertex_substrate: "hex sheet + immune overlay, reconnect on, calibrated (2026-10-28)"
       strict_low_lt_high_all_cases: true
       intermediate_monotone_universal: false
     pass_fail_tests:
@@ -124,7 +126,7 @@ report:
   verdict: >
     Over initial viral loads seeding 1/3/5 infected cells, the highest dose ends with
     STRICTLY more infection than the lowest on both backends and both seeds (CPM
-    1/2/7 & 1/3/2, vertex 0/2/5 & 1/3/6 at N=120), so the two substrates agree on the
+    1/2/7 & 1/3/2, vertex 1/3/7 & 1/5/6 at N=120, revised vertex substrate), so the two substrates agree on the
     DIRECTION of the dose response. Intermediate-dose monotonicity is seed-dependent
     (CPM seed1), so only the directional (low-vs-high) claim is made. Magnitudes are
     comparable and within the capstone's same-seed spread.
@@ -145,10 +147,10 @@ findings:
     status: confirms
     statement: >
       Both substrates show a strictly higher final infection at the highest vs lowest
-      dose, across seeds {0,1} (CPM 1->7 & 1->2, vertex 0->5 & 1->6), agreeing on the
+      dose, across seeds {0,1} (CPM 1->7 & 1->2, vertex 1->7 & 1->6), agreeing on the
       direction while intermediate monotonicity is seed-dependent.
     evidence:
-      observed: "seed 1/3/5 -> final cpm 1/2/7 (s0), 1/3/2 (s1); vertex 0/2/5 (s0), 1/3/6 (s1); N=120"
+      observed: "seed 1/3/5 -> final cpm 1/2/7 (s0), 1/3/2 (s1); vertex 1/3/7 (s0), 1/5/6 (s1); N=120"
     explanation: "More seed virus raises the shared-field infection probability everywhere; the substrate sets only the noisy magnitude."
     next_action: "revisit magnitudes once the ODE V producer lands (Task 21)"
     provenance:

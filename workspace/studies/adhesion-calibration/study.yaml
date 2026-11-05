@@ -10,57 +10,83 @@ gate_status: passed
 design_status: drafted
 
 claim: >
-  REVISED per the 2026-10-27 review: this is NOT a calibration of CPM contact
-  energy J to vertex line tension, and the sheets are NOT established as physically
-  matched. The CPM (23.6 um^2) and vertex (34.9 um^2) mean areas differ by ~48%,
-  and the vertex shape statistics are nearly INSENSITIVE to tension_scale over
-  0.5..8 -- so tension is weakly/non-identifiable from this test. What this study
-  honestly shows: the neutral adhesion strength lowers DIRECTLY to J and
-  MONOTONICALLY (same sign) to line tension, a DIRECTIONAL relation only. A proper
-  physical-observable calibration (relaxation time, interfacial length, deformation
-  under force, migration mobility, neighbour exchange) with identifiability
-  analysis is deferred to Stage 3 / BP-07.
+  REVISED per the 2026-10-28 vertex-mechanics review. Both substrates' mechanics are now
+  DEFINED term by term (docs/mechanics.md). Every vertex parameter is either
+  energy-matched to its CPM counterpart (area stiffness K = 2 lambda_volume, per cell
+  type), lowered per type PAIR from the blueprint adhesion table (Lambda_ab = kappa *
+  J_ab, ratios fixed by J), or CALIBRATED to measured CPM behaviour on the Sego initial
+  state, under a hard mesh-validity constraint (no folded faces). With per-pair junction
+  tension actually applied and auto_reconnect ON, the tension scale IS identifiable from
+  mean cell area: kappa = 1.74 gives area 22.8 vs CPM 23.0. Immune random-walk
+  displacement (9.4 vs 9.4 um) and the saturating chemotactic drift curve are matched.
+  NOT matched: epithelial wandering. The CPM-matching motility folds the vertex mesh,
+  so it is capped at the largest fold-free value and the vertex epithelium wanders
+  about 5x less (MSD 2.0 vs 9.5 um^2), though it does exchange neighbours (T1s). Area
+  dispersion is not matched either (CV 0.033 vs 0.093), and the kappa that fits the
+  small isolated sheet differs (~4).
 
 experiment: >
-  Compile `workspace/blueprints/mechanics_sheet.yaml` (a 4x4 size-25 H sheet, two
-  neutral adhesion values, NO fields/rules/ODE/immune) onto CPM and vertex. Run a
-  few relaxation steps and measure cell-shape statistics (mean cell area, area
-  coefficient of variation CV). Sweep the vertex line-tension scale
-  (`mechanics_mapping.tension_scale` in {0.5, 1, 2, 4}) and compare its shape stats
-  to the CPM sheet; record the best-matching scale and whether the match is sharply
-  identified.
+  (1) Define both mechanical models and their per-type / per-pair parameters
+  (docs/mechanics.md). (2) Mechanics-only calibration
+  (scripts/calibrate_vertex_mechanics.py): drive each backend directly from the Sego
+  initial state with no field / rule / ODE inputs, 60 steps x 5 seeds, and fit the vertex
+  knobs that have no CPM counterpart, one observable each:
+  - tension_scale -> mean epithelial area;
+  - motility -> latent-immune random-walk displacement;
+  - sheet_motility -> epithelial MSD about the sheet centre, then CAPPED (stepped down by
+    0.8x) until a 3-seed x 400-step run has no inverted / self-intersecting face;
+  - tension_noise -> area CV (adopted only if it beats no noise by > 0.01 AND keeps the
+    mesh valid);
+  - migration_scale + chemotaxis_saturation -> one active macrophage's drift speed vs a
+    fixed linear virus gradient (g = 0.001 .. 0.03).
+  (3) Re-run the tension_scale sweep on the 4x4 mechanics-only sheet
+  (workspace/blueprints/mechanics_sheet.yaml) for 60 steps with reconnection on.
+  (4) Count epithelial neighbour exchanges on the Sego sheet over 400 steps.
 
 result: >
-  The CPM sheet relaxes to mean area 23.6 (CV 0.098). The vertex sheet relaxes to
-  mean area ~34.9 (CV ~0.064) and -- critically -- its shape statistics are nearly
-  INSENSITIVE to the line-tension scale over 0.5..8 (CV spread < 0.01): area is set
-  by the area-elasticity + Voronoi tessellation, not by line tension at this scale.
-  Mean areas are the same ORDER of magnitude (ratio ~1.5) but differ by ~48%, which
-  is NOT a match; and because vertex shape is tension-insensitive, the J<->tension
-  mapping is only DIRECTIONAL (monotone), NOT pinned and NOT identifiable here.
-  tension_scale = 1.0 is retained only as a provisional default; the nominal best
-  (|dCV| ~0.03 at scale 8) is within noise. This does not calibrate the mechanics.
+  Calibration (Sego state, 5 seeds x 60 steps). CPM targets: mean area 23.0, area CV
+  0.093, epithelial MSD 9.54 um^2, latent-immune median displacement 9.37 um. Fitted
+  vertex values:
+  - tension_scale 1.74 -> area 22.8.
+  - motility 236.5 -> displacement 9.36 um (domain walls on).
+  - sheet_motility: the MSD fit (83.3) folded the mesh, as did 66.7, 53.3 and 42.7; the
+    fold-free cap is 34.1 -> MSD 2.04 um^2.
+  - tension_noise 0 -> CV 0.033 (the level that would raise CV toward the CPM's folds
+    the mesh).
+  Chemotaxis: CPM drift saturates (0.098 / 0.145 / 0.331 / 0.350 um/step at g = 0.001 /
+  0.003 / 0.01 / 0.03); the fitted vertex tanh law (migration_scale 3.54, saturation
+  105) gives 0.058 / 0.163 / 0.327 / 0.350.
+  Neighbour exchange on the Sego sheet by step 400: vertex 4-11 of 85 epithelial pairs
+  swapped (gains ~ losses: T1s). CPM 60-74 of 110 lost, a count that includes
+  flickering diagonal contacts.
+  Mechanics-sheet sweep (60 steps): CPM area 18.9 (CV 0.103). Vertex area falls
+  monotonically with tension scale: 24.5 (0.5), 23.7 (1), 22.6 (1.74), 22.2 (2),
+  18.5 (4); at 8 the small sheet collapses (area 1.8). On this small sheet the CPM area
+  is reached near kappa ~ 4.
 
 purpose:
   question: >
-    Can the neutral adhesion be lowered so a mechanics-only sheet has comparable
-    cell-shape statistics on both substrates, and is the J<->tension mapping sharply
-    identified?
+    Are the two substrates' mechanics defined and parameterized so that they are
+    mechanically comparable -- per cell type and per type pair -- and which vertex
+    parameters are fixed by the CPM, which must be calibrated, and which cannot be?
   mechanism: >
-    CPM contact energy J and tyssue line tension Lambda both resist interface
-    creation, but with different units/geometry (energy per contact unit vs energy
-    per edge length). Raising either should tighten/regularize cell shape, so the
-    mapping is principled-monotone; its absolute scale is not pinned by units alone.
+    CPM contact energy J (per neighbour bond) and vertex junction tension Lambda (per
+    unit length) both penalize interface; the area constraint lambda_V (V - V_T)^2 and
+    the area elasticity K/2 (A - A0)^2 are the same energy up to K = 2 lambda_V; the CPM
+    temperature T drives membrane fluctuations and cell wandering that the deterministic
+    vertex model must get from active (motility) forces. Tension contracts cells against
+    their area elasticity, so the tension scale sets the relaxed area.
   expected_outcome: >
-    Comparable mean area and low shape dispersion on both backends, with a
-    best-matching tension_scale that is only weakly constrained (a directional, not
-    exact, calibration).
+    Area stiffness and adhesion ratios carry over exactly; the overall tension scale,
+    motility and chemotactic mobility are identifiable from area, MSD and drift; area
+    dispersion may not be reachable.
 
 key_assumptions:
-  - "Mechanics-only: no fields/rules/ODE/immune, so only the mechanical relaxation is compared."
-  - "Shape statistic = mean cell area + area CV at the final step (a few relaxation steps)."
-  - "target_size 25 (size-9 dissolves); CPM uses a volume constraint, vertex a prefered_area."
-  - "The CPM contact mapping is EXACT (J = strength); only the vertex tension scale is swept."
+  - "Mechanics-only calibration: no fields / rules / ODE / immune coupling, so only the substrates' own mechanics are compared."
+  - "One coupled step = 2 MCS (CPM) = one explicit-Euler step dt = 1 (vertex); viscosity eta = 2*K*A0 = 100 for Euler stability."
+  - "CPM temperature 10, neighbour order 2, lambda_volume 1, target size 25 (viva-cpm defaults + blueprint)."
+  - "A type pair absent from the adhesion table is J = 0 on CPM (viva-cpm default) and Lambda = 0 on vertex."
+  - "Immune cells are overlay islands on the vertex substrate; their random walk is fitted on the LATENT pool (no chemotaxis), their drift on an active macrophage."
 
 baseline:
   - name: neutral-mechanics-sheet
@@ -74,38 +100,94 @@ baseline:
 
 variants:
   - name: tension-scale-sweep
-    description: Vertex line-tension scale in {0.5, 1, 2, 4} against the fixed CPM sheet.
+    description: Vertex tension_scale in {0.5, 1, 1.74, 2, 4, 8} against the fixed CPM sheet (60 steps).
+    params: {}
+  - name: vertex-mechanics-calibration
+    description: >
+      scripts/calibrate_vertex_mechanics.py on the Sego initial state (with the
+      fold-free constraint); fitted values become compile/to_vertex.py
+      CALIBRATED_DEFAULTS.
     params: {}
 
 simulation_set:
+  - name: vertex-mechanics-calibration
+    status: completed
+    base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    seeds: [0, 1, 2, 3, 4]
+    metrics:
+      cpm_area_mean: 22.98
+      vertex_area_mean: 22.78
+      cpm_area_cv: 0.093
+      vertex_area_cv: 0.033
+      cpm_epi_msd_um2: 9.54
+      vertex_epi_msd_um2: 2.04
+      cpm_immune_disp_um: 9.37
+      vertex_immune_disp_um: 9.36
+      fitted_tension_scale: 1.74
+      sheet_motility_msd_fit: 83.3
+      fitted_sheet_motility_fold_free_cap: 34.1
+      fitted_motility: 236.5
+      fitted_tension_noise: 0.0
+      fitted_migration_scale: 3.54
+      fitted_chemotaxis_saturation: 105.0
+      chemotaxis_cpm_um_per_step: "0.098 / 0.145 / 0.331 / 0.350 at g = 0.001 / 0.003 / 0.01 / 0.03"
+      chemotaxis_vertex_um_per_step: "0.058 / 0.163 / 0.327 / 0.350"
+      vertex_epi_pairs_exchanged_by_400: "4-11 of 85 (3 seeds)"
+      mesh_valid_3_seeds_x_400_steps: true
+    pass_fail_tests:
+      - "mechanics-defined: pass"
+      - "area-matched: pass"
+      - "immune-motility-matched: pass"
+      - "chemotaxis-drift-matched: pass (low-gradient point ~40% slow)"
+      - "mesh-valid (no folds): pass"
+      - "epithelial-msd-matched: fail (capped by mesh validity: 2.0 vs 9.5 um^2)"
+      - "area-dispersion-matched: fail"
   - name: adhesion-sweep
     status: completed
     base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     seeds: [0]
     metrics:
-      cpm_mean_area: 23.56
-      cpm_area_cv: 0.098
-      vertex_mean_area: 34.88
-      vertex_area_cv: 0.064
-      vertex_cv_spread_over_scale: "< 0.01 (tension_scale 0.5..4, ~flat to 8)"
-      best_tension_scale: 1.0
-      mapping_character: directional (monotone in strength and scale, not pinned)
+      cpm_mean_area: 18.94
+      cpm_area_cv: 0.103
+      vertex_mean_area_by_scale: "0.5: 24.48, 1: 23.73, 1.74: 22.58, 2: 22.15, 4: 18.46, 8: 1.81 (collapse)"
+      vertex_area_cv_by_scale: "0.5: 0.017, 1: 0.020, 1.74: 0.024, 2: 0.026, 4: 0.044, 8: 0.668"
+      area_matching_scale_small_sheet: "~4"
     pass_fail_tests:
       - "cpm-sheet-holds-size25-target: pass"
-      - "vertex-sheet-comparable: pass"
-      - "mapping-directional-not-pinned: pass"
+      - "vertex-sheet-comparable (0.5..4): pass"
+      - "tension-identifiable-from-area: pass"
       - "j-tension-mapping-monotone: pass"
 
 readouts:
   - name: mean_cell_area
-    description: Mean cell area (CPM volume / vertex face area) at the final relaxation step.
+    description: Mean epithelial cell area (CPM volume / vertex face area) at the final step.
     store_path: "mechanics/sizes"
     units: px^2
     status: measured
   - name: area_cv
-    description: Coefficient of variation of cell area -- the shape-dispersion statistic compared across backends.
+    description: Coefficient of variation of epithelial cell area.
     store_path: "mechanics/sizes"
     units: dimensionless
+    status: measured
+  - name: mesh_validity
+    description: Inverted or self-intersecting vertex faces (must be 0 at every sampled step).
+    store_path: "mechanics/footprints"
+    units: count
+    status: measured
+  - name: epithelial_msd
+    description: Mean squared displacement of epithelial cells about the sheet's centre of mass over 60 steps.
+    store_path: "mechanics/positions"
+    units: um^2
+    status: measured
+  - name: immune_displacement
+    description: Median displacement of the latent immune cells over 60 steps (random walk; no chemotaxis).
+    store_path: "mechanics/positions"
+    units: um
+    status: measured
+  - name: chemotactic_drift
+    description: x-velocity of one active macrophage in a fixed linear virus field, vs gradient.
+    store_path: "mechanics/positions"
+    units: um/step
     status: measured
 
 behavior_tests:
@@ -123,15 +205,16 @@ behavior_tests:
     pass_if: {op: in_range, lo: 0.4, hi: 2.5, field: area_ratio}
     units: dimensionless
     requires_simulation: "true"
-  - name: mapping-directional-not-pinned
+  - name: tension-identifiable-from-area
     classification: secondary
     description: >
-      The vertex shape statistics barely depend on the tension scale (0.5..4): CV
-      spread < 0.1 AND every scale fits the CPM CV about equally (mismatch spread <
-      0.05), so the J<->tension mapping is directional, not pinned.
-    measure: {kind: spread, field: area_cv, over: tension_scale}
-    pass_if: {op: lt, value: 0.1, field: cv_spread, note: "mismatch spread < 0.05"}
-    units: dimensionless
+      With per-pair junction tension applied, the vertex mean area decreases
+      monotonically with the tension scale (0.5 -> 4) and brackets the CPM area, so the
+      scale is identifiable from area (replaces the earlier "directional, not pinned"
+      test).
+    measure: {kind: monotone, field: mean_cell_area, over: tension_scale}
+    pass_if: {op: strictly_decreasing, note: "area(0.5) > area(2) > area(4); CPM area in between"}
+    units: px^2
     requires_simulation: "true"
   - name: j-tension-mapping-monotone
     classification: secondary
@@ -145,59 +228,83 @@ behavior_tests:
 
 conclusion_logic:
   if_primary_tests_pass:
-    implementation_status: "Both substrates hold the size-25 target with comparable, low-dispersion shapes."
-    biological_validation: "Comparable sheet morphology; the directional mapping is the honest, expected outcome."
+    implementation_status: "Both substrates hold the size-25 target; vertex knobs calibrated against the CPM."
+    biological_validation: "Mechanically comparable on area, wandering and chemotactic drift -- not on area dispersion."
     pipeline_unblocks:
-      - "flu-lung-crossparadigm uses the faithful tension_scale = 1.0 default."
+      - "flu-lung-crossparadigm, crossparadigm-equivalence and dose-response use the calibrated vertex defaults."
   if_primary_tests_fail:
     diagnose:
-      - "A sheet collapses/explodes -- check target_size (size-9 dissolves) and the area-elasticity knob."
-    block_downstream: "Pin a usable tension_scale before running the full model."
+      - "A sheet collapses/explodes -- check target_size (size-9 dissolves), viscosity (Euler stability) and the area-elasticity knob."
+    block_downstream: "Re-run scripts/calibrate_vertex_mechanics.py before the full model."
 
 limitations:
-  - "The J<->tension calibration is DIRECTIONAL only: vertex shape stats are nearly flat over scale 0.5..8 at this reduced scale, so the scale is weakly identified."
-  - "Mean areas differ by ~1.5x (CPM 23.6, vertex 34.9) -- the Voronoi tessellation + guard collar give larger vertex faces; tension cannot close this (area is set by area-elasticity)."
-  - "A few relaxation steps on a small sheet; a larger sheet / longer relaxation would tighten the estimate."
+  - "Epithelial wandering is ~5x below the CPM's: the CPM-matching sheet motility folds the vertex mesh (persisted with sub-stepping, perimeter stiffness, faster rosette resolution and larger T1 thresholds), so motility is capped at the fold-free value."
+  - "Area dispersion is not matched (vertex CV 0.033 vs CPM 0.093); the tension noise that would raise it folds the mesh."
+  - "Calibrated at target size 25 (viscosity 100); other cell sizes need a re-run of the calibration script."
+  - "The J<->Lambda scale is geometry-dependent: 1.74 on the Sego sheet vs ~4 on the isolated 4x4 sheet; at 8 the small sheet collapses."
+  - "Neighbour exchange is present (T1s) but far below the CPM's contact turnover; the CPM count includes flickering diagonal contacts, so the two are not directly comparable."
+  - "At the shallowest gradient (g = 0.001) the vertex macrophage drifts ~40% slower than the CPM one."
+  - "Immune contact is edge-on in the CPM (same layer) but face-on overlap on vertex (Sego's 2-layer geometry); kill rates read different contact units."
 
 report:
-  title: "Adhesion: a directional (NOT calibrated) J<->tension relation"
+  title: "Mechanics defined and calibrated under a no-fold constraint: area, immune motility and chemotaxis matched; epithelial wandering ~5x lower"
   verdict: >
-    REVISED (review): this is NOT a mechanics calibration and the sheets are NOT
-    physically matched. CPM mean area 23.6 vs vertex ~34.9 um^2 is a ~48% gap, and
-    vertex shape is nearly insensitive to tension_scale (CV spread < 0.01 over
-    0.5..8), so line tension is weakly/non-identifiable from this test. What holds:
-    the neutral adhesion lowers DIRECTLY to J and MONOTONICALLY (same sign) to line
-    tension -- a DIRECTIONAL relation only. A physical-observable calibration with
-    identifiability analysis is deferred to Stage 3 / BP-07; tension_scale = 1.0 is a
-    provisional default, not a fitted value.
+    REVISED (2026-10-28 review). Both substrates' mechanics are written out term by term
+    with every per-type and per-pair parameter (docs/mechanics.md). On the vertex
+    side:
+    - auto_reconnect is on (T1 at 0.1 x hexagon side), and neighbours now exchange
+      (4-11 of 85 pairs by step 400).
+    - The full per-pair tension table is applied (previously one mean tension).
+    - Explicit Euler is stabilized (viscosity 2 K A0, 4 sub-steps per coupled step); at
+      viscosity 1 the displacement clamp was masking an oscillation.
+    - The domain is a wall, as on the CPM.
+    Area stiffness and adhesion ratios are energy-matched. Tension scale (1.74 -> area
+    22.8 vs 23.0), immune motility (9.4 vs 9.4 um) and the saturating chemotactic drift
+    are calibrated to the CPM. The epithelial wandering is NOT matched: every
+    CPM-matching sheet motility folds the vertex mesh, so it is capped at the fold-free
+    value (MSD 2.0 vs 9.5 um^2). Area dispersion is also unmatched (CV 0.033 vs 0.093).
   confidence: medium
   evidence_quality: preliminary
   main_insight: >
-    Interface energy maps monotonically between the substrates, but J (per contact)
-    and Lambda (per edge length) are not unit-commensurable, so a monotone label
-    mapping is NOT a physical calibration (guardrail 5). Cell area on the vertex side
-    is governed by area-elasticity + tessellation, not tension -- which is why the
-    scale is weakly/non-identifiable here.
+    Once the per-pair tension is actually applied, junction tension sets the relaxed
+    cell area, so the J<->Lambda scale is identifiable (geometry-dependent). Without a
+    temperature, the vertex model needs active motility to wander. But the tyssue sheet
+    can absorb only limited active shear before polygons fold, so it cannot reach CPM
+    epithelial fluidity at these parameters. That is a real limit of this vertex
+    substrate.
   caveat: >
-    Reduced scale, few steps; mean areas differ ~48%, which is not a match; the
-    mapping is directional and non-identifiable. Proper calibration to shared
-    physical observables (relaxation, interfacial length, deformation, mobility) with
-    identifiability analysis is Stage 3 / BP-07.
+    Reduced scale, one cell size; epithelial MSD and area CV unmatched; contact geometry
+    for immune cells differs by design (overlay vs same-layer).
 
 findings:
   - id: F1-directional-J-tension-mapping
     kind: methodological
-    status: confirms
+    status: informational
     statement: >
-      The neutral-adhesion -> (CPM J, vertex tension) mapping is directional
-      (monotone) but not sharply identified: vertex cell-shape statistics barely
-      move with tension scale over 0.5..8.
+      SUPERSEDED (2026-10-28): the earlier "tension non-identifiable" result came from
+      the vertex backend collapsing the per-pair table to one mean tension and running
+      only 6 steps.
     evidence:
-      observed: "CPM mean 23.6 / CV 0.098; vertex mean 34.9 / CV 0.064; CV spread < 0.01 across scale"
-    explanation: "J and Lambda differ in units/geometry; vertex area is set by area-elasticity + Voronoi, not tension."
-    next_action: "keep tension_scale = 1.0; a larger sheet could sharpen the estimate"
+      observed: "earlier: CPM mean 23.6 / CV 0.098; vertex mean 34.9 / CV 0.064; CV spread < 0.01 across scale"
+    explanation: "Only the mean tension reached the mesh; the Voronoi tessellation set the area."
+    next_action: "see F2"
     provenance:
       run_ids: [adhesion-sweep]
+  - id: F2-mechanics-calibrated
+    kind: methodological
+    status: confirms
+    statement: >
+      With the mechanics defined and per-pair tension applied, the vertex tension
+      scale, immune motility and chemotactic mobility are identifiable and calibrated
+      to the CPM (area 22.8/23.0, immune displacement 9.4/9.4 um, drift within ~10% for
+      g >= 0.003). Epithelial wandering is capped by mesh validity (MSD 2.0 vs 9.5
+      um^2), and area dispersion is unmatched.
+    evidence:
+      observed: "results/vertex_mechanics_calibration.json"
+    explanation: "Tension contracts cells against area elasticity; active motility replaces the CPM temperature's wandering, up to the shear a tyssue sheet tolerates without folding."
+    next_action: "a fold-aware topology handler (or a softer epithelium) to reach CPM fluidity; validate on a second geometry / cell size (BP-07)"
+    provenance:
+      run_ids: [vertex-mechanics-calibration]
 
 bibliography:
   sources:
@@ -205,6 +312,9 @@ bibliography:
       note: "Sego 2022 adhesion (Table 3) supplies the neutral epithelial J values the sheet uses."
 
 visualizations:
+  - name: "Vertex mechanics calibration"
+    address: "html:mechanics-calibration.html"
+    config: {title: "Vertex knobs fitted to CPM area, wandering and chemotactic drift"}
   - name: "J ↔ tension sweep"
     address: "html:adhesion-sweep.html"
     config: {title: "Cell-shape statistics across the vertex tension sweep vs CPM"}

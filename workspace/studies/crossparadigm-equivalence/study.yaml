@@ -16,19 +16,17 @@ parent_studies:
   - {study: substrate-divergence-counterfactual, condition: ran, relation: tests}
 
 claim: >
-  SCOPED to Claim 3 (scientific equivalence) — NOT blueprint fidelity, NOT
-  biological validity. On cell FATE the two substrates are equivalent under a
-  DEPENDENCE-AWARE reanalysis: the 6x6 grid's 36 cross + 30 same pairs reuse only
-  6+6 runs and are statistically dependent, so the unit of resampling is the RUN.
-  A run-cluster percentile bootstrap gives Delta(same-cross) -0.0015, 90% CI
-  [-0.003, +0.001], inside a +/-0.05 margin -- so fate agreement is equivalent.
-  CAVEATS (reviewer): the +/-0.05 margin is NOT yet biologically justified; the
-  tight CI reflects LOW between-run variance at this reduced scale, not strong
-  power. The earlier pair-level TOST (p=5.6e-36) treated dependent pairs as
-  independent and OVERSTATED significance -- retired as the headline. Exact spatial
-  position is NOT equivalent (cross 0.08 vs same 1.00; ~8.5 um median drift; 1.0 at
-  t0) -- a CANDIDATE representation effect (lattice COM vs relaxing polygon
-  centroid), NOT yet causally isolated (BP-02/BP-04 will isolate it).
+  SCOPED to Claim 3 (scientific equivalence) -- NOT blueprint fidelity, NOT
+  biological validity. RE-RUN 2026-10-28 on the revised vertex substrate (hexagonal
+  sheet, immune overlay, auto_reconnect, per-pair tension, CPM-calibrated motility) with
+  mechanics-stochastic replicates. On cell FATE the substrates remain equivalent under
+  the dependence-aware run-cluster bootstrap: Delta(same-cross) -0.0014, 90% CI
+  [-0.0034, +0.0008], inside +/-0.05 (margin not yet biologically justified). On exact
+  POSITION they are still NOT equivalent, but the gap shrank about 7-fold: cross 0.472
+  vs same-backend 0.608 (Delta +0.135, cluster CI [+0.071, +0.210] vs margin +/-0.10).
+  The previous spatial gap (cross 0.083 vs same 1.000) mostly reflected a degenerate
+  null. Replicates differed only in rule draws, so same-backend positions were
+  identical by construction, and the vertex cells barely moved.
 
 experiment: >
   Run the full Sego blueprint on BOTH backends over rules-seeds {0..5} (N=120).
@@ -40,13 +38,15 @@ experiment: >
   the difference and its 90% CI for each metric.
 
 result: >
-  FATE agreement: same-backend 0.9888 (sd 0.007, n=30), cross-backend 0.9902
-  (sd 0.007, n=36); diff -0.0015, 90% CI [-0.0045, +0.0016] fully inside +/-0.05,
-  p_TOST = 5.6e-36 -> EQUIVALENT. SPATIAL (exact position) agreement: same-backend
-  1.000, cross-backend 0.083; diff +0.917, CI far outside +/-0.10 -> NOT equivalent.
-  Cross-backend spatial agreement is 1.000 at t0 and drifts to 0.083 by the final
-  frame (median per-cell displacement ~8.5 um, ~1.7 cell diameters), so the spatial
-  gap is genuine dynamic drift, not a systematic lattice-vs-polygon offset.
+  FATE agreement: same-backend 0.9887 (n=30 pairs), cross-backend 0.9901 (n=36); diff
+  -0.0014, pair 90% CI [-0.0045, +0.0016], run-cluster CI [-0.0034, +0.0008], fully
+  inside +/-0.05 -> EQUIVALENT. SPATIAL (exact position, centroids within 5 um)
+  agreement: same-backend 0.608, cross-backend 0.472; diff +0.135, run-cluster 90% CI
+  [+0.071, +0.210], outside the +/-0.10 margin -> NOT equivalent. Median per-cell
+  final-frame displacement: cross-backend ~5.7 um vs CPM-vs-CPM 5.2 um and
+  vertex-vs-vertex 2.3 um. The cross-backend positional spread is close to the CPM
+  replicate spread; the vertex replicates spread less because its epithelium wanders
+  ~5x less (mesh-validity cap).
 
 purpose:
   question: >
@@ -86,23 +86,27 @@ simulation_set:
     base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     seeds: [0, 1, 2, 3, 4, 5]
     metrics:
-      fate_same_mean: 0.9888
-      fate_cross_mean: 0.9902
-      fate_tost_diff: -0.0015
+      fate_same_mean: 0.9887
+      fate_cross_mean: 0.9901
+      fate_tost_diff: -0.0014
       fate_tost_ci: "[-0.0045, +0.0016]"
       fate_tost_margin: 0.05
       fate_equivalent: true
-      fate_cluster_ci: "[-0.003, +0.001] (run-cluster bootstrap, PRIMARY)"
-      fate_pair_tost_p: "5.6e-36 (RETIRED: treats dependent pairs as independent)"
+      fate_cluster_ci: "[-0.0034, +0.0008] (run-cluster bootstrap, PRIMARY)"
       fate_margin_biologically_justified: false
-      spatial_same_mean: 1.000
-      spatial_cross_mean: 0.083
-      spatial_cross_t0: 1.000
-      spatial_median_drift_um: 8.5
+      spatial_same_mean: 0.608
+      spatial_cross_mean: 0.472
+      spatial_diff: 0.135
+      spatial_cluster_ci: "[+0.071, +0.210]"
       spatial_equivalent: false
+      median_displacement_cross_um: 5.7
+      median_displacement_same_vertex_um: 2.3
+      median_displacement_same_cpm_um: 5.2
+      superseded_spatial: "same 1.000 / cross 0.083 (deterministic-mechanics replicates, old vertex substrate)"
+      mechanics_seeded_per_replicate: true
     pass_fail_tests:
       - "fate-equivalent-tost: pass"
-      - "spatial-non-equivalent-is-representation: pass (fate + area already match)"
+      - "spatial-equivalent: fail (diff 0.135, CI [+0.071, +0.210] vs margin 0.10)"
 
 readouts:
   - name: fate_agreement
@@ -149,7 +153,7 @@ alternative_hypotheses:
   - hypothesis: "The backends only look equivalent because the metric is insensitive."
     excluded_by: "The counterfactual study rejects equivalence with the same metric/test -> the test has power."
   - hypothesis: "Fate agreement is high only by chance at one seed."
-    excluded_by: "30 same-backend + 36 cross-backend pairs; the TOST CI is +/-0.004 wide (p=5.6e-36)."
+    excluded_by: "6 runs per backend resampled as clusters (run-cluster bootstrap); 90% CI [-0.0034, +0.0008]. The pair-level p was retired as overstated."
 
 conclusion_logic:
   if_primary_tests_pass:
@@ -163,38 +167,75 @@ conclusion_logic:
 
 limitations:
   - "Fate equivalence is established at the reduced scale (50x50, N=120) with faithful Sego rates; a larger/longer regime is a follow-up."
-  - "Exact-position spatial agreement is NOT equivalent -- the substrate changes where cells sit (median ~8.5 um drift), though not what they become; this is representation, consistent with matched fate + matched final areas (capstone)."
-  - "Equivalence is on fate; a morphology-level equivalence (shape/pattern beyond exact centroid) is not claimed here."
+  - "Exact-position agreement is NOT equivalent (diff 0.135, CI [0.071, 0.210] vs a 0.10 margin), though the gap fell ~7x once the null carried mechanical noise and vertex cells moved."
+  - "The vertex epithelium wanders ~5x less than the CPM's (mesh-validity cap), which narrows the vertex-vs-vertex positional spread and contributes to the remaining gap."
+  - "The +/-0.10 spatial margin and +/-0.05 fate margin are pre-declared, not biologically justified (BP-06)."
+  - "Equivalence is on fate and exact centroid position; a morphology-level equivalence (shape / pattern) is not claimed."
+  - "Each backend's mechanics RNG now follows the run seed (mechanics_seed = rules_seed); earlier results used fixed mechanics seeds and are superseded."
 
 report:
-  title: "CPM and vertex are statistically EQUIVALENT on fate (not on exact position)"
+  title: "CPM and vertex are EQUIVALENT on fate; position gap fell from 0.92 to 0.14, still not equivalent"
   verdict: >
-    Under replication (6x6 seed grid, 66 run pairs) the two substrates are
-    statistically EQUIVALENT on cell fate: cross-backend agreement 0.990 sits within
-    +/-0.05 of the same-backend baseline 0.989 (TOST diff -0.0015, 90% CI
-    [-0.004, +0.002], p=5.6e-36). Exact spatial position is NOT equivalent (cross
-    0.08 vs same 1.00; ~8.5 um median drift) -- a representation difference, not a
-    fate one. This upgrades the capstone's "fail to reject" to a positive
-    equivalence claim and gives the IoU "candidate signal" a clear reading.
+    RE-RUN (2026-10-28 review: "equivalence is very bad between backends"). With the
+    revised vertex substrate and mechanics-stochastic replicates, fate stays
+    EQUIVALENT (cross 0.990 vs same 0.989, run-cluster CI [-0.003, +0.001] in +/-0.05).
+    Exact-position agreement improved from cross 0.083 vs same 1.000 (gap 0.92) to
+    cross 0.472 vs same 0.608 (gap 0.135, CI [0.071, 0.210]). This is still NOT
+    equivalent at +/-0.10. Most of the old gap came from a degenerate null:
+    same-backend replicates had identical mechanics, so their positions agreed
+    perfectly by construction, and the vertex cells barely moved. The remaining gap
+    tracks the remaining mechanical difference: the vertex epithelium, capped so its
+    mesh never folds, wanders ~5x less than the CPM's (replicate spread 2.3 vs 5.2 um).
   confidence: medium
   evidence_quality: preliminary
   main_insight: >
-    The shared mechanism makes the two substrates equivalent for what cells BECOME;
-    their native mechanics still place cells differently (where cells ARE). Fate
-    transfers across substrates; exact geometry does not.
+    A spatial equivalence test is only meaningful if the same-backend null contains
+    mechanical noise. Once it does, the remaining positional disagreement is about the
+    size of the substrates' remaining mechanical mismatch (epithelial fluidity), not a
+    fate effect.
   caveat: >
-    Reduced scale, faithful rates; equivalence is on fate agreement within +/-0.05.
-    Spatial non-equivalence is reported honestly as a representation effect, backed
-    by the matched t0 spatial agreement and the capstone's matched final areas.
+    Reduced scale; margins not biologically justified; the vertex epithelium is less
+    fluid than the CPM's, which bounds how close positions can get.
 
 findings:
-  - id: F1-fate-equivalence-positive
+  - id: F3-fate-equivalence-holds-on-revised-substrate
     kind: computational
     status: confirms
     tier: interpretation
     mechanism_origin: engineered
     statement: >
-      Cross-backend fate agreement is EQUIVALENT to the same-backend baseline within
+      On the revised vertex substrate with mechanics-stochastic replicates, cross-backend
+      fate agreement remains equivalent to the same-backend baseline within +/-0.05
+      (run-cluster diff -0.0014, 90% CI [-0.0034, +0.0008]).
+    evidence:
+      observed: "fate same 0.9887, cross 0.9901; cluster CI [-0.0034,+0.0008]"
+    explanation: "Fate is driven by the shared field/rule/ODE mechanism, identical across backends."
+    next_action: "justify the margin biologically (BP-06)"
+    provenance:
+      run_ids: [equivalence-grid]
+  - id: F4-position-gap-near-margin
+    kind: computational
+    status: partial
+    tier: interpretation
+    mechanism_origin: engineered
+    statement: >
+      Exact-position agreement gap shrank from 0.92 to 0.135 (cluster CI [0.071, 0.210]):
+      still not equivalent at +/-0.10. Most of the old gap was a degenerate null
+      (identical mechanics across replicates) plus non-moving vertex cells; the rest
+      tracks the vertex epithelium's lower fluidity.
+    evidence:
+      observed: "spatial same 0.608, cross 0.472; median displacement cross 5.7 / same CPM 5.2 / same vertex 2.3 um"
+    explanation: "Immune motility and chemotaxis are calibrated, but the vertex epithelium is capped below CPM fluidity to keep the mesh valid."
+    next_action: "a fold-aware vertex topology handler to raise epithelial fluidity; scale-aware spatial descriptors (BP-06)"
+    provenance:
+      run_ids: [equivalence-grid]
+  - id: F1-fate-equivalence-positive
+    kind: computational
+    status: informational
+    tier: interpretation
+    mechanism_origin: engineered
+    statement: >
+      SUPERSEDED by F3 (2026-10-28 re-run; same conclusion). Cross-backend fate agreement is EQUIVALENT to the same-backend baseline within
       +/-0.05 under a DEPENDENCE-AWARE run-cluster bootstrap (diff -0.0015, 90% CI
       [-0.003,+0.001]; resampling the 6+6 runs, not the dependent pairs). The margin
       is not yet biologically justified and the CI is tight mainly because between-run
@@ -208,11 +249,11 @@ findings:
       run_ids: [equivalence-grid]
   - id: F2-spatial-non-equivalence-representation
     kind: computational
-    status: confirms
+    status: informational
     tier: interpretation
     mechanism_origin: engineered
     statement: >
-      Exact cell POSITION is NOT backend-equivalent: cross-backend spatial agreement
+      SUPERSEDED by F4 (2026-10-28): the 1.00 same-backend baseline was an artifact of mechanically deterministic replicates. Exact cell POSITION is NOT backend-equivalent: cross-backend spatial agreement
       is 1.0 at t0 but 0.08 at the final frame (median drift ~8.5 um), while fate and
       final areas match. The capstone's "candidate IoU signal" is this representation
       drift -- the substrate changes where cells sit, not what they become.
