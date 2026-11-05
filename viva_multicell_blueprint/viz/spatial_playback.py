@@ -2,18 +2,25 @@
 time slider.
 
 The two backends have genuinely different spatial representations, and the figure
-now shows each in its native form:
+shows each in its native form — **entirely with scatter traces**, so the whole
+animation runs with ``redraw=False``. That matters: an animated ``Heatmap`` can
+only update under a full per-frame ``redraw``, which clears the plot to white
+between frames (a disorienting strobe). Everything here is scatter, so Plotly
+transitions the traces in place with no flash.
 
-* **CPM** — a lattice model, drawn as a voxel heatmap (``rasterize`` of the
-  per-cell occupancy; empty lattice sites are transparent so the field underlay
-  shows through).
+* **CPM** — a lattice model, drawn as filled voxel rectangles (``_type_fill_paths``
+  run-length-encodes the type raster into one ``fill="toself"`` scatter per cell
+  type) with a per-cell outline overlay (``_boundary_xy`` traces the edges of the
+  cell-id raster, so touching same-type cells still read as distinct cells).
 * **Vertex** — a polygon model, drawn as the actual cell polygons (the hexagonal
-  sheet faces and overlay islands from ``frame['polygons']``), filled by cell state with visible cell
-  edges. Rasterizing those polygons (the old behaviour) filled the domain into an
-  edgeless blob that did not read as "vertex" at all.
+  sheet faces and overlay islands from ``frame['polygons']``), filled by cell state
+  with visible cell edges.
 
-Falls back to a voxel heatmap for the vertex panel when a run carries no polygon
-footprints (e.g. the synthetic position-only frames used in unit tests).
+Falls back to scatter voxel fills for the vertex panel when a run carries no
+polygon footprints (e.g. the synthetic position-only frames used in unit tests).
+The optional virus-field heat underlay was dropped from these videos: as an
+animated heatmap it reintroduced the redraw strobe, and as a static t0 backdrop it
+clashed with the (grey) M_latent cells.
 """
 from __future__ import annotations
 
@@ -22,8 +29,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ..compare.raster import cell_id_raster, grid_shape, rasterize, type_codes
-from ._common import (MAX_FRAMES, decimate_indices, discrete_colorscale, rnd, state_color,
-                      times)
+from ._common import MAX_FRAMES, decimate_indices, state_color, times
 
 
 def _boundary_xy(frame, grid):
@@ -65,22 +71,52 @@ def _boundary_trace(xs, ys):
                       line=dict(color="rgba(30,30,30,0.55)", width=0.6))
 
 
-def _field_underlay(frame, shape):
-    """Optional frame['field'] heat underlay. FieldProcess grids are [nx, ny];
-    the raster is (ny, nx), so transpose and assert orientation."""
-    f = frame.get("field")
-    if f is None:
-        return None
-    f = np.asarray(f, float)
-    if f.shape == shape[::-1]:      # (nx, ny) -> (ny, nx)
-        f = f.T
-    assert f.shape == shape, f"field {f.shape} incompatible with raster {shape}"
-    return rnd(f, 3).astype(np.float32)
+def _type_fill_paths(frame, grid, codes):
+    """Filled rectangles per cell type, built by run-length-encoding each row of
+    the type raster. A Scatter ``fill="toself"`` fills each rectangle, so the CPM
+    voxel map is drawn with *scatter* traces (not a heatmap) and therefore animates
+    smoothly with ``redraw=False`` — no per-frame white-flash strobe. Returns
+    ``{type: (xs, ys)}`` with NaN-separated rectangles."""
+    z = rasterize(frame, grid)
+    res = float(grid["grid_resolution_um"])
+    code_to_type = {v: k for k, v in codes.items()}
+    out = {t: ([], []) for t in codes}
+    ny, nx = z.shape
+    for r in range(ny):
+        row = z[r]
+        c = 0
+        while c < nx:
+            v = int(row[c])
+            if v == 0:
+                c += 1
+                continue
+            c0 = c
+            while c < nx and int(row[c]) == v:
+                c += 1
+            t = code_to_type.get(v)
+            if t not in out:
+                continue
+            xs, ys = out[t]
+            x0, x1, y0, y1 = c0 * res, c * res, r * res, (r + 1) * res
+            xs.extend((x0, x1, x1, x0, x0, None))
+            ys.extend((y0, y0, y1, y1, y0, None))
+    return out
 
 
-def _state_z(frame, grid):
-    # int8 (compact bdata); 0 = empty -> transparent in the colorscale (field shows through)
-    return rasterize(frame, grid).astype(np.int8)
+def _fill_trace(xs, ys, color, name):
+    return go.Scatter(x=xs or [None], y=ys or [None], mode="lines", name=name,
+                      legendgroup=name, showlegend=False, fill="toself",
+                      fillcolor=color, line=dict(width=0), hoverinfo="skip")
+
+
+def _voxel_traces(frame, grid, codes, colors):
+    """The per-type fill scatters + the cell-outline scatter for one CPM frame,
+    in a fixed order (types sorted as in ``codes``, then outlines)."""
+    paths = _type_fill_paths(frame, grid, codes)
+    traces = [_fill_trace(*paths[t], colors[t], t) for t in codes]
+    bx, by = _boundary_xy(frame, grid)
+    traces.append(_boundary_trace(bx, by))
+    return traces
 
 
 def _has_polygons(run) -> bool:
@@ -135,51 +171,27 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
     idx = decimate_indices(n, max_frames)
     ts = times(n, dt_days, idx)
     colors = {t: state_color(t, i) for i, t in enumerate(codes)}
-    cs = discrete_colorscale(codes, colors)
     res = float(grid["grid_resolution_um"])
-    xs = rnd(np.arange(shape[1]) * res + res / 2, 2).tolist()
-    ys = rnd(np.arange(shape[0]) * res + res / 2, 2).tolist()
-    has_field = any(r[0].get("field") is not None for r in (run_cpm, run_vertex))
     vtx_poly = _has_polygons(run_vertex)   # real vertex runs -> draw polygons
 
     fig = make_subplots(rows=1, cols=2, subplot_titles=("CPM (voxel map)", "Vertex (polygon map)"),
                         horizontal_spacing=0.08)
     anim = []   # trace indices updated by frames, in frame-data order
 
-    def _add_field(run, col):
-        fz = _field_underlay(run[idx[0]], shape)
-        fig.add_trace(go.Heatmap(x=xs, y=ys, z=None if fz is None else fz,
-                                 colorscale="Greys", opacity=0.6, showscale=False,
-                                 hoverinfo="skip", name="field"), row=1, col=col)
-        anim.append(len(fig.data) - 1)
+    def _vertex_traces(frame):
+        if vtx_poly:
+            paths = _poly_paths_by_type(frame, codes)
+            return [_poly_trace(*paths[t], colors[t], t) for t in codes]
+        return _voxel_traces(frame, grid, codes, colors)
 
-    # --- CPM panel (voxel heatmap) ---
-    if has_field:
-        _add_field(run_cpm, 1)
-    fig.add_trace(go.Heatmap(x=xs, y=ys, z=_state_z(run_cpm[idx[0]], grid),
-                             colorscale=cs, zmin=0, zmax=len(codes), showscale=False,
-                             xgap=0, ygap=0, name="state",
-                             hovertemplate="x=%{x} um<br>y=%{y} um<extra></extra>"), row=1, col=1)
-    anim.append(len(fig.data) - 1)
-    bx, by = _boundary_xy(run_cpm[idx[0]], grid)   # per-cell outlines over the voxels
-    fig.add_trace(_boundary_trace(bx, by), row=1, col=1)
-    anim.append(len(fig.data) - 1)
-
-    # --- Vertex panel (polygons, or heatmap fallback) ---
-    if has_field:
-        _add_field(run_vertex, 2)
-    if vtx_poly:
-        paths = _poly_paths_by_type(run_vertex[idx[0]], codes)
-        for t in codes:
-            px, py = paths[t]
-            fig.add_trace(_poly_trace(px, py, colors[t], t), row=1, col=2)
-            anim.append(len(fig.data) - 1)
-    else:
-        fig.add_trace(go.Heatmap(x=xs, y=ys, z=_state_z(run_vertex[idx[0]], grid),
-                                 colorscale=cs, zmin=0, zmax=len(codes), showscale=False,
-                                 xgap=0, ygap=0, name="state",
-                                 hovertemplate="x=%{x} um<br>y=%{y} um<extra></extra>"), row=1, col=2)
-        anim.append(len(fig.data) - 1)
+    # Everything is scatter-based (voxel fills + outlines, or polygons) so the
+    # animation runs with redraw=False — no per-frame heatmap redraw, no strobe.
+    # --- CPM panel (scatter voxel fills + per-cell outlines) ---
+    for tr in _voxel_traces(run_cpm[idx[0]], grid, codes, colors):
+        fig.add_trace(tr, row=1, col=1); anim.append(len(fig.data) - 1)
+    # --- Vertex panel (polygons, or scatter-voxel fallback for synthetic runs) ---
+    for tr in _vertex_traces(run_vertex[idx[0]]):
+        fig.add_trace(tr, row=1, col=2); anim.append(len(fig.data) - 1)
 
     for c in (1, 2):
         fig.update_xaxes(title_text="x (um)", row=1, col=c, range=[0, shape[1] * res])
@@ -194,27 +206,12 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
 
     frames = []
     for k, i in enumerate(idx):
-        data = []
-        if has_field:
-            fz = _field_underlay(run_cpm[i], shape)
-            data.append(go.Heatmap(z=None if fz is None else fz))
-        data.append(go.Heatmap(z=_state_z(run_cpm[i], grid)))
-        bx, by = _boundary_xy(run_cpm[i], grid)
-        data.append(go.Scatter(x=bx or [None], y=by or [None]))
-        if has_field:
-            fz = _field_underlay(run_vertex[i], shape)
-            data.append(go.Heatmap(z=None if fz is None else fz))
-        if vtx_poly:
-            paths = _poly_paths_by_type(run_vertex[i], codes)
-            for t in codes:
-                px, py = paths[t]
-                data.append(go.Scatter(x=px or [None], y=py or [None]))
-        else:
-            data.append(go.Heatmap(z=_state_z(run_vertex[i], grid)))
+        data = list(_voxel_traces(run_cpm[i], grid, codes, colors))
+        data += _vertex_traces(run_vertex[i])
         frames.append(go.Frame(name=str(k), data=data, traces=anim))
     fig.frames = frames
     steps = [dict(method="animate", label=f"{t:g}",
-                  args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=True),
+                  args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=False),
                                        transition=dict(duration=0))])
              for k, t in enumerate(ts)]
     fig.update_layout(
@@ -223,7 +220,7 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
                       pad=dict(t=40))],
         updatemenus=[dict(type="buttons", direction="left", x=0.0, y=-0.05, showactive=False,
                           buttons=[dict(label="Play", method="animate",
-                                        args=[None, dict(frame=dict(duration=250, redraw=True),
+                                        args=[None, dict(frame=dict(duration=250, redraw=False),
                                                          fromcurrent=True, transition=dict(duration=0))]),
                                    dict(label="Pause", method="animate",
                                         args=[[None], dict(mode="immediate",
@@ -267,34 +264,22 @@ def _single_playback(run, grid_spec, *, backend="cpm", dt_days=1.0, max_frames=M
     idx = decimate_indices(n, max_frames)
     ts = times(n, dt_days, idx)
     colors = {t: state_color(t, i) for i, t in enumerate(codes)}
-    cs = discrete_colorscale(codes, colors)
     res = float(grid["grid_resolution_um"])
-    xs = rnd(np.arange(shape[1]) * res + res / 2, 2).tolist()
-    ys = rnd(np.arange(shape[0]) * res + res / 2, 2).tolist()
-    has_field = run and run[0].get("field") is not None
     use_poly = _has_polygons(run)
     title = title or f"Spatial playback — {backend}"
 
+    def _frame_traces(frame):
+        if use_poly:
+            paths = _poly_paths_by_type(frame, codes)
+            return [_poly_trace(*paths[t], colors[t], t) for t in codes]
+        return _voxel_traces(frame, grid, codes, colors)
+
+    # Scatter-based (voxel fills + outlines, or polygons) so the animation runs
+    # with redraw=False — no per-frame heatmap redraw, no white-flash strobe.
     fig = go.Figure()
     anim = []
-    if has_field:
-        fz = _field_underlay(run[idx[0]], shape)
-        fig.add_trace(go.Heatmap(x=xs, y=ys, z=None if fz is None else fz, colorscale="Greys",
-                                 opacity=0.6, showscale=False, hoverinfo="skip", name="field"))
-        anim.append(len(fig.data) - 1)
-    if use_poly:
-        paths = _poly_paths_by_type(run[idx[0]], codes)
-        for t in codes:
-            px, py = paths[t]
-            fig.add_trace(_poly_trace(px, py, colors[t], t))
-            anim.append(len(fig.data) - 1)
-    else:
-        fig.add_trace(go.Heatmap(x=xs, y=ys, z=_state_z(run[idx[0]], grid), colorscale=cs,
-                                 zmin=0, zmax=len(codes), showscale=False, xgap=0, ygap=0,
-                                 name="state", hovertemplate="x=%{x} um<br>y=%{y} um<extra></extra>"))
-        anim.append(len(fig.data) - 1)
-        bx, by = _boundary_xy(run[idx[0]], grid)   # per-cell outlines over the voxels
-        fig.add_trace(_boundary_trace(bx, by))
+    for tr in _frame_traces(run[idx[0]]):
+        fig.add_trace(tr)
         anim.append(len(fig.data) - 1)
     fig.update_xaxes(title_text="x (um)", range=[0, shape[1] * res])
     fig.update_yaxes(title_text="y (um)", scaleanchor="x", constrain="domain",
@@ -303,32 +288,18 @@ def _single_playback(run, grid_spec, *, backend="cpm", dt_days=1.0, max_frames=M
         fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers", name=t,
                                  marker=dict(size=10, color=colors[t], symbol="square")))
 
-    frames = []
-    for k, i in enumerate(idx):
-        data = []
-        if has_field:
-            fz = _field_underlay(run[i], shape)
-            data.append(go.Heatmap(z=None if fz is None else fz))
-        if use_poly:
-            paths = _poly_paths_by_type(run[i], codes)
-            for t in codes:
-                px, py = paths[t]
-                data.append(go.Scatter(x=px or [None], y=py or [None]))
-        else:
-            data.append(go.Heatmap(z=_state_z(run[i], grid)))
-            bx, by = _boundary_xy(run[i], grid)
-            data.append(go.Scatter(x=bx or [None], y=by or [None]))
-        frames.append(go.Frame(name=str(k), data=data, traces=anim))
+    frames = [go.Frame(name=str(k), data=_frame_traces(run[i]), traces=anim)
+              for k, i in enumerate(idx)]
     fig.frames = frames
     steps = [dict(method="animate", label=f"{t:g}",
-                  args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=True),
+                  args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=False),
                                        transition=dict(duration=0))]) for k, t in enumerate(ts)]
     fig.update_layout(
         title=title,
         sliders=[dict(active=0, steps=steps, currentvalue=dict(prefix="time (days): "), pad=dict(t=40))],
         updatemenus=[dict(type="buttons", direction="left", x=0.0, y=-0.05, showactive=False,
                           buttons=[dict(label="Play", method="animate",
-                                        args=[None, dict(frame=dict(duration=250, redraw=True),
+                                        args=[None, dict(frame=dict(duration=250, redraw=False),
                                                          fromcurrent=True, transition=dict(duration=0))]),
                                    dict(label="Pause", method="animate",
                                         args=[[None], dict(mode="immediate", frame=dict(duration=0, redraw=False),
