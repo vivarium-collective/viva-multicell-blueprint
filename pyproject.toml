@@ -65,10 +65,17 @@ packages = ["viva_multicell_blueprint"]
 # same `vivarium-workbench` package → a conflict. Force one resolution.
 override-dependencies = [
     "vivarium-workbench @ git+https://github.com/vivarium-collective/vivarium-workbench.git@main",
+    # Same conflict for viva-superpowers (bare URL from workbench vs @main
+    # elsewhere). Force a single URL for the whole graph.
+    "viva-superpowers @ git+https://github.com/vivarium-collective/viva-superpowers.git@main",
 ]
 
 [tool.uv.sources]
 vivarium-workbench = { git = "https://github.com/vivarium-collective/vivarium-workbench.git", branch = "main" }
+# vivarium-workbench main depends on viva-superpowers by a bare git URL while
+# other deps pin it @main → uv sees conflicting URLs for the same package.
+# Unify every reference to the main branch here (top-level sources win).
+viva-superpowers = { git = "https://github.com/vivarium-collective/viva-superpowers.git", branch = "main" }
 viva-cpm = { git = "https://github.com/vivarium-collective/viva-cpm.git", branch = "main" }
 vivarium-tyssue = { git = "https://github.com/vivarium-collective/vivarium-tyssue.git", branch = "master" }
 # vivarium-tyssue depends on the pandas-3 tyssue fork, but uv only honors

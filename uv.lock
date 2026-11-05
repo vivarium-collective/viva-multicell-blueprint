@@ -11,7 +11,10 @@ resolution-markers = [
 ]
 
 [manifest]
-overrides = [{ name = "vivarium-workbench", git = "https://github.com/vivarium-collective/vivarium-workbench.git?branch=main" }]
+overrides = [
+    { name = "viva-superpowers", git = "https://github.com/vivarium-collective/viva-superpowers.git?branch=main" },
+    { name = "vivarium-workbench", git = "https://github.com/vivarium-collective/vivarium-workbench.git?branch=main" },
+]
 
 [[package]]
 name = "annotated-doc"
@@ -2105,7 +2108,7 @@ wheels = [
 
 [[package]]
 name = "process-bigraph"
-version = "1.10.1"
+version = "1.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bigraph-schema" },
@@ -2116,9 +2119,9 @@ dependencies = [
     { name = "scipy" },
     { name = "sympy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/80/0571e9030457043ac285b2090732413f3586faae2eb93752f0eba86424ce/process_bigraph-1.10.1.tar.gz", hash = "sha256:7348eaae39da99a07ff28f781da7728b5dba8fc76ddbbf0b1adae209308ad777", size = 265746, upload-time = "2026-10-25T18:45:36.348Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/31/17/a2e8246a1c7149d3fd18e63e333353a45c13a93fd07ce3691b3badaecf87/process_bigraph-1.11.0.tar.gz", hash = "sha256:df0433e462a9a1cef3b6cf66290c789a202997e714a9f6f3e8984fadbc07a176", size = 273107, upload-time = "2026-11-01T03:13:27.295Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/2b/c8786628416df2dae41afc4ec4e7e577054211bad450faa438a5bcc17aa9/process_bigraph-1.10.1-py3-none-any.whl", hash = "sha256:617a4d682dc3f2a78f12d2ae9f67106c6ce2bf88319ab5d95b392f54d8497f40", size = 286175, upload-time = "2026-10-25T18:45:34.626Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/8e/f0c2fca736d84dd1e6d18894b438419cf38619721d31e39b1b3b42678a1f/process_bigraph-1.11.0-py3-none-any.whl", hash = "sha256:c299fbe1b34f1c04e23ced19db3445ff33b1bc6fcdcce3d2dfed0a40938a62c7", size = 291298, upload-time = "2026-11-01T03:13:25.806Z" },
 ]
 
 [[package]]
@@ -3319,6 +3322,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "viva-discovery-engine"
+version = "0.2.0"
+source = { git = "https://github.com/vivarium-collective/discovery-engine.git?tag=v0.2.0#c64577f4a09f0d38f596b09e405bcd1215c4f158" }
+dependencies = [
+    { name = "bigraph-schema" },
+    { name = "click" },
+    { name = "filelock" },
+    { name = "jinja2" },
+    { name = "jsonschema", extra = ["format-nongpl"] },
+    { name = "numpy" },
+    { name = "polars" },
+    { name = "process-bigraph" },
+    { name = "psutil" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "ruamel-yaml" },
+    { name = "scipy" },
+    { name = "typer" },
+    { name = "viva-emitters", extra = ["parquet"] },
+    { name = "viva-workspace" },
+]
+
+[[package]]
 name = "viva-emitters"
 version = "0.4.3"
 source = { git = "https://github.com/vivarium-collective/viva-emitters.git#794058ea5c8d320d29da8c3d9d9b124d996d4dd3" }
@@ -3365,11 +3391,6 @@ dependencies = [
     { name = "viva-workspace" },
 ]
 
-[package.optional-dependencies]
-evaluator = [
-    { name = "viva-emitters", extra = ["parquet"] },
-]
-
 [[package]]
 name = "viva-workspace"
 version = "0.1.0"
@@ -3410,7 +3431,7 @@ dependencies = [
 [[package]]
 name = "vivarium-workbench"
 version = "0.4.1"
-source = { git = "https://github.com/vivarium-collective/vivarium-workbench.git?branch=main#918754bb410cc9dcdf7301c6a597289ce38613e3" }
+source = { git = "https://github.com/vivarium-collective/vivarium-workbench.git?branch=main#026521cef1541f7e358f4362f3389d3299c4a63e" }
 dependencies = [
     { name = "bigraph-schema" },
     { name = "boto3" },
@@ -3428,8 +3449,9 @@ dependencies = [
     { name = "uvicorn" },
     { name = "viva-basic-processes" },
     { name = "viva-catalog" },
+    { name = "viva-discovery-engine" },
     { name = "viva-emitters", extra = ["parquet", "xarray"] },
-    { name = "viva-superpowers", extra = ["evaluator"] },
+    { name = "viva-superpowers" },
     { name = "viva-workspace" },
     { name = "xarray" },
     { name = "zarr" },
