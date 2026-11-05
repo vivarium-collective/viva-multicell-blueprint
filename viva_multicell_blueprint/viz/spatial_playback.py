@@ -21,9 +21,48 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ..compare.raster import grid_shape, rasterize, type_codes
+from ..compare.raster import cell_id_raster, grid_shape, rasterize, type_codes
 from ._common import (MAX_FRAMES, decimate_indices, discrete_colorscale, rnd, state_color,
                       times)
+
+
+def _boundary_xy(frame, grid):
+    """NaN-separated line segments tracing every individual-cell boundary in the
+    CPM voxel map: edges where the per-voxel cell index changes (cell-vs-cell and
+    cell-vs-empty, so each cell gets a closed outline). Coordinates are in um."""
+    idr = cell_id_raster(frame, grid)
+    ny, nx = idr.shape
+    res = float(grid["grid_resolution_um"])
+    xs: list = []
+    ys: list = []
+
+    def seg(x0, y0, x1, y1):
+        xs.extend((x0, x1, None)); ys.extend((y0, y1, None))
+
+    # interior vertical edges (between column c and c+1) -> edge at x=(c+1)*res
+    rr, cc = np.nonzero(idr[:, 1:] != idr[:, :-1])
+    for r, c in zip(rr.tolist(), cc.tolist()):
+        seg((c + 1) * res, r * res, (c + 1) * res, (r + 1) * res)
+    # interior horizontal edges (between row r and r+1) -> edge at y=(r+1)*res
+    rr, cc = np.nonzero(idr[1:, :] != idr[:-1, :])
+    for r, c in zip(rr.tolist(), cc.tolist()):
+        seg(c * res, (r + 1) * res, (c + 1) * res, (r + 1) * res)
+    # outer domain-border edges for cells touching the wall
+    for r in np.nonzero(idr[:, 0])[0].tolist():
+        seg(0, r * res, 0, (r + 1) * res)
+    for r in np.nonzero(idr[:, -1])[0].tolist():
+        seg(nx * res, r * res, nx * res, (r + 1) * res)
+    for c in np.nonzero(idr[0, :])[0].tolist():
+        seg(c * res, 0, (c + 1) * res, 0)
+    for c in np.nonzero(idr[-1, :])[0].tolist():
+        seg(c * res, ny * res, (c + 1) * res, ny * res)
+    return xs, ys
+
+
+def _boundary_trace(xs, ys):
+    return go.Scatter(x=xs or [None], y=ys or [None], mode="lines", name="cell edges",
+                      legendgroup="cell edges", showlegend=False, hoverinfo="skip",
+                      line=dict(color="rgba(30,30,30,0.55)", width=0.6))
 
 
 def _field_underlay(frame, shape):
@@ -122,6 +161,9 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
                              xgap=0, ygap=0, name="state",
                              hovertemplate="x=%{x} um<br>y=%{y} um<extra></extra>"), row=1, col=1)
     anim.append(len(fig.data) - 1)
+    bx, by = _boundary_xy(run_cpm[idx[0]], grid)   # per-cell outlines over the voxels
+    fig.add_trace(_boundary_trace(bx, by), row=1, col=1)
+    anim.append(len(fig.data) - 1)
 
     # --- Vertex panel (polygons, or heatmap fallback) ---
     if has_field:
@@ -157,6 +199,8 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
             fz = _field_underlay(run_cpm[i], shape)
             data.append(go.Heatmap(z=None if fz is None else fz))
         data.append(go.Heatmap(z=_state_z(run_cpm[i], grid)))
+        bx, by = _boundary_xy(run_cpm[i], grid)
+        data.append(go.Scatter(x=bx or [None], y=by or [None]))
         if has_field:
             fz = _field_underlay(run_vertex[i], shape)
             data.append(go.Heatmap(z=None if fz is None else fz))
@@ -249,6 +293,9 @@ def _single_playback(run, grid_spec, *, backend="cpm", dt_days=1.0, max_frames=M
                                  zmin=0, zmax=len(codes), showscale=False, xgap=0, ygap=0,
                                  name="state", hovertemplate="x=%{x} um<br>y=%{y} um<extra></extra>"))
         anim.append(len(fig.data) - 1)
+        bx, by = _boundary_xy(run[idx[0]], grid)   # per-cell outlines over the voxels
+        fig.add_trace(_boundary_trace(bx, by))
+        anim.append(len(fig.data) - 1)
     fig.update_xaxes(title_text="x (um)", range=[0, shape[1] * res])
     fig.update_yaxes(title_text="y (um)", scaleanchor="x", constrain="domain",
                      range=[0, shape[0] * res])
@@ -269,6 +316,8 @@ def _single_playback(run, grid_spec, *, backend="cpm", dt_days=1.0, max_frames=M
                 data.append(go.Scatter(x=px or [None], y=py or [None]))
         else:
             data.append(go.Heatmap(z=_state_z(run[i], grid)))
+            bx, by = _boundary_xy(run[i], grid)
+            data.append(go.Scatter(x=bx or [None], y=by or [None]))
         frames.append(go.Frame(name=str(k), data=data, traces=anim))
     fig.frames = frames
     steps = [dict(method="animate", label=f"{t:g}",

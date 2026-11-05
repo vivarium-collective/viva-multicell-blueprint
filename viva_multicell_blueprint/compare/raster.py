@@ -105,3 +105,44 @@ def rasterize(run_frame, grid_spec) -> np.ndarray:
             rr, cc = disk((c[1], c[0]), r_px, shape=out.shape)
         out[rr, cc] = code
     return out
+
+
+def cell_id_raster(run_frame, grid_spec) -> np.ndarray:
+    """Per-voxel UNIQUE cell index (0 = empty, else 1..N over alive, drawn cells),
+    painted with the exact same footprint logic as :func:`rasterize`.
+
+    Where this raster changes value between neighbouring voxels is an
+    individual-cell boundary — the spatial viz overlays those edges so the voxel
+    map shows per-cell outlines, not just a type-coloured blob. Only cells that
+    :func:`rasterize` actually draws (alive, type in ``type_codes``) get an index,
+    so the outlines line up one-to-one with the coloured pixels."""
+    ny, nx = grid_shape(grid_spec)
+    out = np.full((ny, nx), EMPTY, dtype=np.int32)
+    codes = grid_spec.get("type_codes") or type_codes(run_frame)
+    res = float(grid_spec["grid_resolution_um"])
+    meta = run_frame.get("frame", {}) or {}
+    scale = float(meta.get("scale", 1.0))
+    alive, types = run_frame.get("alive", {}), run_frame.get("types", {})
+    polys, occ = run_frame.get("polygons", {}), run_frame.get("occupancy", {})
+    label = 0
+    for cid in sorted(types, key=str):
+        if not alive.get(cid, False) or str(types[cid]) not in codes:
+            continue
+        label += 1
+        if cid in polys:
+            p = _to_grid(polys[cid], meta, res)
+            rr, cc = polygon(p[:, 1], p[:, 0], shape=out.shape)
+            if rr.size == 0:
+                c = p.mean(axis=0)
+                rr, cc = disk((c[1], c[0]), 0.5, shape=out.shape)
+        elif cid in occ:
+            v = _to_grid(np.asarray(occ[cid], float), meta, res)
+            cc = np.clip(np.floor(v[:, 0]).astype(int), 0, nx - 1)
+            rr = np.clip(np.floor(v[:, 1]).astype(int), 0, ny - 1)
+        else:
+            c = _to_grid(run_frame["positions"][cid], meta, res)
+            area_um2 = float(run_frame.get("sizes", {}).get(cid, res * res)) * scale ** 2
+            r_px = max(math.sqrt(area_um2 / math.pi) / res, 0.5)
+            rr, cc = disk((c[1], c[0]), r_px, shape=out.shape)
+        out[rr, cc] = label
+    return out
