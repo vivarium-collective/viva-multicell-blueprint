@@ -1,0 +1,23 @@
+feedback_report:
+  investigation: influenza-crossparadigm
+  title: "Influenza cross-paradigm — one Sego 2022 blueprint, two mechanical substrates"
+  reviewer: ""
+  date: ""
+  studies:
+    - study: adhesion-calibration
+      verdict: pass
+      sections:
+        - section: findings
+          disposition: revise
+          note: "The vertex model simulation seems to be lacking neighbor exchanges. Rerun with auto_reconnect turned on. Also, define the mechanical equations and mechanical parameters used in both model backends to so we can make sure the models are mechanically equivalent, including any parameter variations between different cell types."
+    - study: initial-state-fidelity
+      verdict: pass
+      disposition: revise
+      note: "Vertex models behave better with roughly hexagonal initial cells. Try to match a hexagonal initial tissue grid to the initial conditions in the CP and original Sego model. Turn on auto_reconnect to allow cells to move past each other. Make sure every polygon in the initial vertex model tissue corresponds to one cell in the initial Sego model. If multiple cells are represented by the same polygon, split them up in the initial tissue by generating separate cells instead. Any chemical or viral fields should be overlayed on the vertex model tissue instead of creating vertex model polygons to replace them. Create any processes that may be required in order to connect this field to the vertex model - via the behavior functions you can see examples of in the vivarium-tyssue repo, particularly in the Gillespie experiment."
+    - study: flu-lung-crossparadigm
+      verdict: warn
+      disposition: revise
+      note: "Cells are not actually moving around in the vertex model within the tissue. This is likely due to the chosen mechanical parameters, and the lack of auto-reconnect. "
+    - study: crossparadigm-equivalence
+      verdict: pass
+      note: "Equivalence is very bad between backends"

@@ -1,34 +1,52 @@
 """VertexBackend: the tyssue vertex model behind the ``MechanicsBackend`` port.
 
 This wraps ``vivarium_tyssue``'s :class:`EulerSolver` (spec section 5, the vertex
-substrate) without changing it. The blueprint's backend-neutral cell list is
-materialized as a **guard-ring-bounded Voronoi tessellation** of the cell centroids,
-written to the ``.hf5`` the solver loads, with per-face ``cell_type`` and
-``prefered_area = size``. Vertex *motility* comes from the fork's
-``ActiveMigration`` effector: each step the field gradient is sampled at every
-face centroid and the per-face migration director (``mx``/``my``/``mz`` +
-``migration_strength``) is rewritten through the solver's ``behaviors`` port
-(the ``apply_gradient`` behavior) -- no change to ``EulerSolver``.
+substrate) without changing it, as ONE self-contained, swappable mechanics node.
 
-Mesh fidelity is honest, not assumed. The fork's Voronoi builders add a boundary
-**guard collar** and weld coincident vertices, so faces are *not* guaranteed 1:1
-with the input centroids. Identity is built by **nearest-centroid assignment over
-interior faces**; guard/collar faces are tagged and excluded; and the residual
-(how many centroids got a clean, uncontested interior face) is measured and
-reported in :attr:`residual_report` -- this feeds the section 9.2
-``initial-state-fidelity`` study.
+Tissue (see :mod:`.vertex_mesh`): every polygon is exactly one blueprint cell.
 
-Division / apoptosis / differentiation enter through the same ``behaviors`` port
-(``split_cells`` / ``apoptosis`` is available via ``is_alive``; ``differentiation``).
-Lineage events arrive on the ``divisions`` / ``deaths`` input ports shaped
-``{"cell_id": <id>}`` (a bare id is also accepted), matching the port contract;
-their effect is reflected in the emitted ``alive`` / ``types`` / geometry.
+* The confluent **sheet** is a regular hexagonal tiling (cell area = blueprint
+  size); each blueprint cell gets its own lattice site by an optimal 1:1
+  assignment, so no polygon ever stands for two cells and no guard ring /
+  collar / medium polygon exists.
+* **Immune** cell types (``backend_params.immune_types`` -- recruited immune
+  types and their latent pools) are members of the SAME sheet, in the same plane
+  as the epithelium, as the CPM has them in the same lattice: each is attached
+  to the tissue on the free lattice site at the sheet margin nearest its
+  blueprint centroid, and is a SMALLER polygon (target area
+  ``immune_area_scale`` x blueprint size), so it can squeeze along and between
+  the epithelial cells by neighbour exchange. Its contact with the epithelium is
+  shared junction length, as for any sheet cell.
+* **Overlay** cell types (``backend_params.overlay_types``, opt-in) are free
+  hexagonal islands at their exact blueprint centroid above the sheet; their
+  contact with the sheet is the polygon overlap area.
+* The shared **fields are overlaid** on the tissue (sampled per face into
+  ``field_<name>`` columns), never meshed.
+
+Mechanics (the vertex energy; full definition in ``docs/mechanics.md``)::
+
+    E = sum_faces K_t/2 (A - A0)^2  +  sum_junctions Lambda_ab * l  (+ Gamma_t/2 (P - P0)^2)
+    eta dr/dt = -grad E + F_migration,   Lambda_ab(t) = kappa * J_ab + OU noise
+
+with per-type ``K_t`` / ``Gamma_t`` from the blueprint ``cell_types`` (``2 *
+lambda_volume`` / ``2 * lambda_surface`` -- the CPM's own per-type knobs, energy-
+matched), per-type-PAIR ``Lambda_ab`` from the lowered adhesion table, T1/T3
+neighbour exchange via ``auto_reconnect``, and active motility (a persistent random
+walk, plus an optional Ornstein-Uhlenbeck junction-tension fluctuation) as the
+counterpart of the CPM temperature. Each coupled step is integrated in ``substeps``
+solver updates (no vertex outruns the T1 threshold), and the shared field domain is a
+hard wall. The calibrated sheet motility is capped so the mesh never folds
+(docs/mechanics.md section 4).
+
+Coupling (see :mod:`.vertex_coupling`): fields, fates, activations and lineage
+events are turned into vivarium-tyssue **behavior nodes** (``apply_gradient``,
+``differentiation``, ``split_cells``, plus the ``junction_tension`` /
+``overlay_fields`` behaviors registered here) and passed to the solver's
+``behaviors`` port -- the same path the Gillespie regulator uses -- so the solver's
+EventManager applies them to the live epithelium before each integration step.
 """
 from __future__ import annotations
 
-import contextlib
-import io
-import math
 import tempfile
 from pathlib import Path
 
@@ -42,97 +60,21 @@ from viva_multicell_blueprint.compile.base import (
     sorted_cell_ids,
 )
 
-# Default sheet mechanics. ActiveMigration is the motility effector the field
-# drives; FaceAreaElasticity + LineTension keep cells bounded so a strong
-# migration transient relaxes instead of exploding (see max_displacement).
-_DEFAULT_EFFECTORS = ["FaceAreaElasticity", "LineTension", "ActiveMigration"]
-_MIGRATION_COLS = ("mx", "my", "mz", "migration_strength")
+from . import vertex_coupling as coupling
+from .vertex_mesh import (
+    assign_to_lattice,
+    attach_to_margin,
+    hex_lattice_sites,
+    hex_polygon,
+    hex_side,
+    overlap_area,
+    sheet_from_polygons,
+)
 
-
-def _voronoi_sheet(centroids: np.ndarray, guard_factor: float = 2.0):
-    """Build a flat-3D tyssue :class:`Sheet` from a guard-ring-bounded Voronoi
-    tessellation of ``centroids``.
-
-    A rectangular **guard ring** of dummy generators ~``guard_factor`` cell-widths
-    outside the cloud bounds every real cell to a finite size (the frame absorbs
-    the unbounded exterior Voronoi regions); the resulting sheet is promoted to a
-    flat 3D sheet (z=0) so the standard ``SheetGeometry`` + rust kernels apply,
-    matching the fork's ``hra/loaders`` pattern.
-    """
-    from scipy.spatial import Voronoi, cKDTree
-    from tyssue import Sheet
-    from tyssue.generation import from_2d_voronoi
-
-    centroids = np.asarray(centroids, dtype=float)
-    d, _ = cKDTree(centroids).query(centroids, k=min(2, len(centroids)))
-    step = float(np.median(d[:, 1])) if d.ndim == 2 and d.shape[1] > 1 else 1.0
-    if not (step > 0):
-        step = 1.0
-    lo = centroids.min(0) - guard_factor * step
-    hi = centroids.max(0) + guard_factor * step
-    xs = np.arange(lo[0], hi[0] + step, step)
-    ys = np.arange(lo[1], hi[1] + step, step)
-    guard = np.vstack([
-        np.c_[xs, np.full(len(xs), lo[1])],
-        np.c_[xs, np.full(len(xs), hi[1])],
-        np.c_[np.full(len(ys), lo[0]), ys],
-        np.c_[np.full(len(ys), hi[0]), ys],
-    ])
-    vor = Voronoi(np.vstack([centroids, guard]))
-    with contextlib.redirect_stdout(io.StringIO()):
-        dsets = from_2d_voronoi(vor)
-        sheet = Sheet("vertex", dsets, coords=["x", "y"])
-    return _promote_to_flat_3d(sheet)
-
-
-def _promote_to_flat_3d(sheet, name: str = "vertex"):
-    """Rebuild a 2D sheet as a flat 3D sheet (z=0). tyssue derives dcoords/ncoords
-    at construction, so a genuine 3D sheet must be *reconstructed* (setting coords
-    alone leaves stale 2D bookkeeping). face_df columns carry over."""
-    from tyssue import Sheet
-
-    vert = sheet.vert_df.copy()
-    vert["z"] = 0.0
-    face = sheet.face_df.copy()
-    if "z" not in face:
-        face["z"] = 0.0
-    with contextlib.redirect_stdout(io.StringIO()):
-        s3 = Sheet(name, {"vert": vert, "edge": sheet.edge_df.copy(), "face": face},
-                   coords=["x", "y", "z"])
-        s3.reset_index()
-        s3.reset_topo()
-    return s3
-
-
-def _assign_identity(sheet, centroids: np.ndarray):
-    """Nearest-centroid assignment of each input centroid to an *interior* face.
-
-    Faces whose centroid is non-finite (unbounded Voronoi regions seeded by the
-    guard ring) are excluded. Returns ``(face_of_cell, residual_report)``:
-    ``face_of_cell[i]`` is the face-index label assigned to centroid ``i`` (``-1``
-    if none), and the report quantifies how many centroids got a *clean*
-    (uncontested) interior face -- the section 9.2 fidelity residual.
-    """
-    from scipy.spatial import cKDTree
-
-    fx = sheet.face_df[["x", "y"]].to_numpy(dtype=float)
-    finite = np.isfinite(fx).all(axis=1)
-    finite_labels = sheet.face_df.index.to_numpy()[finite]
-    _, loc = cKDTree(fx[finite]).query(centroids)
-    face_of_cell = finite_labels[loc]
-
-    uniq, counts = np.unique(face_of_cell, return_counts=True)
-    contested = set(uniq[counts > 1].tolist())
-    n_collision = int(sum(counts[counts > 1]))
-    n_clean = int(len(centroids) - n_collision)
-    report = {
-        "n_input": int(len(centroids)),
-        "n_clean": n_clean,
-        "n_collision": n_collision,
-        "fraction_clean": (n_clean / len(centroids)) if len(centroids) else 0.0,
-        "contested_faces": sorted(int(f) for f in contested),
-    }
-    return face_of_cell.astype(int), report
+MEDIUM = "medium"
+SHEET, OVERLAY = "sheet", "overlay"
+IMMUNE = "immune"   # motility group of immune cells (in-sheet or overlay)
+_MIGRATION_COLS = coupling.MIGRATION_COLS
 
 
 class VertexBackend(MechanicsBackend):
@@ -142,14 +84,60 @@ class VertexBackend(MechanicsBackend):
         bp = config.get("backend_params") or {}
         self._geom = str(bp.get("geom", "SheetGeometry"))
         self._factory = str(bp.get("factory", "model_factory"))
-        self._effectors = list(bp.get("effectors", _DEFAULT_EFFECTORS))
-        self._ref_effector = str(bp.get("ref_effector", "FaceAreaElasticity"))
-        self._area_elasticity = float(bp.get("area_elasticity", 1.0))
-        self._line_tension = float(bp.get("line_tension", 0.01))
-        self._max_disp = float(bp.get("max_displacement", 0.1))
+        self._area_elasticity = float(bp.get("area_elasticity", 2.0))
+        self._viscosity = bp.get("viscosity")
         self._migration_scale = float(bp.get("migration_scale", 0.4))
+        self._chemotaxis_saturation = float(bp.get("chemotaxis_saturation", 0.0))
         self._chemotaxis = list(bp.get("chemotaxis") or [])
-        self._guard_factor = float(bp.get("guard_factor", 2.0))
+        self._overlay_types = {str(t) for t in (bp.get("overlay_types") or [])}
+        self._immune_types = {str(t) for t in (bp.get("immune_types") or [])} - self._overlay_types
+        # in-sheet immune polygons relax to this fraction of their blueprint size
+        self._immune_area_scale = float(bp.get("immune_area_scale", 1.0))
+        # Shape stiffness for in-sheet immune polygons (P0 = shape_index *
+        # sqrt(A0)). A latent cell carries no tension, so it wets the high-tension
+        # tissue border as a CPM latent cell does -- but a polygon, unlike a lattice
+        # cell, can thin into a sliver that folds; this keeps it compact.
+        self._immune_gamma = float(bp.get("immune_perimeter_elasticity", 0.0))
+        # per-pair junction tension (the lowered blueprint adhesion); a pair not
+        # in the table falls back to the scalar line_tension.
+        self._tensions = {str(k): float(v) for k, v in (bp.get("tension_by_pair") or {}).items()}
+        self._default_tension = float(bp.get("line_tension", 0.01))
+        # junction-tension fluctuation (the CPM-temperature counterpart)
+        self._sigma = float(bp.get("tension_noise", 0.0))
+        self._tau = float(bp.get("tension_noise_tau", 1.0))
+        self._reconnect = bool(bp.get("auto_reconnect", True))
+        # persistent random walk (active-Brownian polarity) -- the counterpart of
+        # a CPM cell wandering under Metropolis fluctuations; force per motility
+        # group: epithelium (SHEET) vs immune (in-sheet or overlay, IMMUNE).
+        self._motility_force = {IMMUNE: float(bp.get("motility", 0.0)),
+                                SHEET: float(bp.get("sheet_motility", 0.0))}
+        self._seed = int(bp.get("seed", 0))
+        self._rng = np.random.default_rng(self._seed)
+        # one polarity stream per group, so the immune random walk does not
+        # depend on how many epithelial cells draw before it (and vice versa)
+        persistence = {IMMUNE: float(bp.get("motility_persistence", 10.0)),
+                       SHEET: float(bp.get("sheet_motility_persistence",
+                                           bp.get("motility_persistence", 10.0)))}
+        self._motility = {group: coupling.RandomMotility(persistence[group], seed=self._seed + k)
+                          for k, group in ((1, SHEET), (2, IMMUNE))}
+        self._threshold_length = bp.get("threshold_length")
+        self._substeps = max(1, int(bp.get("substeps", 4)))
+        # rosette detachment rates (per unit time) for the 4-way / 5+-way vertices a
+        # merge leaves behind; unset -> tyssue's defaults (p_4 = 0.1, p_5p = 0.01)
+        self._detach_rates = {k: float(bp[k]) for k in ("p_4", "p_5p") if bp.get(k) is not None}
+        # the shared field domain is a hard wall, as the CPM lattice edge is
+        domain = config.get("domain") or {}
+        extent, res = domain.get("extent_um"), domain.get("grid_resolution_um")
+        self._bounds = ([0.0, 0.0], [float(e) / float(res) for e in extent[:2]]) \
+            if extent and res else None
+        self._max_disp = bp.get("max_displacement")
+        self._type_mech = self._per_type_mechanics(config, bp)
+        # Shape stiffness 1/2 Gamma (P - P0)^2 with P0 = shape_index * sqrt(A0) for
+        # cells whose type sets no perimeter term. The CPM has no counterpart
+        # (lambda_S = 0); on the vertex side it is the regularization that keeps
+        # actively-sheared polygons simple (non-self-intersecting).
+        self._shape_gamma = float(bp.get("perimeter_elasticity", 0.0))
+        self._shape_index = float(bp.get("shape_index", 3.9))
         # Immune-recruitment-as-activation (Task 20): latent pool resolution.
         self._latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
         self._latent_generic = str(bp.get("latent_generic", GENERIC_LATENT))
@@ -160,67 +148,144 @@ class VertexBackend(MechanicsBackend):
         self._build(config.get("initial_state") or [])
 
     # -- construction -------------------------------------------------------- #
+    def _per_type_mechanics(self, config, bp) -> dict:
+        """Per-type face moduli, energy-matched to the CPM's per-type knobs:
+        ``K = 2 * lambda_volume`` and ``Gamma = 2 * lambda_surface`` (CPM charges
+        ``lambda (V - V_T)^2``, tyssue ``K/2 (A - A0)^2``). An explicit
+        ``mechanics.area_elasticity`` / ``perimeter_elasticity`` /
+        ``prefered_perimeter`` on the cell type wins."""
+        out = {}
+        for ct in (config.get("cell_types") or []):
+            if not isinstance(ct, dict):
+                continue
+            mech = dict(ct.get("mechanics") or {})
+            m = {"area_elasticity": self._area_elasticity,
+                 "perimeter_elasticity": 0.0, "prefered_perimeter": 0.0}
+            lam_v = mech.get("lambda_volume", ct.get("lambda_volume"))
+            if lam_v is not None:
+                m["area_elasticity"] = 2.0 * float(lam_v)
+            lam_s = mech.get("lambda_surface", ct.get("lambda_surface"))
+            if lam_s:
+                m["perimeter_elasticity"] = 2.0 * float(lam_s)
+                m["prefered_perimeter"] = float(mech.get("target_surface", ct.get("target_surface", 0.0)))
+            for k in m:
+                if k in mech:
+                    m[k] = float(mech[k])
+            out[str(ct["name"])] = m
+        return out
+
     def _build(self, cells):
         from tyssue import SheetGeometry
         from tyssue.io.hdf5 import save_datasets
 
-        centroids = np.array(
-            [[float(c["centroid"][0]), float(c["centroid"][1])] for c in cells],
-            dtype=float,
-        )
         ids = [str(c["id"]) for c in cells]
         types = [str(c["type"]) for c in cells]
         sizes = [float(c.get("size", 1.0)) for c in cells]
+        cents = np.array([[float(c["centroid"][0]), float(c["centroid"][1])] for c in cells],
+                         dtype=float).reshape(-1, 2)
+        layer = [OVERLAY if t in self._overlay_types else SHEET for t in types]
 
-        sheet = _voronoi_sheet(centroids, guard_factor=self._guard_factor)
+        sheet_ix = [i for i, l in enumerate(layer) if l == SHEET]
+        over_ix = [i for i, l in enumerate(layer) if l == OVERLAY]
+        # in-sheet immune cells attach to the tissue margin AFTER the tissue is
+        # laid out; with no tissue to attach to they are placed like any cell
+        attach_ix = [i for i in sheet_ix if types[i] in self._immune_types]
+        core_ix = [i for i in sheet_ix if types[i] not in self._immune_types]
+        if not core_ix:
+            core_ix, attach_ix = attach_ix, []
+        polys, owner, placed = [], [], {}
+        if sheet_ix:
+            area = float(np.median([sizes[i] for i in core_ix]))
+            sites = hex_lattice_sites(cents[sheet_ix], area)
+            # alternate 1:1 assignment and rigid recentring of the (still regular)
+            # lattice on the tissue cloud until the assignment stops changing
+            site_of = None
+            for _ in range(10):
+                new = assign_to_lattice(cents[core_ix], sites)
+                sites = sites + (cents[core_ix].mean(0) - sites[new].mean(0))
+                if site_of is not None and np.array_equal(new, site_of):
+                    break
+                site_of = new
+            site = {i: int(site_of[k]) for k, i in enumerate(core_ix)}
+            margin = attach_to_margin(cents[attach_ix], sites, set(site.values()))
+            site.update({i: margin[k] for k, i in enumerate(attach_ix)})
+            for i in sheet_ix:
+                center = sites[site[i]]
+                polys.append(hex_polygon(center, area))
+                owner.append(i)
+                placed[i] = center
+        for i in over_ix:
+            polys.append(hex_polygon(cents[i], sizes[i]))
+            owner.append(i)
+            placed[i] = cents[i]
+
+        side = hex_side(float(np.median(sizes))) if sizes else 1.0
+        self._side = side
+        sheet = sheet_from_polygons(polys)
         SheetGeometry.update_all(sheet)
-        face_of_cell, report = _assign_identity(sheet, centroids)
 
-        # Tag every face guard by default; paint the assigned interior faces with
-        # their blueprint cell_type + prefered_area. prefered_area is the TARGET
-        # (= blueprint size); the actual relaxed area is what the port emits.
-        sheet.face_df["cell_type"] = "guard"
-        sheet.face_df["prefered_area"] = sheet.face_df["area"].to_numpy()
-
-        # Every blueprint id is a port citizen regardless of mesh fidelity. Keep
-        # its blueprint pos/size/type so an unmapped cell still emits a real
-        # placeholder (never dropped -> the "every cell in every port" contract
-        # holds even when the section 9.2 residual is non-zero).
-        self._all_ids = list(ids)
-        self._cell_meta = {
-            ids[i]: {
-                "pos": [float(centroids[i, 0]), float(centroids[i, 1])],
-                "size": sizes[i],
-                "type": types[i],
-            }
-            for i in range(len(ids))
-        }
-        self._uid: dict[str, int] = {}  # blueprint id -> stable tyssue unique_id
-        unmapped = []
-        assigned_faces = set()
-        for i, lab in enumerate(face_of_cell):
-            if lab < 0 or lab in assigned_faces:
-                # unassigned or contested (a later centroid colliding onto an
-                # already-claimed face). Record it; it still emits as not-alive.
-                unmapped.append(ids[i])
-                self._alive[ids[i]] = False
-                continue
-            assigned_faces.add(int(lab))
-            sheet.face_df.loc[lab, "cell_type"] = types[i]
-            sheet.face_df.loc[lab, "prefered_area"] = sizes[i]
-            self._uid[ids[i]] = int(sheet.face_df.loc[lab, "unique_id"])
-            self._alive[ids[i]] = True
-
-        report["n_guard_faces"] = int((sheet.face_df["cell_type"] == "guard").sum())
-        report["unmapped_ids"] = unmapped
-        self.residual_report = report
-        self.identity = dict(self._uid)
-        self._uid_to_bid = {u: b for b, u in self._uid.items()}
-
+        fd = sheet.face_df
+        fd["cell_type"] = [types[i] for i in owner]
+        fd["layer"] = [layer[i] for i in owner]
+        fd["prefered_area"] = [sizes[i] * (self._immune_area_scale
+                                           if types[i] in self._immune_types else 1.0)
+                               for i in owner]
+        for col in ("area_elasticity", "perimeter_elasticity", "prefered_perimeter"):
+            fd[col] = [self._mech(types[i])[col] for i in owner]
+        if self._shape_gamma > 0:
+            unset = fd["perimeter_elasticity"].to_numpy() <= 0
+            p0 = self._shape_index * np.sqrt(fd["prefered_area"].to_numpy(dtype=float))
+            fd.loc[unset, "perimeter_elasticity"] = self._shape_gamma
+            fd.loc[unset, "prefered_perimeter"] = p0[unset]
+        if self._immune_gamma > 0:
+            imm = (fd["perimeter_elasticity"].to_numpy() <= 0) & np.array(
+                [types[i] in self._immune_types for i in owner], dtype=bool)
+            p0 = self._shape_index * np.sqrt(fd["prefered_area"].to_numpy(dtype=float))
+            fd.loc[imm, "perimeter_elasticity"] = self._immune_gamma
+            fd.loc[imm, "prefered_perimeter"] = p0[imm]
         for col, val in zip(_MIGRATION_COLS, (1.0, 0.0, 0.0, 0.0)):
-            sheet.face_df[col] = val
-        if "viscosity" not in sheet.vert_df.columns:
-            sheet.vert_df["viscosity"] = 1.0
+            fd[col] = val
+        # Explicit Euler (dt = one step) is stable only if the vertex drag beats
+        # the area stiffness ~K*A0; eta = 2*K*A0 keeps a step well inside it.
+        if self._viscosity is None:
+            k_max = max([self._mech(t)["area_elasticity"] for t in types] or [self._area_elasticity])
+            self._viscosity = 2.0 * k_max * (float(np.median(sizes)) if sizes else 1.0)
+        sheet.vert_df["viscosity"] = float(self._viscosity)
+
+        self._all_ids = list(ids)
+        self._cell_meta = {ids[i]: {"pos": [float(cents[i, 0]), float(cents[i, 1])],
+                                    "size": sizes[i], "type": types[i]} for i in range(len(ids))}
+        uids = fd["unique_id"].to_numpy() if "unique_id" in fd else fd.index.to_numpy()
+        self._uid = {ids[i]: int(uids[f]) for f, i in enumerate(owner)}
+        self._uid_to_bid = {u: b for b, u in self._uid.items()}
+        self._layer_of = {ids[i]: layer[i] for i in range(len(ids))}
+        self._group_of = {ids[i]: IMMUNE if (layer[i] == OVERLAY or types[i] in self._immune_types)
+                          else SHEET for i in range(len(ids))}
+        for b in ids:
+            self._alive[b] = True
+        self.identity = dict(self._uid)
+
+        disp = np.array([np.hypot(*(placed[i] - cents[i])) for i in core_ix]) if core_ix else np.zeros(0)
+        disp_imm = np.array([np.hypot(*(placed[i] - cents[i])) for i in attach_ix]) if attach_ix else np.zeros(0)
+        self.residual_report = {
+            "mesh": "hex",
+            "n_input": len(ids),
+            "n_clean": len(ids),            # 1:1 by construction: one polygon per cell
+            "n_collision": 0,
+            "fraction_clean": 1.0 if ids else 0.0,
+            "contested_faces": [],
+            "unmapped_ids": [],
+            "n_guard_faces": 0,
+            "n_sheet": len(sheet_ix),
+            "n_overlay": len(over_ix),
+            "n_attached_immune": len(attach_ix),
+            "sheet_centroid_rms": float(np.sqrt(np.mean(disp ** 2))) if len(disp) else 0.0,
+            "sheet_centroid_max": float(disp.max()) if len(disp) else 0.0,
+            # attaching an immune cell to the tissue margin moves it off its
+            # blueprint centroid (the CPM leaves a medium gap there)
+            "immune_attach_rms": float(np.sqrt(np.mean(disp_imm ** 2))) if len(disp_imm) else 0.0,
+            "immune_attach_max": float(disp_imm.max()) if len(disp_imm) else 0.0,
+        }
 
         # Held on the instance so its finalizer removes the scratch mesh dir when
         # the backend is collected / at interpreter exit (no orphaned temp dirs).
@@ -228,13 +293,34 @@ class VertexBackend(MechanicsBackend):
         hf5 = str(Path(self._tmpdir_obj.name) / "mesh.hf5")
         save_datasets(hf5, sheet)
         self._solver = self._make_solver(hf5)
+        # Junction tensions are owned by the junction_tension behavior from step 1;
+        # seed them now so the t0 mesh already carries its type-pair tensions.
+        coupling.junction_tension(self._solver.eptm, None, tensions=self._tensions,
+                                  default_tension=self._default_tension)
+
+    def _mech(self, ctype: str) -> dict:
+        return self._type_mech.get(ctype) or {
+            "area_elasticity": self._area_elasticity,
+            "perimeter_elasticity": 0.0, "prefered_perimeter": 0.0}
 
     def _make_solver(self, hf5):
         from process_bigraph import allocate_core
         from vivarium_tyssue.data_types import register_types
+        from vivarium_tyssue.maps import BEHAVIOR_MAP
         from vivarium_tyssue.processes import register_processes
         from vivarium_tyssue.processes.eulersolver import EulerSolver
 
+        effectors = ["FaceAreaElasticity", "LineTension", "ActiveMigration"]
+        if self._shape_gamma > 0 or self._immune_gamma > 0 or any(m["perimeter_elasticity"] > 0 for m in self._type_mech.values()):
+            effectors.insert(1, "PerimeterElasticity")
+        # T1 at 0.2 x hexagon side: the small in-sheet immune polygons (side ~2.2)
+        # must swap neighbours before a short junction inverts
+        threshold = (float(self._threshold_length) if self._threshold_length is not None
+                     else 0.2 * self._side)
+        max_disp = float(self._max_disp) if self._max_disp is not None else 0.5 * self._side
+
+        # tyssue's reconnect (merge/detach) draws from the global numpy RNG.
+        np.random.seed(self._seed)
         core = allocate_core()
         core = register_types(core)
         core = register_processes(core)
@@ -243,26 +329,31 @@ class VertexBackend(MechanicsBackend):
             "eptm": hf5,
             "tissue_type": "Sheet",
             "geom": self._geom,
-            "effectors": self._effectors,
-            "ref_effector": self._ref_effector,
+            "effectors": effectors,
+            "ref_effector": "FaceAreaElasticity",
             "factory": self._factory,
-            # keys are the eptm DataFrame attribute names (face_df / edge_df).
-            "parameters": {
-                "face_df": {"area_elasticity": self._area_elasticity},
-                "edge_df": {"line_tension": self._line_tension},
-            },
-            "settings": {},
+            # per-type face moduli + tensions are already on the mesh; no global
+            # parameter overrides.
+            "parameters": {},
+            "settings": {"threshold_length": threshold},
             "maps": {},
             "backend": "python",
-            "auto_reconnect": False,
+            # T1/T3 neighbour exchange: short junctions (< threshold_length) merge
+            # into a 4-way vertex that detaches along the other axis.
+            "auto_reconnect": {"enabled": self._reconnect, **self._detach_rates},
             "bounds": {},
             "output_columns": {},
             "substeps": 1,
-            # explicit-Euler safety clamp: bounds a strong migration transient so
-            # it relaxes over steps instead of exploding to NaN in one.
-            "max_displacement": self._max_disp,
+            # explicit-Euler safety clamp: bounds a strong transient so it relaxes
+            # over steps instead of exploding to NaN in one.
+            "max_displacement": max_disp,
         }
-        return EulerSolver(cfg, core=core)
+        solver = EulerSolver(cfg, core=core)
+        # This backend's behaviors, on a PRIVATE copy of the maps (EulerSolver's
+        # maps dict is module-global; never mutate it for other solvers).
+        solver.maps = dict(solver.maps)
+        solver.maps["BEHAVIOR_MAP"] = {**BEHAVIOR_MAP, **coupling.EXTRA_BEHAVIORS}
+        return solver
 
     # -- per-step ------------------------------------------------------------ #
     def _face_label(self, uid):
@@ -271,64 +362,6 @@ class VertexBackend(MechanicsBackend):
         fd = self._solver.eptm.face_df
         m = fd.index[fd["unique_id"] == uid]
         return m[0] if len(m) else None
-
-    def _migration_behaviors(self, field_grid):
-        """Rewrite each interior face's migration director from the sampled field
-        gradient at its centroid. Returns a list with one ``apply_gradient``
-        behavior node (or empty). Chemotaxis wiring (``[{field, type?, strength}]``)
-        selects which field(s) drive which cell types; absent -> no migration."""
-        if not field_grid or not self._chemotaxis:
-            return []
-        fd = self._solver.eptm.face_df
-        grads = {}
-        for name, grid in field_grid.items():
-            arr = np.asarray(grid, dtype=float)
-            if arr.ndim >= 2:
-                gx, gy = np.gradient(arr)[:2]
-                grads[name] = (gx, gy, arr.shape)
-        if not grads:
-            return []
-
-        upd = {c: {} for c in _MIGRATION_COLS}
-        for bid, uid in self._uid.items():
-            if not self._alive.get(bid, True):
-                continue
-            lab = self._face_label(uid)
-            if lab is None:
-                continue
-            ctype = str(fd.loc[lab, "cell_type"])
-            x = float(fd.loc[lab, "x"])
-            y = float(fd.loc[lab, "y"])
-            vx = vy = 0.0
-            for ch in self._chemotaxis:
-                want = ch.get("type")
-                if want is not None and want != ctype:
-                    continue
-                name = ch.get("field")
-                if name not in grads:
-                    continue
-                gx, gy, shp = grads[name]
-                ix = int(min(max(round(x), 0), shp[0] - 1))
-                iy = int(min(max(round(y), 0), shp[1] - 1))
-                s = float(ch.get("strength", 1.0))
-                vx += s * float(gx[ix, iy])
-                vy += s * float(gy[ix, iy])
-            norm = math.hypot(vx, vy)
-            # ActiveMigration normalizes the director internally; strength is the
-            # force magnitude, scaled from the gradient magnitude.
-            upd["mx"][uid] = vx
-            upd["my"][uid] = vy
-            upd["mz"][uid] = 0.0
-            upd["migration_strength"][uid] = self._migration_scale * norm
-        if not upd["migration_strength"]:
-            return []
-        return [{
-            "func": "apply_gradient",
-            "parameter_updates": {
-                col: {"dataframe": "face", "update": dict(vals)}
-                for col, vals in upd.items()
-            },
-        }]
 
     def _activation_behaviors(self, activations) -> list:
         """Activate latent cells into active immune types (Task 20). For each
@@ -377,79 +410,88 @@ class VertexBackend(MechanicsBackend):
         divisions = inputs.get("divisions") or []
         deaths = inputs.get("deaths") or []
         activations = inputs.get("activations") or {}
+        fd = self._solver.eptm.face_df
 
-        behaviors = []
-        # (a) fates -> relabel cell_type via the differentiation behavior
-        for cid, new_type in fates.items():
-            uid = self._uid.get(str(cid))
-            if uid is not None:
-                behaviors.append({
-                    "func": "differentiation", "cell_uid": uid, "new_type": str(new_type),
-                })
-        # (a2) activations (immune recruitment) -> activate N currently-LATENT cells
-        #      of each requested active type via the SAME differentiation behavior.
-        behaviors.extend(self._activation_behaviors(activations))
-        # (b) field gradient -> migration directors via apply_gradient
-        behaviors.extend(self._migration_behaviors(field_grid))
-        # (c) deaths -> mark not-alive (is_alive=0 stops migration + flags the port)
-        dead_updates = {}
+        # deaths first, so a cell dying this step stops migrating this step
+        dead_uids = []
         for ev in deaths:
             cid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
             uid = self._uid.get(cid)
             if uid is not None:
                 self._alive[cid] = False
-                dead_updates[uid] = 0
-        if dead_updates:
-            behaviors.append({
-                "func": "apply_gradient",
-                "parameter_updates": {
-                    "is_alive": {"dataframe": "face", "update": dead_updates},
-                },
-            })
-        # (d) divisions -> split the mother face now (daughter gets a fresh uid,
-        #     no blueprint id -> tracked by lineage, not emitted in the cohort)
+                dead_uids.append(uid)
+        live = [u for b, u in self._uid.items() if self._alive.get(b, True)]
+
+        behaviors = []
+        behaviors += coupling.fate_behaviors(fates, self._uid)
+        behaviors += self._activation_behaviors(activations)
+        behaviors += coupling.field_overlay_behaviors(fd, field_grid)
+        random_force = {}
+        for group, walker in self._motility.items():
+            force_of = {u: self._motility_force[group] for u in live
+                        if self._group_of[self._uid_to_bid[u]] == group}
+            random_force.update(walker.step(force_of, float(interval)))
+        behaviors += coupling.migration_behaviors(
+            fd, field_grid, self._chemotaxis, self._migration_scale, live,
+            random_force=random_force,
+            saturation=self._chemotaxis_saturation)
+        behaviors += coupling.death_behaviors(dead_uids)
+        div_uids = []
         for ev in divisions:
             cid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
-            uid = self._uid.get(cid)
-            if uid is not None:
-                behaviors.append({
-                    "func": "split_cells", "geom": self._geom, "cell_uids": [uid],
-                })
+            if self._uid.get(cid) is not None:
+                div_uids.append(self._uid[cid])
+        behaviors += coupling.division_behaviors(div_uids, self._geom)
 
-        self._solver.update({"behaviors": behaviors, "global_time": float(self._t)}, interval)
-        self._t += float(interval)
+        # Integrate the coupled step in `substeps` solver updates so no vertex moves
+        # more than a fraction of the T1 threshold per update -- otherwise a short
+        # junction can invert (fold the mesh) before reconnect gets to merge it.
+        # The coupling behaviors go in with the first update; junction tension (the
+        # topology can change in every update) and domain confinement go in with
+        # each one. Forces and directors persist on the mesh between updates.
+        dt = float(interval) / self._substeps
+        for k in range(self._substeps):
+            if len(self._solver.eptm.edge_df) == 0:
+                break   # the tissue collapsed (every junction gone): nothing left to integrate
+            step = list(behaviors) if k == 0 else []
+            step += coupling.junction_tension_behavior(
+                self._tensions, self._default_tension, self._sigma, self._tau,
+                dt, int(self._rng.integers(2 ** 31 - 1)))
+            step += coupling.confinement_behavior(self._bounds)
+            try:
+                self._solver.update({"behaviors": step, "global_time": float(self._t)}, dt)
+            except ValueError:
+                # tyssue's reconnect merges the last junctions away and then runs
+                # its rosette detachment on the empty mesh; a collapsed tissue is
+                # an outcome (every cell vanished), any other error is not
+                if len(self._solver.eptm.edge_df):
+                    raise
+                break
+            self._t += dt
         return self._emit()
 
     # -- read-back ----------------------------------------------------------- #
     def _emit(self):
-        fd = self._solver.eptm.face_df
-        ed = self._solver.eptm.edge_df
-        # current unique_id -> face label, for O(1) neighbor lookups
+        eptm = self._solver.eptm
+        fd = eptm.face_df
+        ed = eptm.edge_df
         label_by_uid = {int(u): lab for lab, u in fd["unique_id"].items()}
+        opp = coupling._opposite_positions(ed)
+        ed_face = ed["face"].to_numpy()
+        ed_len = ed["length"].to_numpy(dtype=float)
 
         positions, sizes, types, alive, neighbors, shared = {}, {}, {}, {}, {}, {}
         footprints = {}
-        polys = self._face_polygons(
-            [label_by_uid[u] for u in self._uid.values() if u in label_by_uid])
+        live_labels = [label_by_uid[u] for u in self._uid.values() if u in label_by_uid]
+        polys = self._face_polygons(live_labels)
+
         for bid in self._all_ids:
             uid = self._uid.get(bid)
-            if uid is None:
-                # unmapped at build (contested / no interior face): still a port
-                # citizen -> blueprint-placeholder geometry, not alive, no contacts
-                meta = self._cell_meta.get(bid, {})
-                positions[bid] = list(meta.get("pos", [0.0, 0.0]))
-                sizes[bid] = meta.get("size", 0.0)
-                types[bid] = meta.get("type", "")
-                alive[bid] = False
-                neighbors[bid] = []
-                shared[bid] = {}
-                footprints[bid] = no_footprint()
-                continue
-            lab = label_by_uid.get(uid)
+            lab = label_by_uid.get(uid) if uid is not None else None
             if lab is None:
                 # face vanished (extrusion / T2): report last-known state, not alive
-                cached = self._cache.get(bid, {})
-                positions[bid] = cached.get("pos", [0.0, 0.0])
+                cached = self._cache.get(bid) or self._cell_meta.get(bid, {})
+                positions[bid] = list(cached.get("pos", [0.0, 0.0]))
                 sizes[bid] = cached.get("size", 0.0)
                 types[bid] = cached.get("type", "")
                 alive[bid] = False
@@ -466,26 +508,41 @@ class VertexBackend(MechanicsBackend):
             types[bid] = ctype
             alive[bid] = bool(self._alive.get(bid, True)) and bool(fd.loc[lab, "is_alive"])
             self._cache[bid] = {"pos": pos, "size": size, "type": ctype}
+            neighbors[bid] = []
+            shared[bid] = {}
 
-            nbrs, by_type = [], {}
-            rows = ed[ed["face"] == lab]
-            for _, r in rows.iterrows():
-                opp = r.get("opposite", -1)
-                if opp is None or opp < 0 or opp not in ed.index:
-                    continue  # mesh boundary (no neighbor across this edge)
-                nlab = ed.loc[opp, "face"]
-                ntype = str(fd.loc[nlab, "cell_type"])
-                length = float(r["length"])
-                # shared-edge-length by neighbor cell_type (the vertex analog of
-                # CPM contact area); the guard collar is not a real cell type.
-                if ntype != "guard":
-                    by_type[ntype] = by_type.get(ntype, 0.0) + length
-                nuid = int(fd.loc[nlab, "unique_id"])
-                nb_bid = self._uid_to_bid.get(nuid)
-                if nb_bid is not None and nb_bid not in nbrs:
-                    nbrs.append(nb_bid)
-            neighbors[bid] = nbrs
-            shared[bid] = by_type
+        # in-sheet contact: shared junction length by neighbour type (the vertex
+        # analog of CPM contact area). A border half-edge (no opposite) touches
+        # medium, which -- like CPM's medium tag -- is not reported.
+        bid_of_label = {lab: self._uid_to_bid.get(int(u)) for lab, u in fd["unique_id"].items()}
+        for pos_i in np.flatnonzero(opp >= 0):
+            a = bid_of_label.get(ed_face[pos_i])
+            b = bid_of_label.get(ed_face[opp[pos_i]])
+            if a is None or b is None:
+                continue
+            btype = types[b]
+            shared[a][btype] = shared[a].get(btype, 0.0) + float(ed_len[pos_i])
+            if b not in neighbors[a]:
+                neighbors[a].append(b)
+
+        # overlay contact: polygon overlap area between an overlay cell and any
+        # other cell (the 2-layer contact surface; Sego's immune layer sits on the
+        # epithelium), credited symmetrically to both cells.
+        others = [b for b in self._all_ids if footprints[b]["xy"]]   # faces still in the mesh
+        over = [b for b in others if self._layer_of.get(b) == OVERLAY]
+        for a in over:
+            for b in others:
+                if b == a or (self._layer_of.get(b) == OVERLAY and b < a and b in over):
+                    continue  # each overlay-overlay pair once
+                ov = overlap_area(footprints[b]["xy"], footprints[a]["xy"])
+                if ov <= 1e-9:
+                    continue
+                shared[a][types[b]] = shared[a].get(types[b], 0.0) + ov
+                shared[b][types[a]] = shared[b].get(types[a], 0.0) + ov
+                if b not in neighbors[a]:
+                    neighbors[a].append(b)
+                if a not in neighbors[b]:
+                    neighbors[b].append(a)
 
         return {
             "positions": positions,
@@ -499,8 +556,8 @@ class VertexBackend(MechanicsBackend):
 
     def _face_polygons(self, labels) -> dict:
         """face label -> ordered [[x, y], ...] boundary vertices for the given
-        (mapped, interior) faces only, walking half-edges srce -> trgt. Raises if
-        a ring does not close into >= 3 vertices rather than emit a partial one."""
+        faces, walking half-edges srce -> trgt. Raises if a ring does not close
+        into >= 3 vertices rather than emit a partial one."""
         eptm = self._solver.eptm
         ed = eptm.edge_df
         vx = eptm.vert_df["x"].to_dict()

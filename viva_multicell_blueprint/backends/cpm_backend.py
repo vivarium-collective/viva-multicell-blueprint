@@ -20,8 +20,8 @@ Per step: apply ``fates`` (``set_cell_type``), write the shared field
 (``set_field`` per field), run ``mcs_per_update`` sweeps (``step``), then read back
 ``cell_coms``/``cell_volumes``/``cell_types`` and ``cell_contact_area_by_type`` and
 emit the port. ``shared_surface_by_type`` is the contact-area readback regrouped
-from integer type tags into blueprint type NAMES (medium / tag 0 excluded, the CPM
-analog of the vertex backend dropping its ``guard`` collar). Deaths remove the cell
+from integer type tags into blueprint type NAMES (medium / tag 0 excluded, as the
+vertex backend excludes a junction on the free tissue border). Deaths remove the cell
 (``remove_cells``) and mark it not-alive; divisions split it (``divide_cells``) --
 the daughter has no blueprint id, so, as on the vertex side, it is tracked by
 lineage and not folded into the t=0 cohort. Lineage events arrive shaped

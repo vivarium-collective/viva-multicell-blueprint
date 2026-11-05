@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 
 # Keys that are backend-specific (geometry/dynamics) or run-level, and therefore
 # must NOT appear in a canonical biological blueprint.
-BACKEND_RUN_KEYS = {"tension_scale", "rules_seed", "migration_scale"}
+BACKEND_RUN_KEYS = {"tension_scale", "rules_seed", "mechanics_seed", "migration_scale", "vertex"}
 
 
 @dataclass

@@ -1,8 +1,9 @@
 """Behavior test for study `substrate-divergence-counterfactual` (adversarial).
 
 The positive control: in a mechanics-dominated regime the SPATIAL equivalence test
-must REJECT (the two backends place cells differently), and the vertex population
-must migrate further up the chemo gradient than the CPM one.
+must REJECT (the two backends place cells differently). With the vertex chemotaxis
+calibrated to the CPM's saturating drift, the divergence is NOT a directed-migration
+difference: neither population travels far up the gradient.
 """
 from __future__ import annotations
 
@@ -35,7 +36,12 @@ def _mean_A_y(run, ids):
     return float(np.mean(ys)) if ys else float("nan")
 
 
-def test_spatial_equivalence_is_rejected_and_migration_differs():
+def _mean_A_y_at(run, ids, k):
+    f = run.frames[k]
+    return float(np.mean([f["positions"][i][1] for i in ids if f["types"].get(i) == "A"]))
+
+
+def test_spatial_equivalence_is_rejected_without_directed_migration_gap():
     ids = [str(c["id"]) for c in resolve_initial_state(Blueprint.load(BP))]
     cpm = {s: _run("cpm", s) for s in SEEDS}
     vtx = {s: _run("vertex", s) for s in SEEDS}
@@ -50,5 +56,8 @@ def test_spatial_equivalence_is_rejected_and_migration_differs():
     tost = metrics.equivalence_tost(same, cross, margin=0.10)
     assert tost["equivalent"] is False, tost          # the test has power
     assert tost["mean_cross"] < tost["mean_same"]
-    # mechanistic cause: vertex A climbs the gradient further than CPM A
-    assert _mean_A_y(vtx[0], ids) > _mean_A_y(cpm[0], ids)
+    # calibrated chemotaxis: no substrate carries the A population far up the
+    # gradient (the old vertex "climb" came from the uncalibrated linear mapping)
+    y0 = _mean_A_y_at(cpm[0], ids, 0)
+    for run in (cpm[0], vtx[0]):
+        assert abs(_mean_A_y(run, ids) - y0) < 3.0

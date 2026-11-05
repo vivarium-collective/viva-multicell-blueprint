@@ -27,6 +27,7 @@ from viva_multicell_blueprint.compare.runner import run_backend
 
 SEGO = Path(__file__).resolve().parents[1] / "workspace" / "blueprints" / "influenza_sego2022.yaml"
 SEEDS = (0, 1, 2)
+EPITHELIAL = {"H", "I", "D"}
 
 
 def _run(backend, seed, n):
@@ -64,9 +65,12 @@ def main() -> None:
             return None
         return float(np.hypot(sa["centroid"][0] - sb["centroid"][0], sa["centroid"][1] - sb["centroid"][1]))
 
-    def mean_area(r):
+    def mean_area(r, types=EPITHELIAL):
+        # the representation-confound control compares the EPITHELIUM; immune
+        # polygons are half-size on the vertex side by design (immune_area_scale)
         f = r.frames[-1]
-        return float(np.mean([s for cid, s in f["sizes"].items() if f["alive"].get(cid)]))
+        return float(np.mean([s for cid, s in f["sizes"].items()
+                              if f["alive"].get(cid) and (types is None or f["types"].get(cid) in types)]))
 
     cpm_pairs = list(itertools.combinations(SEEDS, 2))
     cross = [(i, j) for i in SEEDS for j in SEEDS]
@@ -86,8 +90,10 @@ def main() -> None:
              *_summ([cdist(cpm[i], vtx[j]) for i, j in cross])))
 
     # representation control + non-circular dynamics check
-    print(f"\n  final mean cell area  CPM={mean_area(cpm[0]):.2f}  VTX={mean_area(vtx[0]):.2f}  "
+    print(f"\n  final mean EPITHELIAL cell area  CPM={mean_area(cpm[0]):.2f}  VTX={mean_area(vtx[0]):.2f}  "
           f"ratio={mean_area(vtx[0]) / mean_area(cpm[0]):.2f}  (target 25)")
+    print(f"  final mean cell area, all cells  CPM={mean_area(cpm[0], None):.2f}  "
+          f"VTX={mean_area(vtx[0], None):.2f}")
     tc = lambda r: np.array(metrics.type_counts(r.frames).get("I", [0] * (n + 1)), float)
     M = np.vstack([tc(cpm[s]) for s in SEEDS])
     lo, hi, vI = M.min(0), M.max(0), tc(vtx[0])

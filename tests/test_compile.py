@@ -26,7 +26,7 @@ _PRICE_PARAMS = yaml.safe_load(
 )["price_ode"]
 
 # A small CSV cell table: 4 non-collinear cells, two types (H, I) -> a 2x2 block
-# both backends can materialize (Voronoi needs a non-degenerate point cloud). Cells
+# both backends can materialize (a non-degenerate point cloud). Cells
 # are size 25 (5x5): small 9-voxel CPM cells are energetically unstable under the
 # default contact energies (a cell fully ringed by medium LOWERS its energy by
 # vanishing), so they dissolve before anything can be observed. 25-voxel cells are

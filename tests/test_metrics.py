@@ -60,3 +60,12 @@ def test_lineage_and_field_match():
     assert abs(la["root_agreement"] - 2 / 3) < 1e-9 and la["n_born"] == {"cpm": 2, "vertex": 1}
     f = np.random.default_rng(0).random((8, 8))
     assert field_match(f, f)["match"] and not field_match(f, f + 0.1)["match"]
+
+
+def test_neighbour_exchanges_counts_gained_contacts():
+    from viva_multicell_blueprint.compare.metrics import neighbour_exchanges
+
+    f0 = {"neighbors": {"1": ["2"], "2": ["1", "3"], "3": ["2"]}}
+    f1 = {"neighbors": {"1": ["2", "3"], "2": ["1", "3"], "3": ["1", "2"]}}   # 1-3 gained
+    f2 = {"neighbors": {"1": ["3"], "2": ["3"], "3": ["1", "2"]}}             # 1-2 lost only
+    assert neighbour_exchanges([f0, f1, f2]) == [0, 1, 1]

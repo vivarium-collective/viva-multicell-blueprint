@@ -12,9 +12,6 @@ title: "BP-01 — the blueprint as a versioned, backend-neutral artifact"
 kind: methods
 confidence: Accepted
 
-parent_studies:
-  - {study: initial-state-fidelity, condition: ran, relation: motivates}
-
 claim: >
   Stage 1 / BP-01 of the review program. The canonical blueprint is now a
   VERSIONED, backend-neutral artifact with a checked contract and a static
@@ -58,64 +55,56 @@ purpose:
     parameters recorded separately; validator reports problems explicitly.
 
 key_assumptions:
-  - "Backend/run parameters are currently tension_scale (vertex) and rules_seed (run); genuine model constants (const) remain canonical."
-  - "blueprint_version is optional for back-compat (a warning, not an error) but set on every canonical artifact going forward."
-  - "This is Stage 1: round-trip fidelity of AREA/footprint/contact/topology (BP-02) and physical initialization (BP-03) are the next steps, not claimed here."
-
-baseline:
-  - name: canonical-blueprint
-    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
-    description: The Sego canonical blueprint is the worked artifact the schema/validator/compile contract is exercised against.
-    params:
-      backend: cpm
-      blueprint: workspace/blueprints/influenza_sego2022.yaml
+- "Backend/run parameters are currently tension_scale (vertex) and rules_seed (run); genuine model constants (const) remain canonical."
+- "blueprint_version is optional for back-compat (a warning, not an error) but set on every canonical artifact going forward."
+- "This is Stage 1: round-trip fidelity of AREA/footprint/contact/topology (BP-02) and physical initialization (BP-03) are the next steps, not claimed here."
 
 simulation_set:
-  - name: bp-01-acceptance
-    status: completed
-    base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
-    kind: analysis
-    metrics:
-      schema_versioned: true
-      canonical_state_backend_neutral: true
-      backend_run_params_separated: "tension_scale, rules_seed -> CompileOptions"
-      static_validator: "validate_blueprint + `multicell-blueprint validate`"
-      worked_examples_validate_and_compile_both_backends: 3
-      canonical_blueprints_contract_clean: "sego, mechanics_divergence"
-    pass_fail_tests:
-      - "same-canonical-blueprint-both-backends: pass"
-      - "backend-run-params-not-canonical: pass"
-      - "validator-structured-diagnostics: pass"
-      - "worked-examples-validate: pass"
+- name: bp-01-acceptance
+  status: completed
+  base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+  kind: analysis
+  metrics:
+    schema_versioned: true
+    canonical_state_backend_neutral: true
+    backend_run_params_separated: "tension_scale, rules_seed -> CompileOptions"
+    static_validator: "validate_blueprint + `multicell-blueprint validate`"
+    worked_examples_validate_and_compile_both_backends: 3
+    canonical_blueprints_contract_clean: "sego, mechanics_divergence"
+  pass_fail_tests:
+  - "same-canonical-blueprint-both-backends: pass"
+  - "backend-run-params-not-canonical: pass"
+  - "validator-structured-diagnostics: pass"
+  - "worked-examples-validate: pass"
 
 behavior_tests:
-  - name: same-canonical-blueprint-both-backends
-    classification: primary
-    description: The same immutable canonical blueprint compiles to CPM and vertex.
-    measure: {kind: contract, field: canonical_state}
-    pass_if: {op: both_backends_accept, note: "tests/test_blueprint_canonical.py::test_same_canonical_blueprint_compiles_to_both_backends"}
-    requires_simulation: "false"
-  - name: backend-run-params-not-canonical
-    classification: primary
-    description: tension_scale and rules_seed are split out of the canonical blueprint and flagged by the validator.
-    measure: {kind: contract, field: canonical_violations}
-    pass_if: {op: separated_and_flagged, note: "tests/test_blueprint_canonical.py::test_backend_run_params_are_not_canonical"}
-    requires_simulation: "false"
-  - name: validator-structured-diagnostics
-    classification: primary
-    description: validate_blueprint returns {severity, path, message} for errors and contract warnings.
-    measure: {kind: contract, field: validate_blueprint}
-    pass_if: {op: diagnostics_shape, note: "tests/test_blueprint_canonical.py::test_validator_structured_diagnostics_and_violation_warning"}
-    requires_simulation: "false"
+- name: same-canonical-blueprint-both-backends
+  classification: primary
+  description: The same immutable canonical blueprint compiles to CPM and vertex.
+  measure: {kind: contract, field: canonical_state}
+  pass_if: {op: both_backends_accept, note: "tests/test_blueprint_canonical.py::test_same_canonical_blueprint_compiles_to_both_backends"}
+  requires_simulation: "false"
+- name: backend-run-params-not-canonical
+  classification: primary
+  description: tension_scale and rules_seed are split out of the canonical blueprint and flagged by the validator.
+  measure: {kind: contract, field: canonical_violations}
+  pass_if: {op: separated_and_flagged, note: "tests/test_blueprint_canonical.py::test_backend_run_params_are_not_canonical"}
+  requires_simulation: "false"
+- name: validator-structured-diagnostics
+  classification: primary
+  description: validate_blueprint returns {severity, path, message} for errors and contract warnings.
+  measure: {kind: contract, field: validate_blueprint}
+  pass_if: {op: diagnostics_shape, note: "tests/test_blueprint_canonical.py::test_validator_structured_diagnostics_and_violation_warning"}
+  requires_simulation: "false"
 
 controls:
-  - name: dirty-blueprint-negative
-    kind: negative
-    description: A blueprint missing `domain` yields an ERROR diagnostic; a blueprint with tension_scale yields a WARNING — the validator exposes problems, not a badge.
+- name: dirty-blueprint-negative
+  kind: negative
+  description: A blueprint missing `domain` yields an ERROR diagnostic; a blueprint with tension_scale yields a WARNING — the validator exposes problems, not a badge.
 
 limitations:
-  - "BP-01 establishes the schema + contract + validator. It does NOT yet prove area/footprint/contact/adjacency/topology fidelity (BP-02) or physical constraint-satisfying initialization (BP-03)."
-  - "The canonical split currently recognizes tension_scale/rules_seed/migration_scale; further backend/run keys are added as backends grow."
+- "BP-01 establishes the schema + contract + validator. It does NOT yet prove area/footprint/contact/adjacency/topology fidelity (BP-02) or physical constraint-satisfying initialization (BP-03)."
+- "The canonical split currently recognizes tension_scale/rules_seed/migration_scale; further backend/run keys are added as backends grow."
 
 report:
   title: "The blueprint is now a versioned, backend-neutral, validated artifact"
@@ -138,24 +127,41 @@ report:
     footprint, contact, topology) is BP-02, not claimed here.
 
 findings:
-  - id: F1-canonical-blueprint-artifact
-    kind: computational
-    status: confirms
-    tier: interpretation
-    mechanism_origin: engineered
-    statement: >
-      One versioned canonical blueprint compiles unchanged to both backends;
-      backend/run parameters are separated into CompileOptions and flagged by a
-      static validator; three worked examples validate and compile on both backends.
-    evidence:
-      observed: "9 BP-01 acceptance tests pass; sego + mechanics_divergence validate contract-clean; 174 passed overall"
-    explanation: "A canonical schema + split + validator make the biological blueprint a first-class, tested artifact."
-    next_action: "Stage 2 / BP-02: prove round-trip geometric fidelity (area, footprint, contact, adjacency, topology) with explicit error measures."
-    seeded_study: null
-    provenance:
-      run_ids: [bp-01-acceptance]
+- id: F1-canonical-blueprint-artifact
+  kind: computational
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: >
+    One versioned canonical blueprint compiles unchanged to both backends;
+    backend/run parameters are separated into CompileOptions and flagged by a
+    static validator; three worked examples validate and compile on both backends.
+  evidence:
+    observed: "9 BP-01 acceptance tests pass; sego + mechanics_divergence validate contract-clean; 174 passed overall"
+  explanation: "A canonical schema + split + validator make the biological blueprint a first-class, tested artifact."
+  next_action: "Stage 2 / BP-02: prove round-trip geometric fidelity (area, footprint, contact, adjacency, topology) with explicit error measures."
+  seeded_study:
+  provenance:
+    run_ids: [bp-01-acceptance]
 
 bibliography:
   sources:
-    - key: review-2026-10-27
-      note: "Cross-paradigm review (references/reviews/influenza_blueprint_feedback.yaml), BP-01."
+  - key: review-2026-10-27
+    note: "Cross-paradigm review (references/reviews/influenza_blueprint_feedback.yaml), BP-01."
+conditions:
+  baseline:
+    name: canonical-blueprint
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    description: The Sego canonical blueprint is the worked artifact the schema/validator/compile contract is exercised against.
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/influenza_sego2022.yaml
+
+  model_settings: []
+inputs: []
+question: >
+  Can the biological blueprint be specified as a versioned, backend-neutral,
+  statically-validated artifact, independent of CPM/vertex implementations?
+pipeline_gate:
+  prerequisites:
+  - {study: initial-state-fidelity, condition: ran, relation: motivates}
