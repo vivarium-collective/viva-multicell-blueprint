@@ -20,7 +20,7 @@
   <div style="display:flex; align-items:center; gap:14px; justify-content:space-between;">
   <div style="display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap">
   <h1 class="study-title" style="margin:0">
-    <span class="study-name" id="study-name" data-slug="crossparadigm-equivalence" data-study-kind="computational" title="crossparadigm-equivalence">Backend equivalence (TOST)</span>
+    <span class="study-name" id="study-name" data-slug="crossparadigm-equivalence" data-study-kind="computational" title="crossparadigm-equivalence" data-edit-kind="study" data-edit-field="title" data-edit-value="Backend equivalence (TOST)" data-edit-label="Title">Backend equivalence (TOST)</span>
     
   </h1>
     
@@ -236,6 +236,9 @@
 /* findings */
 .findings-section{padding:14px 16px;background:#fafbff;border:1px solid #c7d2fe;border-radius:8px}
 .finding-card{padding:12px 14px;margin:10px 0;border:1px solid #e2e8f0;border-left:5px solid #6366f1;border-radius:6px;background:#fff}
+/* Brief highlight when an item is reached via a ?ev= evidence deep-link. */
+.ev-flash{animation:ev-flash-kf 1.9s ease-out;scroll-margin-top:12px}
+@keyframes ev-flash-kf{0%{box-shadow:0 0 0 3px #fbbf24}70%{box-shadow:0 0 0 3px rgba(251,191,36,0.45)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
 .finding-card.finding-status-confirms{border-left-color:#10b981}
 .finding-card.finding-status-partial{border-left-color:#f59e0b}
 .finding-card.finding-status-contradicts{border-left-color:#dc2626}
@@ -544,11 +547,22 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Claim</h2>
-      <p class="ctr-text">SCOPED to Claim 3 (scientific equivalence) — NOT blueprint fidelity, NOT biological validity. On cell FATE the two substrates are equivalent under a DEPENDENCE-AWARE reanalysis: the 6x6 grid&#39;s 36 cross + 30 same pairs reuse only 6+6 runs and are statistically dependent, so the unit of resampling is the RUN. A run-cluster percentile bootstrap gives Delta(same-cross) -0.0015, 90% CI [-0.003, +0.001], inside a +/-0.05 margin -- so fate agreement is equivalent. CAVEATS (reviewer): the +/-0.05 margin is NOT yet biologically justified; the tight CI reflects LOW between-run variance at this reduced scale, not strong power. The earlier pair-level TOST (p=5.6e-36) treated dependent pairs as independent and OVERSTATED significance -- retired as the headline. Exact spatial position is NOT equivalent (cross 0.08 vs same 1.00; ~8.5 um median drift; 1.0 at t0) -- a CANDIDATE representation effect (lattice COM vs relaxing polygon centroid), NOT yet causally isolated (BP-02/BP-04 will isolate it).
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="claim" data-edit-value="RE-RUN 2026-11-05 on the in-sheet immune vertex substrate (immune cells are smaller polygons attached to the tissue margin; faster reconnect; re-calibrated motility). Verdicts unchanged: FATE equivalent (Delta -0.0014, cluster CI [-0.0034, +0.0008] inside +/-0.05); exact POSITION not equivalent (same 0.674, cross 0.547, Delta +0.126, cluster CI [+0.070, +0.181] vs +/-0.10). Diagnostic split: the gap is not only the immune margin attachment (t0 offset up to 5.6 um) -- the epithelium alone is also not equivalent (same 0.738, cross 0.622, Delta +0.116); immune-only Delta +0.156. Earlier reading (2026-10-28) kept for provenance: SCOPED to Claim 3 (scientific equivalence) -- NOT blueprint fidelity, NOT biological validity. RE-RUN 2026-10-28 on the revised vertex substrate (hexagonal sheet, immune overlay, auto_reconnect, per-pair tension, CPM-calibrated motility) with mechanics-stochastic replicates. On cell FATE the substrates remain equivalent under the dependence-aware run-cluster bootstrap: Delta(same-cross) -0.0014, 90% CI [-0.0034, +0.0008], inside +/-0.05 (margin not yet biologically justified). On exact POSITION they are still NOT equivalent, but the gap shrank about 7-fold: cross 0.472 vs same-backend 0.608 (Delta +0.135, cluster CI [+0.071, +0.210] vs margin +/-0.10). The previous spatial gap (cross 0.083 vs same 1.000) mostly reflected a degenerate null. Replicates differed only in rule draws, so same-backend positions were identical by construction, and the vertex cells barely moved.
+" data-edit-multiline data-edit-label="Claim">RE-RUN 2026-11-05 on the in-sheet immune vertex substrate (immune cells are smaller polygons attached to the tissue margin; faster reconnect; re-calibrated motility). Verdicts unchanged: FATE equivalent (Delta -0.0014, cluster CI [-0.0034, +0.0008] inside +/-0.05); exact POSITION not equivalent (same 0.674, cross 0.547, Delta +0.126, cluster CI [+0.070, +0.181] vs +/-0.10). Diagnostic split: the gap is not only the immune margin attachment (t0 offset up to 5.6 um) -- the epithelium alone is also not equivalent (same 0.738, cross 0.622, Delta +0.116); immune-only Delta +0.156. Earlier reading (2026-10-28) kept for provenance: SCOPED to Claim 3 (scientific equivalence) -- NOT blueprint fidelity, NOT biological validity. RE-RUN 2026-10-28 on the revised vertex substrate (hexagonal sheet, immune overlay, auto_reconnect, per-pair tension, CPM-calibrated motility) with mechanics-stochastic replicates. On cell FATE the substrates remain equivalent under the dependence-aware run-cluster bootstrap: Delta(same-cross) -0.0014, 90% CI [-0.0034, +0.0008], inside +/-0.05 (margin not yet biologically justified). On exact POSITION they are still NOT equivalent, but the gap shrank about 7-fold: cross 0.472 vs same-backend 0.608 (Delta +0.135, cluster CI [+0.071, +0.210] vs margin +/-0.10). The previous spatial gap (cross 0.083 vs same 1.000) mostly reflected a degenerate null. Replicates differed only in rule draws, so same-backend positions were identical by construction, and the vertex cells barely moved.
 </p>
       
     </div>
 
+    
+    <div class="ctr-block">
+      <h2 class="overview-label ctr-h">Background</h2>
+      <div class="ctr-meta">
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Question</span> <span class="ctr-meta-item" data-edit-kind="study" data-edit-field="question" data-edit-value="Are CPM and vertex EQUIVALENT (not merely &#34;not-distinguishable&#34;) under replication -- and on which outcome: cell fate, exact spatial position, or both?
+" data-edit-multiline data-edit-label="Question">Are CPM and vertex EQUIVALENT (not merely &#34;not-distinguishable&#34;) under replication -- and on which outcome: cell fate, exact spatial position, or both?
+</span></div>
+        
+      </div>
+    </div>
     
 
     <div class="ctr-block">
@@ -556,7 +570,7 @@
       <p class="ctr-text">Run the full Sego blueprint on BOTH backends over rules-seeds {0..5} (N=120). Compute, per metric, the same-backend agreement (all within-CPM and within-vertex seed pairs = 30 values) and the cross-backend agreement (all 36 CPM x vertex pairs). Apply metrics.equivalence_tost (Welch TOST) against a pre-declared margin: +/-0.05 for fate agreement, +/-0.10 for the strict exact-position spatial agreement (centroids within one cell diameter, 5 um). Report the TOST verdict, the difference and its 90% CI for each metric.
 </p>
       <div class="ctr-meta">
-        <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>sego-equivalence-grid</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>crossparadigm-equivalence</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
         
         <div class="ctr-meta-row"><span class="ctr-meta-k">Measures</span> <span class="ctr-meta-item">2 behavior tests</span><a class="ov-tablink" href="#" onclick="_setStudyTab('audit');return false;">see Tests →</a></div>
         
@@ -570,7 +584,9 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Result</h2>
-      <p class="ctr-text">FATE agreement: same-backend 0.9888 (sd 0.007, n=30), cross-backend 0.9902 (sd 0.007, n=36); diff -0.0015, 90% CI [-0.0045, +0.0016] fully inside +/-0.05, p_TOST = 5.6e-36 -&gt; EQUIVALENT. SPATIAL (exact position) agreement: same-backend 1.000, cross-backend 0.083; diff +0.917, CI far outside +/-0.10 -&gt; NOT equivalent. Cross-backend spatial agreement is 1.000 at t0 and drifts to 0.083 by the final frame (median per-cell displacement ~8.5 um, ~1.7 cell diameters), so the spatial gap is genuine dynamic drift, not a systematic lattice-vs-polygon offset.
+      
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="result" data-edit-value="2026-11-05 (N=120, seeds {0..5}): FATE same 0.9887 / cross 0.9901, Delta -0.0014, pair CI [-0.0045, +0.0016], cluster CI [-0.0034, +0.0008] -&gt; EQUIVALENT. SPATIAL same 0.6736 / cross 0.5475, Delta +0.1262, pair CI [+0.051, +0.201], cluster CI [+0.070, +0.181] -&gt; NOT equivalent. By cell class: epithelium same 0.738 / cross 0.622 (Delta +0.116); immune same 0.481 / cross 0.324 (Delta +0.156). Superseded 2026-10-28 result: FATE agreement: same-backend 0.9887 (n=30 pairs), cross-backend 0.9901 (n=36); diff -0.0014, pair 90% CI [-0.0045, +0.0016], run-cluster CI [-0.0034, +0.0008], fully inside +/-0.05 -&gt; EQUIVALENT. SPATIAL (exact position, centroids within 5 um) agreement: same-backend 0.608, cross-backend 0.472; diff +0.135, run-cluster 90% CI [+0.071, +0.210], outside the +/-0.10 margin -&gt; NOT equivalent. Median per-cell final-frame displacement: cross-backend ~5.7 um vs CPM-vs-CPM 5.2 um and vertex-vs-vertex 2.3 um. The cross-backend positional spread is close to the CPM replicate spread; the vertex replicates spread less because its epithelium wanders ~5x less (mesh-validity cap).
+" data-edit-multiline data-edit-label="Result">2026-11-05 (N=120, seeds {0..5}): FATE same 0.9887 / cross 0.9901, Delta -0.0014, pair CI [-0.0045, +0.0016], cluster CI [-0.0034, +0.0008] -&gt; EQUIVALENT. SPATIAL same 0.6736 / cross 0.5475, Delta +0.1262, pair CI [+0.051, +0.201], cluster CI [+0.070, +0.181] -&gt; NOT equivalent. By cell class: epithelium same 0.738 / cross 0.622 (Delta +0.116); immune same 0.481 / cross 0.324 (Delta +0.156). Superseded 2026-10-28 result: FATE agreement: same-backend 0.9887 (n=30 pairs), cross-backend 0.9901 (n=36); diff -0.0014, pair 90% CI [-0.0045, +0.0016], run-cluster CI [-0.0034, +0.0008], fully inside +/-0.05 -&gt; EQUIVALENT. SPATIAL (exact position, centroids within 5 um) agreement: same-backend 0.608, cross-backend 0.472; diff +0.135, run-cluster 90% CI [+0.071, +0.210], outside the +/-0.10 margin -&gt; NOT equivalent. Median per-cell final-frame displacement: cross-backend ~5.7 um vs CPM-vs-CPM 5.2 um and vertex-vs-vertex 2.3 um. The cross-backend positional spread is close to the CPM replicate spread; the vertex replicates spread less because its epithelium wanders ~5x less (mesh-validity cap).
 </p>
       
       
@@ -587,11 +603,116 @@
       
       
       
-      <div class="finding-card finding-kind-computational finding-status-confirms">
+      <div class="finding-card finding-kind-computational finding-status-confirms" id="finding-F3-fate-equivalence-holds-on-revised-substrate">
         <details class="finding-details">
           <summary class="finding-row">
             <span class="finding-status-glyph">✓</span>
-            <span class="finding-claim finding-statement">Cross-backend fate agreement is EQUIVALENT to the same-backend baseline within +/-0.05 under a DEPENDENCE-AWARE run-cluster bootstrap (diff -0.0015, 90% CI [-0.003,+0.001]; resampling the 6+6 runs, not the dependent pairs). The margin is not yet biologically justified and the CI is tight mainly because between-run variance is low at this scale. The pair-level p=5.6e-36 is retired as overstated.
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F3-fate-equivalence-holds-on-revised-substrate].statement" data-edit-value="On the revised vertex substrate with mechanics-stochastic replicates, cross-backend fate agreement remains equivalent to the same-backend baseline within +/-0.05 (run-cluster diff -0.0014, 90% CI [-0.0034, +0.0008]).
+" data-edit-multiline data-edit-label="Finding F3-fate-equivalence-holds-on-revised-substrate">On the revised vertex substrate with mechanics-stochastic replicates, cross-backend fate agreement remains equivalent to the same-backend baseline within +/-0.05 (run-cluster diff -0.0014, 90% CI [-0.0034, +0.0008]).
+</span>
+            
+          </summary>
+          <div class="finding-drawer">
+            <div class="finding-header">
+              <span class="finding-id">F3-fate-equivalence-holds-on-revised-substrate</span>
+              <span class="finding-kind">computational</span>
+              <span class="finding-status-text">confirms literature</span>
+            </div>
+            
+            
+            <div class="finding-evidence">
+              <strong>observed:</strong> fate same 0.9887, cross 0.9901; cluster CI [-0.0034,+0.0008] · 
+              
+              
+              
+              
+              
+            </div>
+            
+            
+            <div class="finding-traceability" style="font-size:0.84em;color:#475569;padding:4px 10px;margin:4px 0">
+              
+              
+              runs: <a href="#run-equivalence-grid"><code>equivalence-grid</code></a>
+            </div>
+            
+            
+            
+            
+            
+            <div class="finding-explanation"><em>Why:</em> Fate is driven by the shared field/rule/ODE mechanism, identical across backends.</div>
+            
+            <div class="finding-next"><strong>→ Next:</strong> justify the margin biologically (BP-06)</div>
+          </div>
+        </details>
+      </div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <div class="finding-card finding-kind-computational finding-status-partial" id="finding-F4-position-gap-near-margin">
+        <details class="finding-details">
+          <summary class="finding-row">
+            <span class="finding-status-glyph">◐</span>
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F4-position-gap-near-margin].statement" data-edit-value="Exact-position agreement gap shrank from 0.92 to 0.135 (cluster CI [0.071, 0.210]): still not equivalent at +/-0.10. Most of the old gap was a degenerate null (identical mechanics across replicates) plus non-moving vertex cells; the rest tracks the vertex epithelium&#39;s lower fluidity.
+" data-edit-multiline data-edit-label="Finding F4-position-gap-near-margin">Exact-position agreement gap shrank from 0.92 to 0.135 (cluster CI [0.071, 0.210]): still not equivalent at +/-0.10. Most of the old gap was a degenerate null (identical mechanics across replicates) plus non-moving vertex cells; the rest tracks the vertex epithelium&#39;s lower fluidity.
+</span>
+            
+          </summary>
+          <div class="finding-drawer">
+            <div class="finding-header">
+              <span class="finding-id">F4-position-gap-near-margin</span>
+              <span class="finding-kind">computational</span>
+              <span class="finding-status-text">partial literature</span>
+            </div>
+            
+            
+            <div class="finding-evidence">
+              <strong>observed:</strong> spatial same 0.608, cross 0.472; median displacement cross 5.7 / same CPM 5.2 / same vertex 2.3 um · 
+              
+              
+              
+              
+              
+            </div>
+            
+            
+            <div class="finding-traceability" style="font-size:0.84em;color:#475569;padding:4px 10px;margin:4px 0">
+              
+              
+              runs: <a href="#run-equivalence-grid"><code>equivalence-grid</code></a>
+            </div>
+            
+            
+            
+            
+            
+            <div class="finding-explanation"><em>Why:</em> Immune motility and chemotaxis are calibrated, but the vertex epithelium is capped below CPM fluidity to keep the mesh valid.</div>
+            
+            <div class="finding-next"><strong>→ Next:</strong> a fold-aware vertex topology handler to raise epithelial fluidity; scale-aware spatial descriptors (BP-06)</div>
+          </div>
+        </details>
+      </div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <div class="finding-card finding-kind-computational finding-status-informational" id="finding-F1-fate-equivalence-positive">
+        <details class="finding-details">
+          <summary class="finding-row">
+            <span class="finding-status-glyph">◆</span>
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F1-fate-equivalence-positive].statement" data-edit-value="SUPERSEDED by F3 (2026-10-28 re-run; same conclusion). Cross-backend fate agreement is EQUIVALENT to the same-backend baseline within +/-0.05 under a DEPENDENCE-AWARE run-cluster bootstrap (diff -0.0015, 90% CI [-0.003,+0.001]; resampling the 6+6 runs, not the dependent pairs). The margin is not yet biologically justified and the CI is tight mainly because between-run variance is low at this scale. The pair-level p=5.6e-36 is retired as overstated.
+" data-edit-multiline data-edit-label="Finding F1-fate-equivalence-positive">SUPERSEDED by F3 (2026-10-28 re-run; same conclusion). Cross-backend fate agreement is EQUIVALENT to the same-backend baseline within +/-0.05 under a DEPENDENCE-AWARE run-cluster bootstrap (diff -0.0015, 90% CI [-0.003,+0.001]; resampling the 6+6 runs, not the dependent pairs). The margin is not yet biologically justified and the CI is tight mainly because between-run variance is low at this scale. The pair-level p=5.6e-36 is retired as overstated.
 </span>
             
           </summary>
@@ -599,7 +720,7 @@
             <div class="finding-header">
               <span class="finding-id">F1-fate-equivalence-positive</span>
               <span class="finding-kind">computational</span>
-              <span class="finding-status-text">confirms literature</span>
+              <span class="finding-status-text">informational literature</span>
             </div>
             
             
@@ -638,11 +759,12 @@
       
       
       
-      <div class="finding-card finding-kind-computational finding-status-confirms">
+      <div class="finding-card finding-kind-computational finding-status-informational" id="finding-F2-spatial-non-equivalence-representation">
         <details class="finding-details">
           <summary class="finding-row">
-            <span class="finding-status-glyph">✓</span>
-            <span class="finding-claim finding-statement">Exact cell POSITION is NOT backend-equivalent: cross-backend spatial agreement is 1.0 at t0 but 0.08 at the final frame (median drift ~8.5 um), while fate and final areas match. The capstone&#39;s &#34;candidate IoU signal&#34; is this representation drift -- the substrate changes where cells sit, not what they become.
+            <span class="finding-status-glyph">◆</span>
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F2-spatial-non-equivalence-representation].statement" data-edit-value="SUPERSEDED by F4 (2026-10-28): the 1.00 same-backend baseline was an artifact of mechanically deterministic replicates. Exact cell POSITION is NOT backend-equivalent: cross-backend spatial agreement is 1.0 at t0 but 0.08 at the final frame (median drift ~8.5 um), while fate and final areas match. The capstone&#39;s &#34;candidate IoU signal&#34; is this representation drift -- the substrate changes where cells sit, not what they become.
+" data-edit-multiline data-edit-label="Finding F2-spatial-non-equivalence-representation">SUPERSEDED by F4 (2026-10-28): the 1.00 same-backend baseline was an artifact of mechanically deterministic replicates. Exact cell POSITION is NOT backend-equivalent: cross-backend spatial agreement is 1.0 at t0 but 0.08 at the final frame (median drift ~8.5 um), while fate and final areas match. The capstone&#39;s &#34;candidate IoU signal&#34; is this representation drift -- the substrate changes where cells sit, not what they become.
 </span>
             
           </summary>
@@ -650,7 +772,7 @@
             <div class="finding-header">
               <span class="finding-id">F2-spatial-non-equivalence-representation</span>
               <span class="finding-kind">computational</span>
-              <span class="finding-status-text">confirms literature</span>
+              <span class="finding-status-text">informational literature</span>
             </div>
             
             
@@ -764,7 +886,7 @@
     
     <div class="cond-block" data-model-composite="viva_multicell_blueprint.composites.sego.sego_crossparadigm" data-model-overrides='{"backend": "cpm", "blueprint": "workspace/blueprints/influenza_sego2022.yaml"}'>
       <div class="cond-block-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <strong>sego-equivalence-grid</strong>
+        <strong>crossparadigm-equivalence</strong>
         
         <code style="font-size:0.82em;color:#374151;background:#f1f5f9;padding:1px 6px;border-radius:3px">viva_multicell_blueprint.composites.sego.sego_crossparadigm</code>
         <button type="button" class="action-btn" style="font-size:0.8em"
@@ -774,16 +896,26 @@
       
       <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
         
-        <select class="baseline-composite-input" data-baseline-name="sego-equivalence-grid"
+        <select class="baseline-composite-input" data-baseline-name="crossparadigm-equivalence"
                 data-current="viva_multicell_blueprint.composites.sego.sego_crossparadigm"
                 style="flex:1;min-width:200px;font-family:monospace;font-size:0.82em;padding:3px 6px">
           <option value="viva_multicell_blueprint.composites.sego.sego_crossparadigm" selected>viva_multicell_blueprint.composites.sego.sego_crossparadigm</option>
           
         </select>
         <button type="button" class="action-btn baseline-composite-set" style="font-size:0.8em"
-                data-baseline-name="sego-equivalence-grid">Set composite</button>
+                data-baseline-name="crossparadigm-equivalence">Set composite</button>
       </div>
-      <div class="baseline-composite-status muted" data-baseline-name="sego-equivalence-grid" style="font-size:0.8em;margin-top:2px"></div>
+      <div class="baseline-composite-status muted" data-baseline-name="crossparadigm-equivalence" style="font-size:0.8em;margin-top:2px"></div>
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
       
       
       
@@ -799,6 +931,42 @@
   
 
   
+  
+  <div class="overview-section" id="conditions-section">
+    <h3>Conditions <span class="muted" style="font-size:0.85em;font-weight:normal">— what we set up to test it</span></h3>
+    <p class="muted" style="font-size:0.88em">The experimental knobs: how variants perturb the baseline, and which model settings still need a human-set value.</p>
+
+    
+    <div class="cond-block">
+      <div class="cond-block-title">Variants <span class="muted" style="font-weight:normal;font-size:0.85em">(1)</span></div>
+      <table class="cond-table">
+        <thead><tr><th>Variant</th><th>Composite / base</th><th>Parameter overrides</th><th>Notes</th></tr></thead>
+        <tbody>
+          
+          
+          
+          
+          <tr data-model-composite="viva_multicell_blueprint.composites.sego.sego_crossparadigm" data-model-overrides='{}'>
+            <td><code>seed-grid-6x6</code></td>
+            <td>
+              <code>viva_multicell_blueprint.composites.sego.sego_crossparadigm</code>
+              
+            </td>
+            <td>
+              
+                <em class="muted">(no overrides)</em>
+              
+            </td>
+            <td>rules-seeds {0,1,2,3,4,5} on each backend -&gt; 30 same-backend pairs + 36 cross-backend pairs.</td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+    
+
+    
+  </div>
   
 
   
@@ -864,6 +1032,12 @@
 <div class="overview-section" id="results-section">
   
   <div id="results-summary" data-study="crossparadigm-equivalence" style="margin:0 0 16px"></div>
+
+  
+  <div id="gate-results-section" data-study="crossparadigm-equivalence" style="margin:0 0 22px" hidden>
+    <h4>Gate results <span class="muted" style="font-size:0.8em;font-weight:normal">— each acceptance test's value, graded from run data</span></h4>
+    <div id="gate-results"></div>
+  </div>
 
   <h4>Latest run preview <span class="muted" style="font-size:0.8em;font-weight:normal">— downsampled sparkline + first/last/min/max per store</span></h4>
   <div id="results-preview" data-study="crossparadigm-equivalence">
@@ -1247,6 +1421,20 @@ pass_if: {"note": "cross spatial(t0) \u003e cross spatial(final)", "op": "strict
   <div class="overview-section"><h2 class="overview-label">Plan &amp; assumptions</h2>
 
     
+    <div class="overview-section">
+      <h3 class="overview-label">Pipeline gate</h3>
+      <p class="muted" style="margin: 0 0 8px 0;font-size:0.88em">
+        Each study is a model-building gate: it answers <em>"Can we safely build the next layer?"</em>
+      </p>
+      
+      <div style="margin-bottom:6px"><strong>Prerequisites:</strong>
+        <code>{&#39;study&#39;: &#39;flu-lung-crossparadigm&#39;, &#39;condition&#39;: &#39;ran&#39;, &#39;relation&#39;: &#39;builds-on&#39;}</code> · <code>{&#39;study&#39;: &#39;substrate-divergence-counterfactual&#39;, &#39;condition&#39;: &#39;ran&#39;, &#39;relation&#39;: &#39;tests&#39;}</code>
+      </div>
+      
+      
+      
+    </div>
+    
 
     
     <div class="overview-section">
@@ -1262,7 +1450,7 @@ pass_if: {"note": "cross spatial(t0) \u003e cross spatial(final)", "op": "strict
       <h3 class="overview-label">Limitations</h3>
       <p class="muted" style="margin:0 0 6px 0;font-size:0.85em">What this study explicitly does NOT validate (prevents overclaim).</p>
       <ul style="margin:0 0 0 18px;padding:0;font-size:0.93em">
-        <li style="margin:2px 0">Fate equivalence is established at the reduced scale (50x50, N=120) with faithful Sego rates; a larger/longer regime is a follow-up.</li><li style="margin:2px 0">Exact-position spatial agreement is NOT equivalent -- the substrate changes where cells sit (median ~8.5 um drift), though not what they become; this is representation, consistent with matched fate + matched final areas (capstone).</li><li style="margin:2px 0">Equivalence is on fate; a morphology-level equivalence (shape/pattern beyond exact centroid) is not claimed here.</li>
+        <li style="margin:2px 0">Fate equivalence is established at the reduced scale (50x50, N=120) with faithful Sego rates; a larger/longer regime is a follow-up.</li><li style="margin:2px 0">Exact-position agreement is NOT equivalent (diff 0.135, CI [0.071, 0.210] vs a 0.10 margin), though the gap fell ~7x once the null carried mechanical noise and vertex cells moved.</li><li style="margin:2px 0">The vertex epithelium wanders ~5x less than the CPM&#39;s (mesh-validity cap), which narrows the vertex-vs-vertex positional spread and contributes to the remaining gap.</li><li style="margin:2px 0">The +/-0.10 spatial margin and +/-0.05 fate margin are pre-declared, not biologically justified (BP-06).</li><li style="margin:2px 0">Equivalence is on fate and exact centroid position; a morphology-level equivalence (shape / pattern) is not claimed.</li><li style="margin:2px 0">Each backend&#39;s mechanics RNG now follows the run seed (mechanics_seed = rules_seed); earlier results used fixed mechanics seeds and are superseded.</li>
       </ul>
     </div>
     
@@ -1303,11 +1491,12 @@ pass_if: {"note": "cross spatial(t0) \u003e cross spatial(final)", "op": "strict
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "32798cb9cc6f9f03f3ef823d9ab6168dc533d021", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/32798cb9cc6f9f03f3ef823d9ab6168dc533d021", "branch": "main", "lockfile": "uv.lock@7c453b95ffdb", "generated_at": "2026-10-28 13:48 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "f54d537ee578fce37c8e7118231bb6212259bdc2", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/f54d537ee578fce37c8e7118231bb6212259bdc2", "branch": "main", "lockfile": "uv.lock@114a7e530289", "generated_at": "2026-11-05 22:38 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>
 window._studyName = "crossparadigm-equivalence";
+window.__STUDY_INVESTIGATION__ = "influenza-crossparadigm";  // owning investigation (feedback save routing)
 window._study = null;  // populated by _bootstrapStudy() in study-detail.js
 
 // Save handler for the Conditions → Model settings editable rows.
@@ -1436,6 +1625,8 @@ window._seedFollowupProposal = _seedFollowupProposal;
 <script src="/viva-multicell-blueprint/workbench/assets/progress-track.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/comparison-view.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/study-detail.js"></script>
+<script src="/viva-multicell-blueprint/workbench/assets/study-feedback.js"></script>
+<script src="/viva-multicell-blueprint/workbench/assets/inline-edit.js"></script>
 <script>
 // Re-assert the refresh-aware seed handlers AFTER study-detail.js (which
 // defines its own navigate-away _seedFollowupStudy). The embedded

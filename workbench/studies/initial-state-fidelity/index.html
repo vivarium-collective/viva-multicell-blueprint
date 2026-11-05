@@ -20,7 +20,7 @@
   <div style="display:flex; align-items:center; gap:14px; justify-content:space-between;">
   <div style="display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap">
   <h1 class="study-title" style="margin:0">
-    <span class="study-name" id="study-name" data-slug="initial-state-fidelity" data-study-kind="computational" title="initial-state-fidelity">initial state fidelity</span>
+    <span class="study-name" id="study-name" data-slug="initial-state-fidelity" data-study-kind="computational" title="initial-state-fidelity" data-edit-kind="study" data-edit-field="title" data-edit-value="" data-edit-label="Title">initial state fidelity</span>
     
   </h1>
     
@@ -50,7 +50,7 @@
 
 
 
-<p id="study-question-headline" class="study-question-headline"><span class="q-glyph">Q</span> Do both substrates faithfully reproduce the blueprint&#39;s initial centroids, sizes and types, and how clean is the vertex 1:1 identity?
+<p id="study-question-headline" class="study-question-headline"><span class="q-glyph">Q</span> Do both substrates faithfully reproduce the blueprint&#39;s initial centroids, sizes and types, with one vertex polygon per blueprint cell?
 </p>
 
 <nav class="study-tabs" aria-label="Study sections">
@@ -236,6 +236,9 @@
 /* findings */
 .findings-section{padding:14px 16px;background:#fafbff;border:1px solid #c7d2fe;border-radius:8px}
 .finding-card{padding:12px 14px;margin:10px 0;border:1px solid #e2e8f0;border-left:5px solid #6366f1;border-radius:6px;background:#fff}
+/* Brief highlight when an item is reached via a ?ev= evidence deep-link. */
+.ev-flash{animation:ev-flash-kf 1.9s ease-out;scroll-margin-top:12px}
+@keyframes ev-flash-kf{0%{box-shadow:0 0 0 3px #fbbf24}70%{box-shadow:0 0 0 3px rgba(251,191,36,0.45)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
 .finding-card.finding-status-confirms{border-left-color:#10b981}
 .finding-card.finding-status-partial{border-left-color:#f59e0b}
 .finding-card.finding-status-contradicts{border-left-color:#dc2626}
@@ -544,21 +547,32 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Claim</h2>
-      <p class="ctr-text">Both backends reproduce the blueprint&#39;s t=0 state -- every cell&#39;s centroid, size and type -- when the one backend-neutral blueprint is compiled onto each. The CPM side is EXACT (centroid residual 0); the vertex side is within a sub-cell residual (RMS ~1.2 um) and achieves a clean 1:1 identity for every cell (fraction_clean 1.0).
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="claim" data-edit-value="REVISED 2026-11-05: the vertex t0 is now ONE sheet of 48 hexagons (36 epithelial + 12 latent immune), the immune cells attached at the tissue margin site nearest their centroid instead of sitting as overlay islands on it. Epithelial centroid residual unchanged (rms 1.60, max 2.44 um); the immune cells move up to one cell diameter onto the margin (rms 4.11, max 5.60 um), closing the CPM&#39;s medium gap. All 48 cells present, types exact. Earlier reading (2026-10-28):   REVISED per the 2026-10-28 vertex-mechanics review. Both backends reproduce the blueprint&#39;s t=0 state (every cell&#39;s centroid, size and type), with every vertex polygon corresponding to exactly ONE Sego cell. The CPM side is EXACT (centroid residual 0). The vertex epithelium is a regular HEXAGONAL sheet at the target area (36 hexagons, area 25.0 each) mapped 1:1 onto the blueprint cells (sub-cell residual: RMS 1.60 um, max 2.44 um). The 12 immune cells are overlay islands exactly on their centroids, and the fields are overlaid on the tissue rather than meshed: no guard-ring or medium polygons remain.
+" data-edit-multiline data-edit-label="Claim">REVISED 2026-11-05: the vertex t0 is now ONE sheet of 48 hexagons (36 epithelial + 12 latent immune), the immune cells attached at the tissue margin site nearest their centroid instead of sitting as overlay islands on it. Epithelial centroid residual unchanged (rms 1.60, max 2.44 um); the immune cells move up to one cell diameter onto the margin (rms 4.11, max 5.60 um), closing the CPM&#39;s medium gap. All 48 cells present, types exact. Earlier reading (2026-10-28):   REVISED per the 2026-10-28 vertex-mechanics review. Both backends reproduce the blueprint&#39;s t=0 state (every cell&#39;s centroid, size and type), with every vertex polygon corresponding to exactly ONE Sego cell. The CPM side is EXACT (centroid residual 0). The vertex epithelium is a regular HEXAGONAL sheet at the target area (36 hexagons, area 25.0 each) mapped 1:1 onto the blueprint cells (sub-cell residual: RMS 1.60 um, max 2.44 um). The 12 immune cells are overlay islands exactly on their centroids, and the fields are overlaid on the tissue rather than meshed: no guard-ring or medium polygons remain.
 </p>
       
     </div>
 
     
+    <div class="ctr-block">
+      <h2 class="overview-label ctr-h">Background</h2>
+      <div class="ctr-meta">
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Question</span> <span class="ctr-meta-item" data-edit-kind="study" data-edit-field="question" data-edit-value="Do both substrates faithfully reproduce the blueprint&#39;s initial centroids, sizes and types, with one vertex polygon per blueprint cell?
+" data-edit-multiline data-edit-label="Question">Do both substrates faithfully reproduce the blueprint&#39;s initial centroids, sizes and types, with one vertex polygon per blueprint cell?
+</span></div>
+        
+      </div>
+    </div>
+    
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Model &amp; approach</h2>
-      <p class="ctr-text">Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM and vertex, read each backend&#39;s t0 emission (no steps), and compare per cell to the resolved blueprint cells: centroid distance (RMS, max), type match, and size. For the vertex backend also report the `residual_report` (n_clean, fraction_clean, unmapped_ids, n_guard_faces) -- the 1:1 mapping quality of the guard-ring Voronoi tessellation.
+      <p class="ctr-text">Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM and vertex, read each backend&#39;s t0 emission (no steps), and compare per cell to the resolved blueprint cells: centroid distance (RMS, max), type match, and size. For the vertex backend also check the mesh: one face per blueprint cell, the epithelial faces 6-sided at area 25 and forming ONE connected sheet, immune cells as separate overlay islands, and no guard / medium faces (`residual_report`: mesh, n_sheet, n_overlay, n_guard_faces, sheet_centroid_rms/max, unmapped_ids).
 </p>
       <div class="ctr-meta">
-        <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>sego-t0-fidelity</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>initial-state-fidelity</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
         
-        <div class="ctr-meta-row"><span class="ctr-meta-k">Measures</span> <span class="ctr-meta-item">3 behavior tests</span><a class="ov-tablink" href="#" onclick="_setStudyTab('audit');return false;">see Tests →</a></div>
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Measures</span> <span class="ctr-meta-item">4 behavior tests</span><a class="ov-tablink" href="#" onclick="_setStudyTab('audit');return false;">see Tests →</a></div>
         
       </div>
     </div>
@@ -570,7 +584,9 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Result</h2>
-      <p class="ctr-text">All 48 cells (36 epithelial + 12 latent immune) are present on both backends with 100% type match. CPM seeds each cell exactly at its blueprint centroid (centroid RMS = 0.000 um, mean size 25.00). The vertex backend places all 48 cells with a clean, uncontested interior face (n_clean = 48, fraction_clean = 1.0, 0 unmapped, 50 guard-ring faces excluded); its centroid residual is sub-cell (RMS 1.21 um, max 2.25 um; cell radius ~2.8 um) and its t0 face areas are larger (mean ~46) because the Voronoi tessellation fills the plane before relaxing toward prefered_area.
+      
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="result" data-edit-value="2026-11-05: n_sheet 48, n_overlay 0, n_attached_immune 12; sheet_centroid_rms 1.60 um, immune_attach_rms 4.11 um (max 5.60). Superseded 2026-10-28 result:   All 48 cells (36 epithelial + 12 latent immune) are present on both backends with 100% type match. CPM seeds each cell exactly at its blueprint centroid (centroid RMS 0.000 um, mean size 25.00). The vertex backend builds 48 faces for 48 cells: a single connected sheet of 36 regular hexagons (all 6-sided, area 25.0) plus 12 hexagonal overlay islands. It has 0 guard faces (was 50), 0 unmapped and 0 contested, and t0 areas equal the target (was ~46 from the un-relaxed Voronoi). Placement residual: epithelium RMS 1.60 um / max 2.44 um (the hexagonal lattice re-tiles the blueprint&#39;s square 5-um block; cell radius ~2.8 um); overlay 0; all cells RMS 1.39 um.
+" data-edit-multiline data-edit-label="Result">2026-11-05: n_sheet 48, n_overlay 0, n_attached_immune 12; sheet_centroid_rms 1.60 um, immune_attach_rms 4.11 um (max 5.60). Superseded 2026-10-28 result:   All 48 cells (36 epithelial + 12 latent immune) are present on both backends with 100% type match. CPM seeds each cell exactly at its blueprint centroid (centroid RMS 0.000 um, mean size 25.00). The vertex backend builds 48 faces for 48 cells: a single connected sheet of 36 regular hexagons (all 6-sided, area 25.0) plus 12 hexagonal overlay islands. It has 0 guard faces (was 50), 0 unmapped and 0 contested, and t0 areas equal the target (was ~46 from the un-relaxed Voronoi). Placement residual: epithelium RMS 1.60 um / max 2.44 um (the hexagonal lattice re-tiles the blueprint&#39;s square 5-um block; cell radius ~2.8 um); overlay 0; all cells RMS 1.39 um.
 </p>
       
       
@@ -587,11 +603,12 @@
       
       
       
-      <div class="finding-card finding-kind-computational finding-status-confirms">
+      <div class="finding-card finding-kind-computational finding-status-confirms" id="finding-F1-shared-t0-across-substrates">
         <details class="finding-details">
           <summary class="finding-row">
             <span class="finding-status-glyph">✓</span>
-            <span class="finding-claim finding-statement">The blueprint&#39;s t0 state materializes faithfully on both backends (CPM exact; vertex clean 1:1 with a 1.2 um sub-cell residual), so the cross-paradigm comparison begins from a shared initial condition.
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F1-shared-t0-across-substrates].statement" data-edit-value="The blueprint&#39;s t0 state materializes faithfully on both backends (CPM exact; vertex one-hexagon-per-cell with a 1.6 um sub-cell epithelial residual), so the cross-paradigm comparison begins from a shared initial condition.
+" data-edit-multiline data-edit-label="Finding F1-shared-t0-across-substrates">The blueprint&#39;s t0 state materializes faithfully on both backends (CPM exact; vertex one-hexagon-per-cell with a 1.6 um sub-cell epithelial residual), so the cross-paradigm comparison begins from a shared initial condition.
 </span>
             
           </summary>
@@ -604,7 +621,7 @@
             
             
             <div class="finding-evidence">
-              <strong>observed:</strong> 48/48 type match; CPM RMS 0.000 um; vertex RMS 1.21 um, fraction_clean 1.0, 0 unmapped · 
+              <strong>observed:</strong> 48/48 type match; CPM RMS 0.000 um; vertex 36 hexagons (area 25) + 12 overlay, 0 guard, sheet RMS 1.60 um · 
               
               
               
@@ -623,9 +640,9 @@
             
             
             
-            <div class="finding-explanation"><em>Why:</em> CPM seeds cells 1:1; vertex nearest-centroid assignment over interior faces is uncontested at this spacing.</div>
+            <div class="finding-explanation"><em>Why:</em> CPM seeds cells 1:1; vertex assigns cells 1:1 to a hexagonal lattice of the target area.</div>
             
-            <div class="finding-next"><strong>→ Next:</strong> none -- fidelity is established; consumed by flu-lung-crossparadigm</div>
+            <div class="finding-next"><strong>→ Next:</strong> Stage 2 (BP-02): contact / adjacency / round-trip fidelity</div>
           </div>
         </details>
       </div>
@@ -639,7 +656,7 @@
       <div class="ctr-meta ctr-assess">
         
         
-        <div class="ctr-meta-row"><span class="ctr-meta-k">Caveat</span> <span class="ctr-meta-item">REVIEW: centroid + cell-count + type identity is necessary but NOT sufficient for BLUEPRINT FIDELITY (Claim 1). Per-cell area, perimeter, footprint IoU, contact-surface, adjacency, boundary, polygon validity, coverage and round-trip (serialize-&gt;compile-&gt;inspect-&gt;reconstruct) are untested (Stage 2 / BP-02).</span></div>
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Caveat</span> <span class="ctr-meta-item">REVIEW: centroid + cell-count + type identity is necessary but NOT sufficient for BLUEPRINT FIDELITY (Claim 1). Per-cell area, perimeter, footprint IoU, contact-surface, adjacency, boundary, polygon validity, coverage and round-trip (serialize-&gt;compile-&gt;inspect-&gt;reconstruct) are only partly tested here (area + polygon validity + connectivity now are; the rest is Stage 2 / BP-02).</span></div>
         
       </div>
       
@@ -707,7 +724,7 @@
     
     <div class="cond-block" data-model-composite="viva_multicell_blueprint.composites.sego.sego_crossparadigm" data-model-overrides='{"backend": "cpm", "blueprint": "workspace/blueprints/influenza_sego2022.yaml"}'>
       <div class="cond-block-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <strong>sego-t0-fidelity</strong>
+        <strong>initial-state-fidelity</strong>
         
         <code style="font-size:0.82em;color:#374151;background:#f1f5f9;padding:1px 6px;border-radius:3px">viva_multicell_blueprint.composites.sego.sego_crossparadigm</code>
         <button type="button" class="action-btn" style="font-size:0.8em"
@@ -717,16 +734,26 @@
       
       <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
         
-        <select class="baseline-composite-input" data-baseline-name="sego-t0-fidelity"
+        <select class="baseline-composite-input" data-baseline-name="initial-state-fidelity"
                 data-current="viva_multicell_blueprint.composites.sego.sego_crossparadigm"
                 style="flex:1;min-width:200px;font-family:monospace;font-size:0.82em;padding:3px 6px">
           <option value="viva_multicell_blueprint.composites.sego.sego_crossparadigm" selected>viva_multicell_blueprint.composites.sego.sego_crossparadigm</option>
           
         </select>
         <button type="button" class="action-btn baseline-composite-set" style="font-size:0.8em"
-                data-baseline-name="sego-t0-fidelity">Set composite</button>
+                data-baseline-name="initial-state-fidelity">Set composite</button>
       </div>
-      <div class="baseline-composite-status muted" data-baseline-name="sego-t0-fidelity" style="font-size:0.8em;margin-top:2px"></div>
+      <div class="baseline-composite-status muted" data-baseline-name="initial-state-fidelity" style="font-size:0.8em;margin-top:2px"></div>
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
       
       
       
@@ -742,6 +769,42 @@
   
 
   
+  
+  <div class="overview-section" id="conditions-section">
+    <h3>Conditions <span class="muted" style="font-size:0.85em;font-weight:normal">— what we set up to test it</span></h3>
+    <p class="muted" style="font-size:0.88em">The experimental knobs: how variants perturb the baseline, and which model settings still need a human-set value.</p>
+
+    
+    <div class="cond-block">
+      <div class="cond-block-title">Variants <span class="muted" style="font-weight:normal;font-size:0.85em">(1)</span></div>
+      <table class="cond-table">
+        <thead><tr><th>Variant</th><th>Composite / base</th><th>Parameter overrides</th><th>Notes</th></tr></thead>
+        <tbody>
+          
+          
+          
+          
+          <tr data-model-composite="viva_multicell_blueprint.composites.sego.sego_crossparadigm" data-model-overrides='{}'>
+            <td><code>cpm-vs-vertex-t0</code></td>
+            <td>
+              <code>viva_multicell_blueprint.composites.sego.sego_crossparadigm</code>
+              
+            </td>
+            <td>
+              
+                <em class="muted">(no overrides)</em>
+              
+            </td>
+            <td>The two backends&#39; t0 placement of the same 48-cell initial state.</td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+    
+
+    
+  </div>
   
 
   
@@ -807,6 +870,12 @@
 <div class="overview-section" id="results-section">
   
   <div id="results-summary" data-study="initial-state-fidelity" style="margin:0 0 16px"></div>
+
+  
+  <div id="gate-results-section" data-study="initial-state-fidelity" style="margin:0 0 22px" hidden>
+    <h4>Gate results <span class="muted" style="font-size:0.8em;font-weight:normal">— each acceptance test's value, graded from run data</span></h4>
+    <div id="gate-results"></div>
+  </div>
 
   <h4>Latest run preview <span class="muted" style="font-size:0.8em;font-weight:normal">— downsampled sparkline + first/last/min/max per store</span></h4>
   <div id="results-preview" data-study="initial-state-fidelity">
@@ -965,14 +1034,53 @@ pass_if: {"field": "centroid_rms", "op": "lt", "value": 1e-06}</pre>
         <span class="muted" style="font-size:0.78em">requires: <code>true</code></span>
         
       </div>
-      <div style="margin-top: 6px; font-size: 0.95em;">The vertex backend achieves a clean 1:1 identity for every cell (fraction_clean = 1.0, 0 unmapped) with a sub-cell centroid residual.</div>
+      <div style="margin-top: 6px; font-size: 0.95em;">Every cell gets its own vertex polygon (fraction_clean = 1.0, 0 unmapped, 0 guard faces) with a sub-cell centroid residual.</div>
       
       
       <details style="margin-top: 6px; font-size: 0.82em;">
         <summary class="muted" style="cursor: pointer;">Assertion</summary>
         
         <pre style="background:#fff; padding:8px; margin:4px 0 0 0; border:1px solid #e2e8f0; border-radius:3px; overflow-x:auto;">measure: {"backend": "vertex", "field": "centroid_residual", "kind": "residual"}
-pass_if: {"field": "centroid_rms", "note": "fraction_clean == 1.0", "op": "lt", "value": 2.0}</pre>
+pass_if: {"field": "centroid_rms", "note": "fraction_clean == 1.0; n_guard_faces == 0", "op": "lt", "value": 2.0}</pre>
+      </details>
+      
+      
+      
+      
+    </li>
+    
+    
+    
+    
+    
+    
+    
+    
+    <li class="expected-behavior-item" id="bt-vertex-one-hexagonal-sheet"
+        data-test-kind="behavioral"
+        
+        data-pytest-node="vertex-one-hexagonal-sheet"
+        data-classification="primary"
+        data-result="pending"
+        style="margin: 0 0 10px 0; padding: 10px 12px; border-left: 4px solid #10b981; background: #f8fafc; border-radius: 4px;">
+      
+        
+      <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+        <span class="bt-result" style="font-size: 0.75em; font-family: monospace; padding: 2px 8px; border-radius: 9999px; background: #f1f5f9; color: #475569">⏳ pending</span>
+        <span class="classification-pill classification-primary">primary</span>
+        <strong style="font-size: 0.9em;">vertex-one-hexagonal-sheet</strong>
+        
+        <span class="muted" style="font-size:0.78em">requires: <code>true</code></span>
+        
+      </div>
+      <div style="margin-top: 6px; font-size: 0.95em;">The epithelial faces are 6-sided at the target area and form one connected sheet; immune cells are separate overlay islands.</div>
+      
+      
+      <details style="margin-top: 6px; font-size: 0.82em;">
+        <summary class="muted" style="cursor: pointer;">Assertion</summary>
+        
+        <pre style="background:#fff; padding:8px; margin:4px 0 0 0; border:1px solid #e2e8f0; border-radius:3px; overflow-x:auto;">measure: {"field": "vertex_residual_report", "kind": "topology"}
+pass_if: {"field": "n_sheet", "note": "all sheet faces 6-sided, area 25, one component; n_overlay == 12", "op": "eq", "value": 36}</pre>
       </details>
       
       
@@ -1176,7 +1284,7 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span class="gate-status-not_started" style="padding:2px 12px;border-radius:9999px;font-weight:700;font-size:0.85em">not_started</span>
         <span class="muted small">evaluated by code</span>
-        <span class="muted small">0/3 passed</span>
+        <span class="muted small">0/4 passed</span>
       </div>
       
     </div>
@@ -1192,10 +1300,10 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
       <div style="padding:10px 14px;background:#f0fdf4;border-left:4px solid #10b981;border-radius:4px;margin-bottom:8px">
         <strong>✓ If primary tests pass:</strong>
         
-        <div style="margin-top:4px"><em>Implementation:</em> Both backends faithfully reproduce the blueprint t0 state; the cross-paradigm comparison starts from a shared initial condition.</div>
+        <div style="margin-top:4px"><em>Implementation:</em> Both backends faithfully reproduce the blueprint t0 state, one vertex polygon per cell; the cross-paradigm comparison starts from a shared initial condition.</div>
         
         
-        <div style="margin-top:4px"><em>Empirical validation:</em> The t0 tissue is identical across substrates up to a sub-cell vertex residual.</div>
+        <div style="margin-top:4px"><em>Empirical validation:</em> The t0 tissue is identical across substrates up to the sub-cell hexagonal re-tiling of the epithelium.</div>
         
         
         <div style="margin-top:4px"><em>Pipeline unblocks:</em>
@@ -1209,7 +1317,7 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
         <strong>✗ If primary tests fail:</strong>
         
         <div style="margin-top:4px"><em>Diagnose:</em>
-          <ul style="margin:4px 0 0 18px"><li>Vertex unmapped/contested cells -- inspect the guard factor / centroid spacing.</li><li>CPM residual non-zero -- check the seed-block placement.</li></ul>
+          <ul style="margin:4px 0 0 18px"><li>Vertex placement residual large -- inspect the lattice assignment for an irregular input layout.</li><li>CPM residual non-zero -- check the seed-block placement.</li></ul>
         </div>
         
         
@@ -1236,7 +1344,7 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
     <div class="overview-section">
       <h3 class="overview-label">Key assumptions</h3>
       <ul style="margin:0 0 0 18px;padding:0;font-size:0.93em">
-        <li style="margin:2px 0">t=0 is each backend&#39;s own initial emission (no coupled steps).</li><li style="margin:2px 0">Centroid residual is Euclidean distance in grid units = um (grid_resolution_um = 1).</li><li style="margin:2px 0">Vertex face area at t0 is the Voronoi area (larger than prefered_area); it relaxes under the solver -- fidelity scores centroids/types, not the un-relaxed area.</li>
+        <li style="margin:2px 0">t=0 is each backend&#39;s own initial emission (no coupled steps).</li><li style="margin:2px 0">Centroid residual is Euclidean distance in grid units = um (grid_resolution_um = 1).</li><li style="margin:2px 0">The vertex epithelium is a regular hexagonal tiling (cell area = target size); the blueprint&#39;s square block cannot be tiled by regular hexagons without a sub-cell displacement, which is reported, not hidden.</li><li style="margin:2px 0">Immune (and latent immune) cells are overlay cells above the sheet (Sego&#39;s 2-layer immune geometry), not sheet polygons.</li>
       </ul>
     </div>
     
@@ -1246,7 +1354,7 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
       <h3 class="overview-label">Limitations</h3>
       <p class="muted" style="margin:0 0 6px 0;font-size:0.85em">What this study explicitly does NOT validate (prevents overclaim).</p>
       <ul style="margin:0 0 0 18px;padding:0;font-size:0.93em">
-        <li style="margin:2px 0">REVIEW: centroid + cell-count + type identity is necessary but NOT sufficient for BLUEPRINT FIDELITY (Claim 1). Per-cell area, perimeter, footprint IoU, contact-surface, adjacency, boundary, polygon validity, coverage and round-trip (serialize-&gt;compile-&gt;inspect-&gt;reconstruct) are untested (Stage 2 / BP-02).</li><li style="margin:2px 0">REVIEW: matching is by immutable ID; latent immune cells and epithelial cells should be checked for whether they may physically co-occupy the sheet.</li><li style="margin:2px 0">Vertex t0 face area is the un-relaxed Voronoi area (~46), larger than prefered_area 25; fidelity scores centroids + types, not that transient area.</li><li style="margin:2px 0">The clean fraction_clean = 1.0 holds at this margin spacing; denser packing could contest faces (the residual would then report it).</li>
+        <li style="margin:2px 0">REVIEW: centroid + cell-count + type identity is necessary but NOT sufficient for BLUEPRINT FIDELITY (Claim 1). Per-cell area, perimeter, footprint IoU, contact-surface, adjacency, boundary, polygon validity, coverage and round-trip (serialize-&gt;compile-&gt;inspect-&gt;reconstruct) are only partly tested here (area + polygon validity + connectivity now are; the rest is Stage 2 / BP-02).</li><li style="margin:2px 0">The hexagonal sheet re-tiles the blueprint&#39;s SQUARE block, so the epithelial adjacency differs by construction: 6 neighbours per interior cell on vertex vs 4 edge (+4 corner) on CPM.</li><li style="margin:2px 0">Immune cells are overlay islands on vertex but same-layer cells on CPM -- the two substrates represent the immune geometry differently by design (vertex follows Sego&#39;s 2-layer model).</li><li style="margin:2px 0">For irregular (data-derived) layouts the hexagonal re-tiling residual will be larger; it is reported per run, not hidden.</li>
       </ul>
     </div>
     
@@ -1287,11 +1395,12 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "32798cb9cc6f9f03f3ef823d9ab6168dc533d021", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/32798cb9cc6f9f03f3ef823d9ab6168dc533d021", "branch": "main", "lockfile": "uv.lock@7c453b95ffdb", "generated_at": "2026-10-28 13:48 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "f54d537ee578fce37c8e7118231bb6212259bdc2", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/f54d537ee578fce37c8e7118231bb6212259bdc2", "branch": "main", "lockfile": "uv.lock@114a7e530289", "generated_at": "2026-11-05 22:38 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>
 window._studyName = "initial-state-fidelity";
+window.__STUDY_INVESTIGATION__ = "influenza-crossparadigm";  // owning investigation (feedback save routing)
 window._study = null;  // populated by _bootstrapStudy() in study-detail.js
 
 // Save handler for the Conditions → Model settings editable rows.
@@ -1420,6 +1529,8 @@ window._seedFollowupProposal = _seedFollowupProposal;
 <script src="/viva-multicell-blueprint/workbench/assets/progress-track.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/comparison-view.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/study-detail.js"></script>
+<script src="/viva-multicell-blueprint/workbench/assets/study-feedback.js"></script>
+<script src="/viva-multicell-blueprint/workbench/assets/inline-edit.js"></script>
 <script>
 // Re-assert the refresh-aware seed handlers AFTER study-detail.js (which
 // defines its own navigate-away _seedFollowupStudy). The embedded

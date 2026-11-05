@@ -20,7 +20,7 @@
   <div style="display:flex; align-items:center; gap:14px; justify-content:space-between;">
   <div style="display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap">
   <h1 class="study-title" style="margin:0">
-    <span class="study-name" id="study-name" data-slug="substrate-divergence-counterfactual" data-study-kind="computational" title="substrate-divergence-counterfactual">Mechanics-dominated counterfactual (positive control)</span>
+    <span class="study-name" id="study-name" data-slug="substrate-divergence-counterfactual" data-study-kind="computational" title="substrate-divergence-counterfactual" data-edit-kind="study" data-edit-field="title" data-edit-value="Mechanics-dominated counterfactual (positive control)" data-edit-label="Title">Mechanics-dominated counterfactual (positive control)</span>
     
   </h1>
     
@@ -236,6 +236,9 @@
 /* findings */
 .findings-section{padding:14px 16px;background:#fafbff;border:1px solid #c7d2fe;border-radius:8px}
 .finding-card{padding:12px 14px;margin:10px 0;border:1px solid #e2e8f0;border-left:5px solid #6366f1;border-radius:6px;background:#fff}
+/* Brief highlight when an item is reached via a ?ev= evidence deep-link. */
+.ev-flash{animation:ev-flash-kf 1.9s ease-out;scroll-margin-top:12px}
+@keyframes ev-flash-kf{0%{box-shadow:0 0 0 3px #fbbf24}70%{box-shadow:0 0 0 3px rgba(251,191,36,0.45)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
 .finding-card.finding-status-confirms{border-left-color:#10b981}
 .finding-card.finding-status-partial{border-left-color:#f59e0b}
 .finding-card.finding-status-contradicts{border-left-color:#dc2626}
@@ -544,11 +547,22 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Claim</h2>
-      <p class="ctr-text">In a MECHANICS-DOMINATED regime (strong differential adhesion + a strong chemoattractant gradient, no shared rules/ODE), the two substrates DIVERGE: the spatial equivalence test REJECTS equivalence (cross-backend spatial agreement 0.20 vs same-backend 1.00; TOST diff +0.80, margin +/-0.10). The divergence is mechanistically attributable -- the vertex fork&#39;s ActiveMigration climbs the gradient (type-A mean y 7 -&gt; 17.9) while CPM&#39;s Metropolis chemotaxis barely moves it (y -&gt; 10.7). This is the POSITIVE CONTROL for crossparadigm-equivalence: it proves the equivalence test can detect a real substrate difference, so the equivalence verdict on the Sego model is informative, not an artifact of an insensitive metric.
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="claim" data-edit-value="RE-RUN 2026-11-05 (reviewer: &#34;auto-reconnect isn&#39;t working here&#34;). Reconnect WAS on; it is now also faster (merged 4-way vertices detach at p_4 = 1 per unit time instead of 0.1, T1 at 0.2 x side), and the playback&#39;s vertex panel counts neighbour exchanges frame by frame. In this regime the vertex run still makes only 3 exchanges in 80 steps (vs 74 in the Sego run): with 15 A cells (nearly all on the border) and a one-row B stripe, nothing shrinks a junction to the T1 threshold, so the vertex clusters keep their topology while the CPM blobs flow -- the substrate difference this control is built to expose, not a disabled reconnect. Equivalence is still REJECTED (same 0.775, cross 0.450, Delta +0.325 vs +/-0.10). Earlier reading (2026-10-28): In a MECHANICS-DOMINATED regime (strong differential adhesion + a strong chemoattractant gradient, no shared rules/ODE), the spatial equivalence test still REJECTS equivalence after the 2026-10-28 vertex revision. Cross-backend spatial agreement is 0.417 vs same-backend 0.775 (diff +0.358 &gt; margin 0.10), now with mechanics-stochastic replicates, so the same-backend baseline is a genuine stochastic null rather than 1.0 by construction. It remains the POSITIVE CONTROL: the same test that finds the Sego model fate-equivalent detects a substrate difference here. REVISED MECHANISM: the earlier attribution (vertex A cells climbing the gradient to y~17.9 while CPM stays at ~10.7) was an artifact of the old uncalibrated vertex chemotaxis. With chemotactic drift calibrated to the CPM (saturating), neither substrate moves A far (CPM mean y 11.0 -&gt; 11.0, vertex 10.7 -&gt; 10.1). The divergence is now positional / sorting dynamics, not migration direction, and is not yet causally isolated.
+" data-edit-multiline data-edit-label="Claim">RE-RUN 2026-11-05 (reviewer: &#34;auto-reconnect isn&#39;t working here&#34;). Reconnect WAS on; it is now also faster (merged 4-way vertices detach at p_4 = 1 per unit time instead of 0.1, T1 at 0.2 x side), and the playback&#39;s vertex panel counts neighbour exchanges frame by frame. In this regime the vertex run still makes only 3 exchanges in 80 steps (vs 74 in the Sego run): with 15 A cells (nearly all on the border) and a one-row B stripe, nothing shrinks a junction to the T1 threshold, so the vertex clusters keep their topology while the CPM blobs flow -- the substrate difference this control is built to expose, not a disabled reconnect. Equivalence is still REJECTED (same 0.775, cross 0.450, Delta +0.325 vs +/-0.10). Earlier reading (2026-10-28): In a MECHANICS-DOMINATED regime (strong differential adhesion + a strong chemoattractant gradient, no shared rules/ODE), the spatial equivalence test still REJECTS equivalence after the 2026-10-28 vertex revision. Cross-backend spatial agreement is 0.417 vs same-backend 0.775 (diff +0.358 &gt; margin 0.10), now with mechanics-stochastic replicates, so the same-backend baseline is a genuine stochastic null rather than 1.0 by construction. It remains the POSITIVE CONTROL: the same test that finds the Sego model fate-equivalent detects a substrate difference here. REVISED MECHANISM: the earlier attribution (vertex A cells climbing the gradient to y~17.9 while CPM stays at ~10.7) was an artifact of the old uncalibrated vertex chemotaxis. With chemotactic drift calibrated to the CPM (saturating), neither substrate moves A far (CPM mean y 11.0 -&gt; 11.0, vertex 10.7 -&gt; 10.1). The divergence is now positional / sorting dynamics, not migration direction, and is not yet causally isolated.
 </p>
       
     </div>
 
+    
+    <div class="ctr-block">
+      <h2 class="overview-label ctr-h">Background</h2>
+      <div class="ctr-meta">
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Question</span> <span class="ctr-meta-item" data-edit-kind="study" data-edit-field="question" data-edit-value="When MECHANICS (not the shared mechanism) drives the outcome, does the equivalence test correctly REJECT -- i.e. does it have the power to detect a real substrate difference?
+" data-edit-multiline data-edit-label="Question">When MECHANICS (not the shared mechanism) drives the outcome, does the equivalence test correctly REJECT -- i.e. does it have the power to detect a real substrate difference?
+</span></div>
+        
+      </div>
+    </div>
     
 
     <div class="ctr-block">
@@ -556,7 +570,7 @@
       <p class="ctr-text">Run a mechanics-only blueprint (workspace/blueprints/mechanics_divergence.yaml: types A/B, A self-adhesive and repelled by B, a chemo field secreted by B with strong chemotaxis on A) on BOTH backends over rules-seeds {0,1,2} (N=80). Score the same-backend and cross-backend exact-position spatial agreement and apply the SAME metrics.equivalence_tost used by crossparadigm-equivalence (margin +/-0.10).
 </p>
       <div class="ctr-meta">
-        <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>mechanics-divergence</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>substrate-divergence-counterfactual</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
         
         <div class="ctr-meta-row"><span class="ctr-meta-k">Measures</span> <span class="ctr-meta-item">2 behavior tests</span><a class="ov-tablink" href="#" onclick="_setStudyTab('audit');return false;">see Tests →</a></div>
         
@@ -570,7 +584,9 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Result</h2>
-      <p class="ctr-text">Spatial agreement: same-backend 1.000 (mechanics-only runs are deterministic per backend, so seeds reproduce exactly), cross-backend 0.20; TOST diff +0.80, far outside +/-0.10 -&gt; NOT equivalent. Mechanistic cause: type-A cells migrate up the chemo gradient under the vertex ActiveMigration director (mean final y ~17.9 from a start of ~7) but barely move under CPM&#39;s Metropolis chemotaxis bias (y ~10.7), so the two substrates place the population very differently.
+      
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="result" data-edit-value="2026-11-05: spatial same 0.775, cross 0.450, TOST Delta +0.325 (pair CI [+0.116, +0.534]), outside +/-0.10 -&gt; NOT equivalent; vertex neighbour exchanges 3 over 80 steps. Superseded 2026-10-28 result: Spatial agreement (N=80, seeds {0,1,2}, mechanics seeded per replicate): same-backend 0.775, cross-backend 0.417; TOST diff +0.358, outside +/-0.10 -&gt; NOT equivalent. Type-A mean y: CPM 11.0 -&gt; 11.0 (seeds 10.7 / 10.1 / 12.2); vertex 10.7 -&gt; 10.1 (10.4 / 9.9 / 10.0). The large directed-migration difference reported earlier no longer appears once the vertex chemotaxis is calibrated to the CPM&#39;s saturating drift.
+" data-edit-multiline data-edit-label="Result">2026-11-05: spatial same 0.775, cross 0.450, TOST Delta +0.325 (pair CI [+0.116, +0.534]), outside +/-0.10 -&gt; NOT equivalent; vertex neighbour exchanges 3 over 80 steps. Superseded 2026-10-28 result: Spatial agreement (N=80, seeds {0,1,2}, mechanics seeded per replicate): same-backend 0.775, cross-backend 0.417; TOST diff +0.358, outside +/-0.10 -&gt; NOT equivalent. Type-A mean y: CPM 11.0 -&gt; 11.0 (seeds 10.7 / 10.1 / 12.2); vertex 10.7 -&gt; 10.1 (10.4 / 9.9 / 10.0). The large directed-migration difference reported earlier no longer appears once the vertex chemotaxis is calibrated to the CPM&#39;s saturating drift.
 </p>
       
       
@@ -587,11 +603,64 @@
       
       
       
-      <div class="finding-card finding-kind-computational finding-status-confirms">
+      <div class="finding-card finding-kind-computational finding-status-confirms" id="finding-F2-test-still-rejects-mechanism-revised">
         <details class="finding-details">
           <summary class="finding-row">
             <span class="finding-status-glyph">✓</span>
-            <span class="finding-claim finding-statement">In a mechanics-dominated regime the spatial equivalence TOST REJECTS (cross 0.20 vs same 1.00, diff +0.80 vs margin 0.10), driven by a directed migration difference (vertex A to y~17.9, CPM A to y~10.7). The equivalence test can detect a real substrate difference, so crossparadigm-equivalence&#39;s positive verdict is informative, not an insensitivity artifact.
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F2-test-still-rejects-mechanism-revised].statement" data-edit-value="On the calibrated vertex substrate with stochastic replicates, the spatial TOST still rejects (cross 0.417 vs same 0.775, diff +0.358), but not because of directed migration: neither substrate moves type A far up the gradient.
+" data-edit-multiline data-edit-label="Finding F2-test-still-rejects-mechanism-revised">On the calibrated vertex substrate with stochastic replicates, the spatial TOST still rejects (cross 0.417 vs same 0.775, diff +0.358), but not because of directed migration: neither substrate moves type A far up the gradient.
+</span>
+            
+          </summary>
+          <div class="finding-drawer">
+            <div class="finding-header">
+              <span class="finding-id">F2-test-still-rejects-mechanism-revised</span>
+              <span class="finding-kind">computational</span>
+              <span class="finding-status-text">confirms literature</span>
+            </div>
+            
+            
+            <div class="finding-evidence">
+              <strong>observed:</strong> spatial same 0.775, cross 0.417; A mean y CPM 11.0 -&gt; 11.0, vertex 10.7 -&gt; 10.1; N=80, seeds {0,1,2} · 
+              
+              
+              
+              
+              
+            </div>
+            
+            
+            <div class="finding-traceability" style="font-size:0.84em;color:#475569;padding:4px 10px;margin:4px 0">
+              
+              
+              runs: <a href="#run-counterfactual-divergence"><code>counterfactual-divergence</code></a>
+            </div>
+            
+            
+            
+            
+            
+            <div class="finding-explanation"><em>Why:</em> Differential-adhesion sorting / positional dynamics differ between lattice Metropolis and vertex T1 rearrangement; not yet isolated.</div>
+            
+            <div class="finding-next"><strong>→ Next:</strong> sweep adhesion contrast and gradient strength to map where equivalence breaks (BP-06/BP-07)</div>
+          </div>
+        </details>
+      </div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <div class="finding-card finding-kind-computational finding-status-informational" id="finding-F1-equivalence-test-has-power">
+        <details class="finding-details">
+          <summary class="finding-row">
+            <span class="finding-status-glyph">◆</span>
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F1-equivalence-test-has-power].statement" data-edit-value="SUPERSEDED by F2 (2026-10-28): the vertex up-gradient climb was produced by the old, uncalibrated linear ActiveMigration mapping. In a mechanics-dominated regime the spatial equivalence TOST REJECTS (cross 0.20 vs same 1.00, diff +0.80 vs margin 0.10), driven by a directed migration difference (vertex A to y~17.9, CPM A to y~10.7). The equivalence test can detect a real substrate difference, so crossparadigm-equivalence&#39;s positive verdict is informative, not an insensitivity artifact.
+" data-edit-multiline data-edit-label="Finding F1-equivalence-test-has-power">SUPERSEDED by F2 (2026-10-28): the vertex up-gradient climb was produced by the old, uncalibrated linear ActiveMigration mapping. In a mechanics-dominated regime the spatial equivalence TOST REJECTS (cross 0.20 vs same 1.00, diff +0.80 vs margin 0.10), driven by a directed migration difference (vertex A to y~17.9, CPM A to y~10.7). The equivalence test can detect a real substrate difference, so crossparadigm-equivalence&#39;s positive verdict is informative, not an insensitivity artifact.
 </span>
             
           </summary>
@@ -599,7 +668,7 @@
             <div class="finding-header">
               <span class="finding-id">F1-equivalence-test-has-power</span>
               <span class="finding-kind">computational</span>
-              <span class="finding-status-text">confirms literature</span>
+              <span class="finding-status-text">informational literature</span>
             </div>
             
             
@@ -645,7 +714,7 @@
         </div>
         
         
-        <div class="ctr-meta-row"><span class="ctr-meta-k">Caveat</span> <span class="ctr-meta-item">REVIEW: an artificial mechanics-only regime with a strong gradient + differential adhesion -- it proves the test has POWER but cannot establish sensitivity to realistic influenza-relevant discrepancies.</span></div>
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Caveat</span> <span class="ctr-meta-item">REVIEW: an artificial mechanics-only regime with a strong gradient + differential adhesion -- it shows the test has POWER but cannot establish sensitivity to realistic influenza-relevant discrepancies.</span></div>
         
       </div>
       
@@ -713,7 +782,7 @@
     
     <div class="cond-block" data-model-composite="viva_multicell_blueprint.composites.sego.sego_crossparadigm" data-model-overrides='{"backend": "cpm", "blueprint": "workspace/blueprints/mechanics_divergence.yaml"}'>
       <div class="cond-block-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <strong>mechanics-divergence</strong>
+        <strong>substrate-divergence-counterfactual</strong>
         
         <code style="font-size:0.82em;color:#374151;background:#f1f5f9;padding:1px 6px;border-radius:3px">viva_multicell_blueprint.composites.sego.sego_crossparadigm</code>
         <button type="button" class="action-btn" style="font-size:0.8em"
@@ -723,16 +792,26 @@
       
       <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
         
-        <select class="baseline-composite-input" data-baseline-name="mechanics-divergence"
+        <select class="baseline-composite-input" data-baseline-name="substrate-divergence-counterfactual"
                 data-current="viva_multicell_blueprint.composites.sego.sego_crossparadigm"
                 style="flex:1;min-width:200px;font-family:monospace;font-size:0.82em;padding:3px 6px">
           <option value="viva_multicell_blueprint.composites.sego.sego_crossparadigm" selected>viva_multicell_blueprint.composites.sego.sego_crossparadigm</option>
           
         </select>
         <button type="button" class="action-btn baseline-composite-set" style="font-size:0.8em"
-                data-baseline-name="mechanics-divergence">Set composite</button>
+                data-baseline-name="substrate-divergence-counterfactual">Set composite</button>
       </div>
-      <div class="baseline-composite-status muted" data-baseline-name="mechanics-divergence" style="font-size:0.8em;margin-top:2px"></div>
+      <div class="baseline-composite-status muted" data-baseline-name="substrate-divergence-counterfactual" style="font-size:0.8em;margin-top:2px"></div>
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
       
       
       
@@ -748,6 +827,42 @@
   
 
   
+  
+  <div class="overview-section" id="conditions-section">
+    <h3>Conditions <span class="muted" style="font-size:0.85em;font-weight:normal">— what we set up to test it</span></h3>
+    <p class="muted" style="font-size:0.88em">The experimental knobs: how variants perturb the baseline, and which model settings still need a human-set value.</p>
+
+    
+    <div class="cond-block">
+      <div class="cond-block-title">Variants <span class="muted" style="font-weight:normal;font-size:0.85em">(1)</span></div>
+      <table class="cond-table">
+        <thead><tr><th>Variant</th><th>Composite / base</th><th>Parameter overrides</th><th>Notes</th></tr></thead>
+        <tbody>
+          
+          
+          
+          
+          <tr data-model-composite="viva_multicell_blueprint.composites.sego.sego_crossparadigm" data-model-overrides='{}'>
+            <td><code>both-backends-seeds</code></td>
+            <td>
+              <code>viva_multicell_blueprint.composites.sego.sego_crossparadigm</code>
+              
+            </td>
+            <td>
+              
+                <em class="muted">(no overrides)</em>
+              
+            </td>
+            <td>rules-seeds {0,1,2} on each backend (confirms the divergence is structural, not seed noise).</td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+    
+
+    
+  </div>
   
 
   
@@ -813,6 +928,12 @@
 <div class="overview-section" id="results-section">
   
   <div id="results-summary" data-study="substrate-divergence-counterfactual" style="margin:0 0 16px"></div>
+
+  
+  <div id="gate-results-section" data-study="substrate-divergence-counterfactual" style="margin:0 0 22px" hidden>
+    <h4>Gate results <span class="muted" style="font-size:0.8em;font-weight:normal">— each acceptance test's value, graded from run data</span></h4>
+    <div id="gate-results"></div>
+  </div>
 
   <h4>Latest run preview <span class="muted" style="font-size:0.8em;font-weight:normal">— downsampled sparkline + first/last/min/max per store</span></h4>
   <div id="results-preview" data-study="substrate-divergence-counterfactual">
@@ -971,14 +1092,15 @@ pass_if: {"note": "cross spatial agreement \u003c\u003c same; diff \u003e margin
         <span class="muted" style="font-size:0.78em">requires: <code>true</code></span>
         
       </div>
-      <div style="margin-top: 6px; font-size: 0.95em;">Type-A migrates up the gradient under vertex but not CPM (mechanistic cause of the divergence).</div>
+      <div style="margin-top: 6px; font-size: 0.95em;">REVISED (2026-10-28): with calibrated chemotaxis, neither substrate carries type A far up the gradient, so the divergence is not a directed-migration difference.
+</div>
       
       
       <details style="margin-top: 6px; font-size: 0.82em;">
         <summary class="muted" style="cursor: pointer;">Assertion</summary>
         
-        <pre style="background:#fff; padding:8px; margin:4px 0 0 0; border:1px solid #e2e8f0; border-radius:3px; overflow-x:auto;">measure: {"field": "typeA_mean_final_y", "high": 40.0, "kind": "comparison", "low": 0.0}
-pass_if: {"note": "vertex final y \u003e cpm final y", "op": "strictly_greater"}</pre>
+        <pre style="background:#fff; padding:8px; margin:4px 0 0 0; border:1px solid #e2e8f0; border-radius:3px; overflow-x:auto;">measure: {"field": "typeA_mean_y_change", "high": 40.0, "kind": "comparison", "low": -40.0}
+pass_if: {"field": "abs_typeA_mean_y_change", "note": "both backends", "op": "lt", "value": 3.0}</pre>
       </details>
       
       
@@ -1211,7 +1333,7 @@ pass_if: {"note": "vertex final y \u003e cpm final y", "op": "strictly_greater"}
       <h3 class="overview-label">Limitations</h3>
       <p class="muted" style="margin:0 0 6px 0;font-size:0.85em">What this study explicitly does NOT validate (prevents overclaim).</p>
       <ul style="margin:0 0 0 18px;padding:0;font-size:0.93em">
-        <li style="margin:2px 0">REVIEW: an artificial mechanics-only regime with a strong gradient + differential adhesion -- it proves the test has POWER but cannot establish sensitivity to realistic influenza-relevant discrepancies.</li><li style="margin:2px 0">REVIEW: mechanics-only rules-seeds are DETERMINISTIC, so repeated pairs are not independent stochastic replicates; power should be measured by graded injected deviations (effect-size sweep) and a matched-physical-response control (Stage 4 / BP-06,BP-07).</li><li style="margin:2px 0">An engineered extreme regime (deliberately strong adhesion + chemotaxis), chosen to make the substrate decisive -- not a biological claim about influenza.</li><li style="margin:2px 0">Mechanics-only, so fate is static; the divergence is spatial/positional by construction.</li><li style="margin:2px 0">Demonstrates the test&#39;s POWER and that mechanics-driven outcomes are substrate-sensitive; it does not quantify a biological effect size.</li>
+        <li style="margin:2px 0">REVIEW: an artificial mechanics-only regime with a strong gradient + differential adhesion -- it shows the test has POWER but cannot establish sensitivity to realistic influenza-relevant discrepancies.</li><li style="margin:2px 0">Replicates are now stochastic in their mechanics (mechanics_seed = rules_seed); power should still be mapped by graded injected deviations (effect-size sweep) and a matched-physical-response control (Stage 4 / BP-06, BP-07).</li><li style="margin:2px 0">The cause of the remaining divergence (sorting / positional dynamics) is not yet isolated; the earlier migration-direction explanation is retired.</li><li style="margin:2px 0">Mechanics-only, so fate is static; the divergence is spatial/positional by construction.</li><li style="margin:2px 0">Demonstrates the test&#39;s POWER and that mechanics-driven outcomes are substrate-sensitive; it does not quantify a biological effect size.</li>
       </ul>
     </div>
     
@@ -1252,11 +1374,12 @@ pass_if: {"note": "vertex final y \u003e cpm final y", "op": "strictly_greater"}
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "32798cb9cc6f9f03f3ef823d9ab6168dc533d021", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/32798cb9cc6f9f03f3ef823d9ab6168dc533d021", "branch": "main", "lockfile": "uv.lock@7c453b95ffdb", "generated_at": "2026-10-28 13:48 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "f54d537ee578fce37c8e7118231bb6212259bdc2", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/f54d537ee578fce37c8e7118231bb6212259bdc2", "branch": "main", "lockfile": "uv.lock@114a7e530289", "generated_at": "2026-11-05 22:38 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>
 window._studyName = "substrate-divergence-counterfactual";
+window.__STUDY_INVESTIGATION__ = "influenza-crossparadigm";  // owning investigation (feedback save routing)
 window._study = null;  // populated by _bootstrapStudy() in study-detail.js
 
 // Save handler for the Conditions → Model settings editable rows.
@@ -1385,6 +1508,8 @@ window._seedFollowupProposal = _seedFollowupProposal;
 <script src="/viva-multicell-blueprint/workbench/assets/progress-track.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/comparison-view.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/study-detail.js"></script>
+<script src="/viva-multicell-blueprint/workbench/assets/study-feedback.js"></script>
+<script src="/viva-multicell-blueprint/workbench/assets/inline-edit.js"></script>
 <script>
 // Re-assert the refresh-aware seed handlers AFTER study-detail.js (which
 // defines its own navigate-away _seedFollowupStudy). The embedded

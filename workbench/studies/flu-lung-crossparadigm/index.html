@@ -20,7 +20,7 @@
   <div style="display:flex; align-items:center; gap:14px; justify-content:space-between;">
   <div style="display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap">
   <h1 class="study-title" style="margin:0">
-    <span class="study-name" id="study-name" data-slug="flu-lung-crossparadigm" data-study-kind="computational" title="flu-lung-crossparadigm">flu lung crossparadigm</span>
+    <span class="study-name" id="study-name" data-slug="flu-lung-crossparadigm" data-study-kind="computational" title="flu-lung-crossparadigm" data-edit-kind="study" data-edit-field="title" data-edit-value="" data-edit-label="Title">flu lung crossparadigm</span>
     
   </h1>
     
@@ -236,6 +236,9 @@
 /* findings */
 .findings-section{padding:14px 16px;background:#fafbff;border:1px solid #c7d2fe;border-radius:8px}
 .finding-card{padding:12px 14px;margin:10px 0;border:1px solid #e2e8f0;border-left:5px solid #6366f1;border-radius:6px;background:#fff}
+/* Brief highlight when an item is reached via a ?ev= evidence deep-link. */
+.ev-flash{animation:ev-flash-kf 1.9s ease-out;scroll-margin-top:12px}
+@keyframes ev-flash-kf{0%{box-shadow:0 0 0 3px #fbbf24}70%{box-shadow:0 0 0 3px rgba(251,191,36,0.45)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
 .finding-card.finding-status-confirms{border-left-color:#10b981}
 .finding-card.finding-status-partial{border-left-color:#f59e0b}
 .finding-card.finding-status-contradicts{border-left-color:#dc2626}
@@ -544,11 +547,22 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Claim</h2>
-      <p class="ctr-text">The ONE backend-neutral Sego 2022 influenza blueprint compiles to BOTH the CPM (viva-cpm) and vertex (vivarium-tyssue) substrates and runs the Sego model WITH NAMED DEVIATIONS (V/L/C/F producers absent, latent-pool recruitment approximation) end-to-end on each. Because the field / rules / systemic-ODE / recruitment mechanism is shared byte-for-byte across the two compiles, we test for a substrate effect against a NULL CONTROL (same-backend seed-to-seed spread). On cell fate and infected-patch LOCATION the cross-backend difference sits inside the same-backend seed spread, so at this scale and seed count we FAIL TO REJECT the null (no detectable substrate effect -- NOT proof of equality). The one exception is raw infected-patch occupancy IoU, which trends ~25-35% below both same-backend baselines -- a candidate weak substrate signal to test at larger scale / more vertex seeds.
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="claim" data-edit-value="REVISED 2026-11-05 (reviewer feedback: vertex CD8/NK floated free of the tissue): vertex immune cells are now SMALLER POLYGONS IN THE EPITHELIAL SHEET, attached at the tissue margin and moving along it by neighbour exchange, as the CPM immune pool wets the epithelial edge; reconnect resolves merged rosettes faster (p_4 = 1, T1 at 0.2 x side); motilities re-calibrated under the no-fold cap. On this substrate FATE still falls inside the same-backend seed spread (cross 0.948 vs 0.926-0.960), but infected-patch OCCUPANCY (IoU 0.053, below both baselines 0.100 / 0.299) and LOCATION (centroid distance 5.7 vs 3.3 um) now separate the backends -- a candidate substrate signal, not yet causally attributed. Earlier reading (2026-10-28, overlay immune layer) kept for provenance: The ONE backend-neutral Sego 2022 influenza blueprint compiles to BOTH the CPM (viva-cpm) and vertex (vivarium-tyssue) substrates and runs the Sego model WITH NAMED DEVIATIONS (V/L/C/F producers absent, latent-pool recruitment approximation) end-to-end on each. RE-RUN 2026-10-28 on the REVISED vertex substrate: a hexagonal one-polygon-per-cell sheet, immune overlay, auto_reconnect, per-pair tension, domain walls, and CPM-calibrated motility under a no-fold constraint. Vertex cells now move within the tissue and exchange neighbours, though the epithelium wanders ~5x less than on the CPM. Replicate runs are now also stochastic in their MECHANICS, so the same-backend null control includes mechanical noise. Against that null, cell FATE, infected-patch OCCUPANCY and patch LOCATION all fall inside the same-backend seed spread (fail to reject). The one candidate substrate signal left: the vertex I-count leaves the narrow CPM 3-seed envelope for ~45% of steps by N=400.
+" data-edit-multiline data-edit-label="Claim">REVISED 2026-11-05 (reviewer feedback: vertex CD8/NK floated free of the tissue): vertex immune cells are now SMALLER POLYGONS IN THE EPITHELIAL SHEET, attached at the tissue margin and moving along it by neighbour exchange, as the CPM immune pool wets the epithelial edge; reconnect resolves merged rosettes faster (p_4 = 1, T1 at 0.2 x side); motilities re-calibrated under the no-fold cap. On this substrate FATE still falls inside the same-backend seed spread (cross 0.948 vs 0.926-0.960), but infected-patch OCCUPANCY (IoU 0.053, below both baselines 0.100 / 0.299) and LOCATION (centroid distance 5.7 vs 3.3 um) now separate the backends -- a candidate substrate signal, not yet causally attributed. Earlier reading (2026-10-28, overlay immune layer) kept for provenance: The ONE backend-neutral Sego 2022 influenza blueprint compiles to BOTH the CPM (viva-cpm) and vertex (vivarium-tyssue) substrates and runs the Sego model WITH NAMED DEVIATIONS (V/L/C/F producers absent, latent-pool recruitment approximation) end-to-end on each. RE-RUN 2026-10-28 on the REVISED vertex substrate: a hexagonal one-polygon-per-cell sheet, immune overlay, auto_reconnect, per-pair tension, domain walls, and CPM-calibrated motility under a no-fold constraint. Vertex cells now move within the tissue and exchange neighbours, though the epithelium wanders ~5x less than on the CPM. Replicate runs are now also stochastic in their MECHANICS, so the same-backend null control includes mechanical noise. Against that null, cell FATE, infected-patch OCCUPANCY and patch LOCATION all fall inside the same-backend seed spread (fail to reject). The one candidate substrate signal left: the vertex I-count leaves the narrow CPM 3-seed envelope for ~45% of steps by N=400.
 </p>
       
     </div>
 
+    
+    <div class="ctr-block">
+      <h2 class="overview-label ctr-h">Background</h2>
+      <div class="ctr-meta">
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Question</span> <span class="ctr-meta-item" data-edit-kind="study" data-edit-field="question" data-edit-value="Does one backend-neutral blueprint reproduce the Sego 2022 influenza model on two different mechanical substrates, and -- judged against same-backend seed noise -- do the substrates diverge?
+" data-edit-multiline data-edit-label="Question">Does one backend-neutral blueprint reproduce the Sego 2022 influenza model on two different mechanical substrates, and -- judged against same-backend seed noise -- do the substrates diverge?
+</span></div>
+        
+      </div>
+    </div>
     
 
     <div class="ctr-block">
@@ -556,7 +570,7 @@
       <p class="ctr-text">Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM and vertex and run the full model at a tractable reduced scale (a 50x50-site patch, a 6x6 epithelial block + a 12-cell pre-placed latent immune pool). For &gt;=3 CPM rules-seeds AND the vertex backend, compute: (1) per-cell fate agreement over the t0 cohort, reported RELATIVE to the same-backend (CPM-vs-CPM) seed baseline; (2) dynamics -- the vertex I-count trajectory checked for the fraction of steps inside the CPM &gt;=3-seed stochastic envelope (a non-circular check); (3) spatial pattern -- infected-patch area/centroid/Rg + occupancy IoU, with the representation confound controlled by confirming the final-frame cell areas match across backends. Render spatial_playback, dynamics_overlay and divergence. Headline figures are regenerated by `scripts/regen_capstone_metrics.py` (N=400); the behavior test pins the baseline-relative relationship at N=150.
 </p>
       <div class="ctr-meta">
-        <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>sego-influenza-crossparadigm</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>flu-lung-crossparadigm</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
         
         <div class="ctr-meta-row"><span class="ctr-meta-k">Measures</span> <span class="ctr-meta-item">5 behavior tests</span><a class="ov-tablink" href="#" onclick="_setStudyTab('audit');return false;">see Tests →</a></div>
         
@@ -570,7 +584,33 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Result</h2>
-      <p class="ctr-text">Both backends run the Sego model (with named deviations) end-to-end. The NULL CONTROL is decisive: at N=400 the cross-backend fate agreement is 0.942 (0.890-1.000), which is WITHIN the same-backend seed baselines (CPM-vs-CPM 0.934 [0.906-0.967]; vertex-vs-vertex 0.943 [0.935-0.949]) -- the two substrates agree on cell fate no less than two CPM seeds do. The infected-patch CENTROID (representation-robust) is 6.13 um apart cross-backend vs 5.40 um same-backend CPM -- again within seed noise -- and the vertex I-count lies inside the CPM 3-seed envelope at 100% of steps. Final-frame mean cell areas match (CPM 24.67, vertex 24.51; ratio 0.99), so the spatial comparison is NOT representation-confounded (the vertex Voronoi faces, ~46 at t0, relax to the target by the end). The ONE metric that trends below its baseline is the raw infected-patch occupancy IoU (cross 0.165 vs same-backend CPM 0.249 / vertex 0.212, ~25-35% lower): all three are low because the single infected patch scatters, but the cross-backend value sits below BOTH same-backend baselines, so it is flagged as a CANDIDATE weak substrate signal (NOT attributed to seed noise -- that is untested) to check at larger scale / more vertex seeds. At the CI scale (N=150) cross-backend and same-backend CPM fate agreement are equal (0.987 vs 0.987). CONCLUSION: on fate and patch location we FAIL TO REJECT a substrate difference at this scale and seed count (a null result, not proof of equality); raw occupancy IoU is the one metric that may carry a weak substrate signal.
+      
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="result" data-edit-value="RE-RUN 2026-11-05 (in-sheet immune polygons, re-calibrated motility; N=400, 3 CPM x 3 vertex seeds, scripts/regen_capstone_metrics.py): - Fate agreement: cross 0.948 (0.904-0.996) between the same-backend baselines
+  (CPM-vs-CPM 0.926 [0.901-0.955]; vertex-vs-vertex 0.960 [0.950-0.976]) -&gt; fail to reject.
+- Infected-patch occupancy IoU: cross 0.053 (0.005-0.150), BELOW both baselines (CPM
+  0.100, vertex 0.299) -&gt; candidate signal.
+- Patch centroid distance: 5.7 um cross (2.0-8.6) vs 3.3 um same-backend CPM (2.6-4.8). - Final mean EPITHELIAL cell area: CPM 23.42, vertex 21.98 (ratio 0.94; the immune
+  polygons are half-size by design, so the representation check is epithelium-only).
+- Vertex (seed 0) I-count inside the CPM 3-seed envelope at 55% of steps. - 74 vertex neighbour exchanges over the run (shown in the playback). The CI behavior test (N=150) still passes. Earlier result (2026-10-28, overlay immune layer), superseded: Both backends run the Sego model (with named deviations) end-to-end. N=400, 3 CPM x 3 vertex seeds: - Fate agreement: cross 0.938 (0.899-0.993) lies between the same-backend baselines
+  (CPM-vs-CPM 0.926 [0.901-0.955]; vertex-vs-vertex 0.944 [0.921-0.973]).
+- Infected-patch occupancy IoU: cross 0.135 (0.038-0.277), between CPM 0.100 and
+  vertex 0.175.
+- Patch centroid distance: 3.6 um cross vs 3.3 um same-backend CPM. - Final mean cell area: CPM 24.67, vertex 23.13 (ratio 0.94). - The vertex (seed 0) I-count is inside the CPM 3-seed envelope at 55% of steps (100%
+  at N=150).
+At the CI scale (N=150): cross fate 0.987 vs same-backend CPM 0.976, area ratio 0.96. Superseded readings: the old &#34;IoU below both baselines&#34; signal came from mechanically deterministic replicates, and the intermediate &#34;location&#34; signal from an over-mobile (folding) vertex sheet; neither survives. CONCLUSION: on fate, occupancy and location we fail to reject a substrate difference (a null, not equality). Late I-count dynamics are the remaining candidate, to test with more CPM seeds (a wider envelope) and larger scale.
+" data-edit-multiline data-edit-label="Result">RE-RUN 2026-11-05 (in-sheet immune polygons, re-calibrated motility; N=400, 3 CPM x 3 vertex seeds, scripts/regen_capstone_metrics.py): - Fate agreement: cross 0.948 (0.904-0.996) between the same-backend baselines
+  (CPM-vs-CPM 0.926 [0.901-0.955]; vertex-vs-vertex 0.960 [0.950-0.976]) -&gt; fail to reject.
+- Infected-patch occupancy IoU: cross 0.053 (0.005-0.150), BELOW both baselines (CPM
+  0.100, vertex 0.299) -&gt; candidate signal.
+- Patch centroid distance: 5.7 um cross (2.0-8.6) vs 3.3 um same-backend CPM (2.6-4.8). - Final mean EPITHELIAL cell area: CPM 23.42, vertex 21.98 (ratio 0.94; the immune
+  polygons are half-size by design, so the representation check is epithelium-only).
+- Vertex (seed 0) I-count inside the CPM 3-seed envelope at 55% of steps. - 74 vertex neighbour exchanges over the run (shown in the playback). The CI behavior test (N=150) still passes. Earlier result (2026-10-28, overlay immune layer), superseded: Both backends run the Sego model (with named deviations) end-to-end. N=400, 3 CPM x 3 vertex seeds: - Fate agreement: cross 0.938 (0.899-0.993) lies between the same-backend baselines
+  (CPM-vs-CPM 0.926 [0.901-0.955]; vertex-vs-vertex 0.944 [0.921-0.973]).
+- Infected-patch occupancy IoU: cross 0.135 (0.038-0.277), between CPM 0.100 and
+  vertex 0.175.
+- Patch centroid distance: 3.6 um cross vs 3.3 um same-backend CPM. - Final mean cell area: CPM 24.67, vertex 23.13 (ratio 0.94). - The vertex (seed 0) I-count is inside the CPM 3-seed envelope at 55% of steps (100%
+  at N=150).
+At the CI scale (N=150): cross fate 0.987 vs same-backend CPM 0.976, area ratio 0.96. Superseded readings: the old &#34;IoU below both baselines&#34; signal came from mechanically deterministic replicates, and the intermediate &#34;location&#34; signal from an over-mobile (folding) vertex sheet; neither survives. CONCLUSION: on fate, occupancy and location we fail to reject a substrate difference (a null, not equality). Late I-count dynamics are the remaining candidate, to test with more CPM seeds (a wider envelope) and larger scale.
 </p>
       
       
@@ -587,11 +627,116 @@
       
       
       
-      <div class="finding-card finding-kind-computational finding-status-confirms">
+      <div class="finding-card finding-kind-computational finding-status-confirms" id="finding-F4-revised-substrate-within-seed-noise">
         <details class="finding-details">
           <summary class="finding-row">
             <span class="finding-status-glyph">✓</span>
-            <span class="finding-claim finding-statement">On cell fate and infected-patch LOCATION the cross-backend difference falls inside the same-backend seed spread (cross fate 0.942 vs CPM 0.934 / vertex 0.943; centroid 6.1 vs 5.4 um; vertex 100% inside the CPM envelope), so at this scale and seed count we FAIL TO REJECT a substrate difference -- a null result, not proof of equality.
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F4-revised-substrate-within-seed-noise].statement" data-edit-value="On the revised vertex substrate with mechanics-stochastic replicates, cross-backend fate agreement (0.938), infected-patch occupancy IoU (0.135) and patch location (3.6 um) all lie within the same-backend baselines (0.926/0.944; 0.100/0.175; 3.3 um), so we fail to reject a substrate difference on any of them.
+" data-edit-multiline data-edit-label="Finding F4-revised-substrate-within-seed-noise">On the revised vertex substrate with mechanics-stochastic replicates, cross-backend fate agreement (0.938), infected-patch occupancy IoU (0.135) and patch location (3.6 um) all lie within the same-backend baselines (0.926/0.944; 0.100/0.175; 3.3 um), so we fail to reject a substrate difference on any of them.
+</span>
+            
+          </summary>
+          <div class="finding-drawer">
+            <div class="finding-header">
+              <span class="finding-id">F4-revised-substrate-within-seed-noise</span>
+              <span class="finding-kind">computational</span>
+              <span class="finding-status-text">confirms literature</span>
+            </div>
+            
+            
+            <div class="finding-evidence">
+              <strong>observed:</strong> N=400: fate cross 0.938 vs same CPM 0.926 / vertex 0.944; IoU cross 0.135 vs 0.100 / 0.175; centroid 3.60 vs 3.33 um; area ratio 0.94; N=150 cross 0.987 vs same 0.976 · 
+              
+              
+              
+              
+              
+            </div>
+            
+            
+            <div class="finding-traceability" style="font-size:0.84em;color:#475569;padding:4px 10px;margin:4px 0">
+              
+              
+              runs: <a href="#run-crossparadigm-nullcontrol-N400"><code>crossparadigm-nullcontrol-N400</code></a>, <a href="#run-crossparadigm-ci-N150"><code>crossparadigm-ci-N150</code></a>
+            </div>
+            
+            
+            
+            
+            
+            <div class="finding-explanation"><em>Why:</em> Fate is computed by the shared mechanism; the substrate enters only via field sampling + contact surface.</div>
+            
+            <div class="finding-next"><strong>→ Next:</strong> more seeds + larger scale; Stage 4 producers (V/L/C/F)</div>
+          </div>
+        </details>
+      </div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <div class="finding-card finding-kind-computational finding-status-partial" id="finding-F5-late-dynamics-candidate-signal">
+        <details class="finding-details">
+          <summary class="finding-row">
+            <span class="finding-status-glyph">◐</span>
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F5-late-dynamics-candidate-signal].statement" data-edit-value="The vertex I-count stays inside the CPM 3-seed envelope at 100% of steps to N=150 but only 55% by N=400 -- a candidate late-dynamics substrate signal, not yet separated from the narrowness of a 3-seed envelope.
+" data-edit-multiline data-edit-label="Finding F5-late-dynamics-candidate-signal">The vertex I-count stays inside the CPM 3-seed envelope at 100% of steps to N=150 but only 55% by N=400 -- a candidate late-dynamics substrate signal, not yet separated from the narrowness of a 3-seed envelope.
+</span>
+            
+          </summary>
+          <div class="finding-drawer">
+            <div class="finding-header">
+              <span class="finding-id">F5-late-dynamics-candidate-signal</span>
+              <span class="finding-kind">computational</span>
+              <span class="finding-status-text">partial literature</span>
+            </div>
+            
+            
+            <div class="finding-evidence">
+              <strong>observed:</strong> vertex in-band 0.551 at N=400, 1.0 at N=150 · 
+              
+              
+              
+              
+              
+            </div>
+            
+            
+            <div class="finding-traceability" style="font-size:0.84em;color:#475569;padding:4px 10px;margin:4px 0">
+              
+              
+              runs: <a href="#run-crossparadigm-nullcontrol-N400"><code>crossparadigm-nullcontrol-N400</code></a>
+            </div>
+            
+            
+            
+            
+            
+            <div class="finding-explanation"><em>Why:</em> Infection spread later in the run may depend on each substrate&#39;s cell motility and contact geometry.</div>
+            
+            <div class="finding-next"><strong>→ Next:</strong> widen the envelope with more CPM seeds; compare against a vertex-seed envelope</div>
+          </div>
+        </details>
+      </div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <div class="finding-card finding-kind-computational finding-status-informational" id="finding-F1-fail-to-reject-substrate-effect-on-fate-and-location">
+        <details class="finding-details">
+          <summary class="finding-row">
+            <span class="finding-status-glyph">◆</span>
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F1-fail-to-reject-substrate-effect-on-fate-and-location].statement" data-edit-value="SUPERSEDED (2026-10-28, revised vertex substrate). On cell fate and infected-patch LOCATION the cross-backend difference falls inside the same-backend seed spread (cross fate 0.942 vs CPM 0.934 / vertex 0.943; centroid 6.1 vs 5.4 um; vertex 100% inside the CPM envelope), so at this scale and seed count we FAIL TO REJECT a substrate difference -- a null result, not proof of equality.
+" data-edit-multiline data-edit-label="Finding F1-fail-to-reject-substrate-effect-on-fate-and-location">SUPERSEDED (2026-10-28, revised vertex substrate). On cell fate and infected-patch LOCATION the cross-backend difference falls inside the same-backend seed spread (cross fate 0.942 vs CPM 0.934 / vertex 0.943; centroid 6.1 vs 5.4 um; vertex 100% inside the CPM envelope), so at this scale and seed count we FAIL TO REJECT a substrate difference -- a null result, not proof of equality.
 </span>
             
           </summary>
@@ -599,7 +744,7 @@
             <div class="finding-header">
               <span class="finding-id">F1-fail-to-reject-substrate-effect-on-fate-and-location</span>
               <span class="finding-kind">computational</span>
-              <span class="finding-status-text">confirms literature</span>
+              <span class="finding-status-text">informational literature</span>
             </div>
             
             
@@ -646,11 +791,12 @@
       
       
       
-      <div class="finding-card finding-kind-computational finding-status-partial">
+      <div class="finding-card finding-kind-computational finding-status-informational" id="finding-F2-raw-iou-candidate-weak-substrate-signal">
         <details class="finding-details">
           <summary class="finding-row">
-            <span class="finding-status-glyph">◐</span>
-            <span class="finding-claim finding-statement">Raw infected-patch occupancy IoU is the ONE metric trending below BOTH same-backend baselines (cross 0.165 vs CPM 0.249 / vertex 0.212, ~25-35% lower). It is NOT a representation artifact (final mean areas match: CPM 24.67 vs vertex 24.51), so it is flagged as a CANDIDATE weak substrate signal -- not attributed to seed noise, which is untested -- to be checked at larger scale / more seeds.
+            <span class="finding-status-glyph">◆</span>
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F2-raw-iou-candidate-weak-substrate-signal].statement" data-edit-value="SUPERSEDED (2026-10-28): did not survive mechanics-stochastic replicates. Raw infected-patch occupancy IoU is the ONE metric trending below BOTH same-backend baselines (cross 0.165 vs CPM 0.249 / vertex 0.212, ~25-35% lower). It is NOT a representation artifact (final mean areas match: CPM 24.67 vs vertex 24.51), so it is flagged as a CANDIDATE weak substrate signal -- not attributed to seed noise, which is untested -- to be checked at larger scale / more seeds.
+" data-edit-multiline data-edit-label="Finding F2-raw-iou-candidate-weak-substrate-signal">SUPERSEDED (2026-10-28): did not survive mechanics-stochastic replicates. Raw infected-patch occupancy IoU is the ONE metric trending below BOTH same-backend baselines (cross 0.165 vs CPM 0.249 / vertex 0.212, ~25-35% lower). It is NOT a representation artifact (final mean areas match: CPM 24.67 vs vertex 24.51), so it is flagged as a CANDIDATE weak substrate signal -- not attributed to seed noise, which is untested -- to be checked at larger scale / more seeds.
 </span>
             
           </summary>
@@ -658,7 +804,7 @@
             <div class="finding-header">
               <span class="finding-id">F2-raw-iou-candidate-weak-substrate-signal</span>
               <span class="finding-kind">computational</span>
-              <span class="finding-status-text">partial literature</span>
+              <span class="finding-status-text">informational literature</span>
             </div>
             
             
@@ -682,7 +828,7 @@
             
             
             
-            <div class="finding-explanation"><em>Why:</em> Both baselines are low (single-patch scatter), but the cross term sits below both; the vertex Voronoi faces relax to target, ruling out the t0 size confound.</div>
+            <div class="finding-explanation"><em>Why:</em> Both baselines are low (single-patch scatter), but the cross term sits below both; the (old) vertex Voronoi faces relaxed to target, ruling out the t0 size confound.</div>
             
             <div class="finding-next"><strong>→ Next:</strong> test the IoU gap with more vertex seeds + a larger/longer run before calling it signal or noise; report IoU only with its same-backend baseline</div>
           </div>
@@ -697,11 +843,12 @@
       
       
       
-      <div class="finding-card finding-kind-methodological finding-status-confirms">
+      <div class="finding-card finding-kind-methodological finding-status-confirms" id="finding-F3-slow-epidemic-at-faithful-rates">
         <details class="finding-details">
           <summary class="finding-row">
             <span class="finding-status-glyph">✓</span>
-            <span class="finding-claim finding-statement">At faithful Sego rates the per-step infection probability is ~0.004 and the ODE recruitment inflow rounds to ~0 activations, so at reduced scale the epidemic is a slow onset and the latent immune pool is barely activated.
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F3-slow-epidemic-at-faithful-rates].statement" data-edit-value="At faithful Sego rates the per-step infection probability is ~0.004 and the ODE recruitment inflow rounds to ~0 activations, so at reduced scale the epidemic is a slow onset and the latent immune pool is barely activated.
+" data-edit-multiline data-edit-label="Finding F3-slow-epidemic-at-faithful-rates">At faithful Sego rates the per-step infection probability is ~0.004 and the ODE recruitment inflow rounds to ~0 activations, so at reduced scale the epidemic is a slow onset and the latent immune pool is barely activated.
 </span>
             
           </summary>
@@ -817,7 +964,7 @@
     
     <div class="cond-block" data-model-composite="viva_multicell_blueprint.composites.sego.sego_crossparadigm" data-model-overrides='{"backend": "cpm", "blueprint": "workspace/blueprints/influenza_sego2022.yaml"}'>
       <div class="cond-block-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <strong>sego-influenza-crossparadigm</strong>
+        <strong>flu-lung-crossparadigm</strong>
         
         <code style="font-size:0.82em;color:#374151;background:#f1f5f9;padding:1px 6px;border-radius:3px">viva_multicell_blueprint.composites.sego.sego_crossparadigm</code>
         <button type="button" class="action-btn" style="font-size:0.8em"
@@ -827,16 +974,26 @@
       
       <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
         
-        <select class="baseline-composite-input" data-baseline-name="sego-influenza-crossparadigm"
+        <select class="baseline-composite-input" data-baseline-name="flu-lung-crossparadigm"
                 data-current="viva_multicell_blueprint.composites.sego.sego_crossparadigm"
                 style="flex:1;min-width:200px;font-family:monospace;font-size:0.82em;padding:3px 6px">
           <option value="viva_multicell_blueprint.composites.sego.sego_crossparadigm" selected>viva_multicell_blueprint.composites.sego.sego_crossparadigm</option>
           
         </select>
         <button type="button" class="action-btn baseline-composite-set" style="font-size:0.8em"
-                data-baseline-name="sego-influenza-crossparadigm">Set composite</button>
+                data-baseline-name="flu-lung-crossparadigm">Set composite</button>
       </div>
-      <div class="baseline-composite-status muted" data-baseline-name="sego-influenza-crossparadigm" style="font-size:0.8em;margin-top:2px"></div>
+      <div class="baseline-composite-status muted" data-baseline-name="flu-lung-crossparadigm" style="font-size:0.8em;margin-top:2px"></div>
+      
+      
+      
+      
+      
+      
+        
+      
+        
+      
       
       
       
@@ -852,6 +1009,42 @@
   
 
   
+  
+  <div class="overview-section" id="conditions-section">
+    <h3>Conditions <span class="muted" style="font-size:0.85em;font-weight:normal">— what we set up to test it</span></h3>
+    <p class="muted" style="font-size:0.88em">The experimental knobs: how variants perturb the baseline, and which model settings still need a human-set value.</p>
+
+    
+    <div class="cond-block">
+      <div class="cond-block-title">Variants <span class="muted" style="font-weight:normal;font-size:0.85em">(1)</span></div>
+      <table class="cond-table">
+        <thead><tr><th>Variant</th><th>Composite / base</th><th>Parameter overrides</th><th>Notes</th></tr></thead>
+        <tbody>
+          
+          
+          
+          
+          <tr data-model-composite="viva_multicell_blueprint.composites.sego.sego_crossparadigm" data-model-overrides='{}'>
+            <td><code>cpm-vs-vertex</code></td>
+            <td>
+              <code>viva_multicell_blueprint.composites.sego.sego_crossparadigm</code>
+              
+            </td>
+            <td>
+              
+                <em class="muted">(no overrides)</em>
+              
+            </td>
+            <td>The two mechanical substrates sharing one compiled mechanism, each over &gt;=3 rules-seeds.</td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+    
+
+    
+  </div>
   
 
   
@@ -917,6 +1110,12 @@
 <div class="overview-section" id="results-section">
   
   <div id="results-summary" data-study="flu-lung-crossparadigm" style="margin:0 0 16px"></div>
+
+  
+  <div id="gate-results-section" data-study="flu-lung-crossparadigm" style="margin:0 0 22px" hidden>
+    <h4>Gate results <span class="muted" style="font-size:0.8em;font-weight:normal">— each acceptance test's value, graded from run data</span></h4>
+    <div id="gate-results"></div>
+  </div>
 
   <h4>Latest run preview <span class="muted" style="font-size:0.8em;font-weight:normal">— downsampled sparkline + first/last/min/max per store</span></h4>
   <div id="results-preview" data-study="flu-lung-crossparadigm">
@@ -1445,7 +1644,7 @@ pass_if: {"field": "figure_html_bytes", "op": "lt", "value": 2500000}</pre>
       <h3 class="overview-label">Limitations</h3>
       <p class="muted" style="margin:0 0 6px 0;font-size:0.85em">What this study explicitly does NOT validate (prevents overclaim).</p>
       <ul style="margin:0 0 0 18px;padding:0;font-size:0.93em">
-        <li style="margin:2px 0">REVIEW: biological fidelity to Sego 2022 is NOT validated here -- a CPM self-envelope is an internal consistency check, not a match to digitized Sego figures/measured flu-lung data (Stage 4 / BP-08).</li><li style="margin:2px 0">REVIEW: &#39;runs the model&#39; carries NAMED DEVIATIONS -- V/L/C/F have no producer (sit at 0) and immune recruitment is a latent-pool approximation; quantify their effect by ablation (Stage 4 / BP-05).</li><li style="margin:2px 0">Reduced scale + modest steps: a demonstration, not paper scale; the epidemic is in slow onset, so any substrate signal is small relative to seed noise -- a larger/longer run could resolve a signal this scale cannot.</li><li style="margin:2px 0">The headline is a NULL result (no substrate-driven divergence beyond seed noise), which is scale-dependent: absence of evidence here is not proof the substrates never diverge.</li><li style="margin:2px 0">Immune recruitment is a latent-pool approximation (T20-RECRUIT); at this scale the ODE drive rounds to ~0 activations, so the immune arm is barely exercised.</li><li style="margin:2px 0">The systemic-ODE inputs V/L/C/F have no producer (Task 21) and sit at 0, further weakening the recruitment drive.</li><li style="margin:2px 0">Parameters are the faithful Sego 2022 values (no tuning); divergence/agreement is reported, never forced (anti-goal respected).</li><li style="margin:2px 0">The dynamics acceptance band is the CPM &gt;=3-seed stochastic envelope (reported as such -- the vertex in-band fraction is 1.0), NOT a digitized Sego 2022 figure; a literature band is an open item.</li><li style="margin:2px 0">Raw occupancy IoU is modestly lower cross-backend than same-backend, but all values are low (stochastic single-patch scatter); it is reported with its baseline, not as a headline.</li>
+        <li style="margin:2px 0">REVIEW: biological fidelity to Sego 2022 is NOT validated here -- a CPM self-envelope is an internal consistency check, not a match to digitized Sego figures/measured flu-lung data (Stage 4 / BP-08).</li><li style="margin:2px 0">REVIEW: &#39;runs the model&#39; carries NAMED DEVIATIONS -- V/L/C/F have no producer (sit at 0) and immune recruitment is a latent-pool approximation; quantify their effect by ablation (Stage 4 / BP-05).</li><li style="margin:2px 0">Reduced scale + modest steps: a demonstration, not paper scale; the epidemic is in slow onset, so any substrate signal is small relative to seed noise.</li><li style="margin:2px 0">The headline is a NULL result on fate and occupancy (fail to reject), which is scale-dependent: absence of evidence here is not proof the substrates never diverge.</li><li style="margin:2px 0">Immune recruitment is a latent-pool approximation (T20-RECRUIT); at this scale the ODE drive rounds to ~0 activations, so the immune arm (and the calibrated vertex chemotaxis) is barely exercised.</li><li style="margin:2px 0">The systemic-ODE inputs V/L/C/F have no producer (Task 21) and sit at 0, further weakening the recruitment drive.</li><li style="margin:2px 0">Parameters are the faithful Sego 2022 values (no tuning of the biology); the vertex MECHANICS knobs are calibrated to CPM behaviour (adhesion-calibration), never to make the fates agree.</li><li style="margin:2px 0">The dynamics acceptance band is the CPM 3-seed stochastic envelope (narrow with 3 seeds), NOT a digitized Sego 2022 figure.</li><li style="margin:2px 0">Immune contact differs by design: same-layer edge contact on CPM vs overlay overlap area on vertex.</li><li style="margin:2px 0">The vertex epithelium wanders ~5x less than the CPM&#39;s (motility capped so the mesh never folds; see adhesion-calibration).</li>
       </ul>
     </div>
     
@@ -1486,11 +1685,12 @@ pass_if: {"field": "figure_html_bytes", "op": "lt", "value": 2500000}</pre>
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "32798cb9cc6f9f03f3ef823d9ab6168dc533d021", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/32798cb9cc6f9f03f3ef823d9ab6168dc533d021", "branch": "main", "lockfile": "uv.lock@7c453b95ffdb", "generated_at": "2026-10-28 13:48 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "f54d537ee578fce37c8e7118231bb6212259bdc2", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/f54d537ee578fce37c8e7118231bb6212259bdc2", "branch": "main", "lockfile": "uv.lock@114a7e530289", "generated_at": "2026-11-05 22:38 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>
 window._studyName = "flu-lung-crossparadigm";
+window.__STUDY_INVESTIGATION__ = "influenza-crossparadigm";  // owning investigation (feedback save routing)
 window._study = null;  // populated by _bootstrapStudy() in study-detail.js
 
 // Save handler for the Conditions → Model settings editable rows.
@@ -1619,6 +1819,8 @@ window._seedFollowupProposal = _seedFollowupProposal;
 <script src="/viva-multicell-blueprint/workbench/assets/progress-track.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/comparison-view.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/study-detail.js"></script>
+<script src="/viva-multicell-blueprint/workbench/assets/study-feedback.js"></script>
+<script src="/viva-multicell-blueprint/workbench/assets/inline-edit.js"></script>
 <script>
 // Re-assert the refresh-aware seed handlers AFTER study-detail.js (which
 // defines its own navigate-away _seedFollowupStudy). The embedded
