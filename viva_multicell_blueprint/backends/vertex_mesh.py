@@ -12,9 +12,12 @@ at each face; see :mod:`.vertex_coupling`).
   optimal 1:1 assignment (Hungarian, minimum total squared displacement), so two
   cells can never share a polygon -- coincident centroids are split onto
   neighbouring sites rather than merged.
-* **Overlay layer** -- cells that live *above* the sheet (Sego's immune layer,
-  z=1 over the z=0 epithelium) are free hexagonal islands of their own size centred
-  exactly on their blueprint centroid. They share no vertices with the sheet;
+* **Margin attachment** -- immune cells join the same sheet on the free lattice
+  site at the tissue margin nearest their blueprint centroid
+  (:func:`attach_to_margin`), so they are bound to the tissue rather than
+  floating apart from it.
+* **Overlay layer** (opt-in) -- cells that live *above* the sheet are free
+  hexagonal islands of their own size centred exactly on their blueprint centroid. They share no vertices with the sheet;
   their contact with the epithelium is the polygon OVERLAP area
   (:func:`overlap_area`), the 2-layer analog of a lattice contact surface.
 
@@ -73,6 +76,37 @@ def assign_to_lattice(centroids: np.ndarray, sites: np.ndarray) -> np.ndarray:
     rows, cols = linear_sum_assignment(d2)
     out = np.empty(len(centroids), dtype=int)
     out[rows] = cols
+    return out
+
+
+def attach_to_margin(centroids: np.ndarray, sites: np.ndarray, occupied) -> list:
+    """Attach each centroid (in order) to the free lattice site that borders the
+    tissue (an ``occupied`` site) and lies nearest to it, so the cell joins the
+    tissue at its margin instead of floating as a separate island. Attached cells
+    take their sites in turn, so they line up along the margin; only when the
+    whole margin ring is taken does a cell attach to one placed before it.
+    Returns one site index per centroid."""
+    from scipy.spatial import cKDTree
+
+    if len(centroids) == 0:
+        return []
+    tree = cKDTree(sites)
+    pitch = float(tree.query(sites[0], k=2)[0][1])        # nearest-neighbour spacing
+    nbrs = tree.query_ball_point(sites, r=1.1 * pitch)
+    tissue = set(int(k) for k in occupied)
+    taken = set(tissue)
+    out = []
+    for c in np.asarray(centroids, dtype=float):
+        free = [k for k in range(len(sites)) if k not in taken]
+        for anchor in (tissue, taken):
+            ring = [k for k in free if any(j in anchor for j in nbrs[k])]
+            if ring:
+                free = ring
+                break
+        d2 = ((sites[free] - c) ** 2).sum(1)
+        k = free[int(np.argmin(d2))]
+        taken.add(k)
+        out.append(k)
     return out
 
 

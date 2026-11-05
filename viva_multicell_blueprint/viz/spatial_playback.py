@@ -35,6 +35,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from ..compare.metrics import neighbour_exchanges
 from ..compare.raster import cell_id_raster, grid_shape, rasterize, type_codes
 from ._common import MAX_FRAMES, decimate_indices, state_color, times
 
@@ -248,9 +249,15 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
     colors = {t: state_color(t, i) for i, t in enumerate(codes)}
     res = float(grid["grid_resolution_um"])
     vtx_poly = _has_polygons(run_vertex)   # real vertex runs -> draw polygons
+    # running count of vertex neighbour exchanges (T1/T3 by auto_reconnect), shown
+    # in the vertex panel title so topology changes are visible frame by frame
+    swaps = neighbour_exchanges(run_vertex)
 
-    fig = make_subplots(rows=1, cols=2, subplot_titles=("CPM (voxel map)", "Vertex (polygon map)"),
-                        horizontal_spacing=0.08)
+    def _titles(i):
+        return ("CPM (voxel map)", f"Vertex (polygon map) — neighbour exchanges: {swaps[i]}")
+
+    fig = make_subplots(rows=1, cols=2, subplot_titles=_titles(idx[0]), horizontal_spacing=0.08)
+    title_annotations = [a.to_plotly_json() for a in fig.layout.annotations]
     anim = []   # trace indices updated by frames, in frame-data order
 
     def _cpm_traces(i):
@@ -287,7 +294,9 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
     frames = []
     for k, i in enumerate(idx):
         data = list(_cpm_traces(i)) + _vertex_traces(i)
-        frames.append(go.Frame(name=str(k), data=data, traces=anim))
+        notes = [dict(a, text=text) for a, text in zip(title_annotations, _titles(i))]
+        frames.append(go.Frame(name=str(k), data=data, traces=anim,
+                               layout=go.Layout(annotations=notes)))
     fig.frames = frames
     steps = [dict(method="animate", label=f"{t:g}",
                   args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=True),

@@ -5,13 +5,21 @@ substrate) without changing it, as ONE self-contained, swappable mechanics node.
 
 Tissue (see :mod:`.vertex_mesh`): every polygon is exactly one blueprint cell.
 
-* The confluent **epithelial sheet** is a regular hexagonal tiling (cell area =
-  blueprint size); each blueprint cell gets its own lattice site by an optimal
-  1:1 assignment, so no polygon ever stands for two cells and no guard ring /
+* The confluent **sheet** is a regular hexagonal tiling (cell area = blueprint
+  size); each blueprint cell gets its own lattice site by an optimal 1:1
+  assignment, so no polygon ever stands for two cells and no guard ring /
   collar / medium polygon exists.
-* **Overlay** cell types (``backend_params.overlay_types`` -- the immune layer,
-  Sego's z=1 over the z=0 epithelium) are free hexagonal islands at their exact
-  blueprint centroid; their contact with the sheet is the polygon overlap area.
+* **Immune** cell types (``backend_params.immune_types`` -- recruited immune
+  types and their latent pools) are members of the SAME sheet, in the same plane
+  as the epithelium, as the CPM has them in the same lattice: each is attached
+  to the tissue on the free lattice site at the sheet margin nearest its
+  blueprint centroid, and is a SMALLER polygon (target area
+  ``immune_area_scale`` x blueprint size), so it can squeeze along and between
+  the epithelial cells by neighbour exchange. Its contact with the epithelium is
+  shared junction length, as for any sheet cell.
+* **Overlay** cell types (``backend_params.overlay_types``, opt-in) are free
+  hexagonal islands at their exact blueprint centroid above the sheet; their
+  contact with the sheet is the polygon overlap area.
 * The shared **fields are overlaid** on the tissue (sampled per face into
   ``field_<name>`` columns), never meshed.
 
@@ -55,6 +63,7 @@ from viva_multicell_blueprint.compile.base import (
 from . import vertex_coupling as coupling
 from .vertex_mesh import (
     assign_to_lattice,
+    attach_to_margin,
     hex_lattice_sites,
     hex_polygon,
     hex_side,
@@ -64,6 +73,7 @@ from .vertex_mesh import (
 
 MEDIUM = "medium"
 SHEET, OVERLAY = "sheet", "overlay"
+IMMUNE = "immune"   # motility group of immune cells (in-sheet or overlay)
 _MIGRATION_COLS = coupling.MIGRATION_COLS
 
 
@@ -80,6 +90,14 @@ class VertexBackend(MechanicsBackend):
         self._chemotaxis_saturation = float(bp.get("chemotaxis_saturation", 0.0))
         self._chemotaxis = list(bp.get("chemotaxis") or [])
         self._overlay_types = {str(t) for t in (bp.get("overlay_types") or [])}
+        self._immune_types = {str(t) for t in (bp.get("immune_types") or [])} - self._overlay_types
+        # in-sheet immune polygons relax to this fraction of their blueprint size
+        self._immune_area_scale = float(bp.get("immune_area_scale", 1.0))
+        # Shape stiffness for in-sheet immune polygons (P0 = shape_index *
+        # sqrt(A0)). A latent cell carries no tension, so it wets the high-tension
+        # tissue border as a CPM latent cell does -- but a polygon, unlike a lattice
+        # cell, can thin into a sliver that folds; this keeps it compact.
+        self._immune_gamma = float(bp.get("immune_perimeter_elasticity", 0.0))
         # per-pair junction tension (the lowered blueprint adhesion); a pair not
         # in the table falls back to the scalar line_tension.
         self._tensions = {str(k): float(v) for k, v in (bp.get("tension_by_pair") or {}).items()}
@@ -89,18 +107,19 @@ class VertexBackend(MechanicsBackend):
         self._tau = float(bp.get("tension_noise_tau", 1.0))
         self._reconnect = bool(bp.get("auto_reconnect", True))
         # persistent random walk (active-Brownian polarity) -- the counterpart of
-        # a CPM cell wandering under Metropolis fluctuations; force per layer.
-        self._motility_force = {OVERLAY: float(bp.get("motility", 0.0)),
+        # a CPM cell wandering under Metropolis fluctuations; force per motility
+        # group: epithelium (SHEET) vs immune (in-sheet or overlay, IMMUNE).
+        self._motility_force = {IMMUNE: float(bp.get("motility", 0.0)),
                                 SHEET: float(bp.get("sheet_motility", 0.0))}
         self._seed = int(bp.get("seed", 0))
         self._rng = np.random.default_rng(self._seed)
-        # one polarity stream per layer, so the overlay's random walk does not
-        # depend on how many sheet cells draw before it (and vice versa)
-        persistence = {OVERLAY: float(bp.get("motility_persistence", 10.0)),
+        # one polarity stream per group, so the immune random walk does not
+        # depend on how many epithelial cells draw before it (and vice versa)
+        persistence = {IMMUNE: float(bp.get("motility_persistence", 10.0)),
                        SHEET: float(bp.get("sheet_motility_persistence",
                                            bp.get("motility_persistence", 10.0)))}
-        self._motility = {layer: coupling.RandomMotility(persistence[layer], seed=self._seed + k)
-                          for k, layer in ((1, SHEET), (2, OVERLAY))}
+        self._motility = {group: coupling.RandomMotility(persistence[group], seed=self._seed + k)
+                          for k, group in ((1, SHEET), (2, IMMUNE))}
         self._threshold_length = bp.get("threshold_length")
         self._substeps = max(1, int(bp.get("substeps", 4)))
         # rosette detachment rates (per unit time) for the 4-way / 5+-way vertices a
@@ -168,21 +187,30 @@ class VertexBackend(MechanicsBackend):
 
         sheet_ix = [i for i, l in enumerate(layer) if l == SHEET]
         over_ix = [i for i, l in enumerate(layer) if l == OVERLAY]
+        # in-sheet immune cells attach to the tissue margin AFTER the tissue is
+        # laid out; with no tissue to attach to they are placed like any cell
+        attach_ix = [i for i in sheet_ix if types[i] in self._immune_types]
+        core_ix = [i for i in sheet_ix if types[i] not in self._immune_types]
+        if not core_ix:
+            core_ix, attach_ix = attach_ix, []
         polys, owner, placed = [], [], {}
         if sheet_ix:
-            area = float(np.median([sizes[i] for i in sheet_ix]))
+            area = float(np.median([sizes[i] for i in core_ix]))
             sites = hex_lattice_sites(cents[sheet_ix], area)
             # alternate 1:1 assignment and rigid recentring of the (still regular)
-            # lattice on the blueprint cloud until the assignment stops changing
+            # lattice on the tissue cloud until the assignment stops changing
             site_of = None
             for _ in range(10):
-                new = assign_to_lattice(cents[sheet_ix], sites)
-                sites = sites + (cents[sheet_ix].mean(0) - sites[new].mean(0))
+                new = assign_to_lattice(cents[core_ix], sites)
+                sites = sites + (cents[core_ix].mean(0) - sites[new].mean(0))
                 if site_of is not None and np.array_equal(new, site_of):
                     break
                 site_of = new
-            for k, i in enumerate(sheet_ix):
-                center = sites[site_of[k]]
+            site = {i: int(site_of[k]) for k, i in enumerate(core_ix)}
+            margin = attach_to_margin(cents[attach_ix], sites, set(site.values()))
+            site.update({i: margin[k] for k, i in enumerate(attach_ix)})
+            for i in sheet_ix:
+                center = sites[site[i]]
                 polys.append(hex_polygon(center, area))
                 owner.append(i)
                 placed[i] = center
@@ -199,14 +227,22 @@ class VertexBackend(MechanicsBackend):
         fd = sheet.face_df
         fd["cell_type"] = [types[i] for i in owner]
         fd["layer"] = [layer[i] for i in owner]
-        fd["prefered_area"] = [sizes[i] for i in owner]
+        fd["prefered_area"] = [sizes[i] * (self._immune_area_scale
+                                           if types[i] in self._immune_types else 1.0)
+                               for i in owner]
         for col in ("area_elasticity", "perimeter_elasticity", "prefered_perimeter"):
             fd[col] = [self._mech(types[i])[col] for i in owner]
         if self._shape_gamma > 0:
             unset = fd["perimeter_elasticity"].to_numpy() <= 0
-            p0 = self._shape_index * np.sqrt(np.asarray([sizes[i] for i in owner], dtype=float))
+            p0 = self._shape_index * np.sqrt(fd["prefered_area"].to_numpy(dtype=float))
             fd.loc[unset, "perimeter_elasticity"] = self._shape_gamma
             fd.loc[unset, "prefered_perimeter"] = p0[unset]
+        if self._immune_gamma > 0:
+            imm = (fd["perimeter_elasticity"].to_numpy() <= 0) & np.array(
+                [types[i] in self._immune_types for i in owner], dtype=bool)
+            p0 = self._shape_index * np.sqrt(fd["prefered_area"].to_numpy(dtype=float))
+            fd.loc[imm, "perimeter_elasticity"] = self._immune_gamma
+            fd.loc[imm, "prefered_perimeter"] = p0[imm]
         for col, val in zip(_MIGRATION_COLS, (1.0, 0.0, 0.0, 0.0)):
             fd[col] = val
         # Explicit Euler (dt = one step) is stable only if the vertex drag beats
@@ -223,11 +259,14 @@ class VertexBackend(MechanicsBackend):
         self._uid = {ids[i]: int(uids[f]) for f, i in enumerate(owner)}
         self._uid_to_bid = {u: b for b, u in self._uid.items()}
         self._layer_of = {ids[i]: layer[i] for i in range(len(ids))}
+        self._group_of = {ids[i]: IMMUNE if (layer[i] == OVERLAY or types[i] in self._immune_types)
+                          else SHEET for i in range(len(ids))}
         for b in ids:
             self._alive[b] = True
         self.identity = dict(self._uid)
 
-        disp = np.array([np.hypot(*(placed[i] - cents[i])) for i in sheet_ix]) if sheet_ix else np.zeros(0)
+        disp = np.array([np.hypot(*(placed[i] - cents[i])) for i in core_ix]) if core_ix else np.zeros(0)
+        disp_imm = np.array([np.hypot(*(placed[i] - cents[i])) for i in attach_ix]) if attach_ix else np.zeros(0)
         self.residual_report = {
             "mesh": "hex",
             "n_input": len(ids),
@@ -239,8 +278,13 @@ class VertexBackend(MechanicsBackend):
             "n_guard_faces": 0,
             "n_sheet": len(sheet_ix),
             "n_overlay": len(over_ix),
+            "n_attached_immune": len(attach_ix),
             "sheet_centroid_rms": float(np.sqrt(np.mean(disp ** 2))) if len(disp) else 0.0,
             "sheet_centroid_max": float(disp.max()) if len(disp) else 0.0,
+            # attaching an immune cell to the tissue margin moves it off its
+            # blueprint centroid (the CPM leaves a medium gap there)
+            "immune_attach_rms": float(np.sqrt(np.mean(disp_imm ** 2))) if len(disp_imm) else 0.0,
+            "immune_attach_max": float(disp_imm.max()) if len(disp_imm) else 0.0,
         }
 
         # Held on the instance so its finalizer removes the scratch mesh dir when
@@ -267,10 +311,12 @@ class VertexBackend(MechanicsBackend):
         from vivarium_tyssue.processes.eulersolver import EulerSolver
 
         effectors = ["FaceAreaElasticity", "LineTension", "ActiveMigration"]
-        if self._shape_gamma > 0 or any(m["perimeter_elasticity"] > 0 for m in self._type_mech.values()):
+        if self._shape_gamma > 0 or self._immune_gamma > 0 or any(m["perimeter_elasticity"] > 0 for m in self._type_mech.values()):
             effectors.insert(1, "PerimeterElasticity")
+        # T1 at 0.2 x hexagon side: the small in-sheet immune polygons (side ~2.2)
+        # must swap neighbours before a short junction inverts
         threshold = (float(self._threshold_length) if self._threshold_length is not None
-                     else 0.1 * self._side)
+                     else 0.2 * self._side)
         max_disp = float(self._max_disp) if self._max_disp is not None else 0.5 * self._side
 
         # tyssue's reconnect (merge/detach) draws from the global numpy RNG.
@@ -381,9 +427,9 @@ class VertexBackend(MechanicsBackend):
         behaviors += self._activation_behaviors(activations)
         behaviors += coupling.field_overlay_behaviors(fd, field_grid)
         random_force = {}
-        for layer, walker in self._motility.items():
-            force_of = {u: self._motility_force[layer] for u in live
-                        if self._layer_of[self._uid_to_bid[u]] == layer}
+        for group, walker in self._motility.items():
+            force_of = {u: self._motility_force[group] for u in live
+                        if self._group_of[self._uid_to_bid[u]] == group}
             random_force.update(walker.step(force_of, float(interval)))
         behaviors += coupling.migration_behaviors(
             fd, field_grid, self._chemotaxis, self._migration_scale, live,
@@ -405,12 +451,22 @@ class VertexBackend(MechanicsBackend):
         # each one. Forces and directors persist on the mesh between updates.
         dt = float(interval) / self._substeps
         for k in range(self._substeps):
+            if len(self._solver.eptm.edge_df) == 0:
+                break   # the tissue collapsed (every junction gone): nothing left to integrate
             step = list(behaviors) if k == 0 else []
             step += coupling.junction_tension_behavior(
                 self._tensions, self._default_tension, self._sigma, self._tau,
                 dt, int(self._rng.integers(2 ** 31 - 1)))
             step += coupling.confinement_behavior(self._bounds)
-            self._solver.update({"behaviors": step, "global_time": float(self._t)}, dt)
+            try:
+                self._solver.update({"behaviors": step, "global_time": float(self._t)}, dt)
+            except ValueError:
+                # tyssue's reconnect merges the last junctions away and then runs
+                # its rosette detachment on the empty mesh; a collapsed tissue is
+                # an outcome (every cell vanished), any other error is not
+                if len(self._solver.eptm.edge_df):
+                    raise
+                break
             self._t += dt
         return self._emit()
 

@@ -9,7 +9,9 @@ field / rule / ODE coupling -- each backend is driven directly):
 * ``sheet_motility``  -> epithelial MSD relative to the sheet centre of mass,
   CAPPED at the largest value whose mesh never folds (inverted / self-intersecting
   faces) over a long run -- validity is a hard constraint, the MSD gap is reported
-* ``motility``        -> latent-immune random-walk displacement (median |d|)
+* ``motility``        -> latent-immune random-walk displacement (median |d|),
+  CAPPED the same way (the immune cells are polygons IN the sheet, so their walk
+  deforms the mesh too)
 * ``tension_scale``   -> epithelial mean area (junction tension Lambda_ab =
   tension_scale * J_ab contracts cells against their area elasticity)
 * ``tension_noise``   -> epithelial area coefficient of variation
@@ -100,9 +102,10 @@ def chemotaxis_drift(kind, blueprint, gradient, n_steps, overrides=None, seed=0)
 
 
 def n_folds(blueprint, overrides, n_steps, seeds) -> int:
-    """Worst count of inverted / self-intersecting sheet faces over a mechanics-only
-    vertex run (sampled every 10 steps), across seeds. A folded vertex mesh is
-    invalid geometry, so any fitted motility must keep this at 0."""
+    """Worst count of inverted / self-intersecting faces (epithelial AND in-sheet
+    immune) over a mechanics-only vertex run (sampled every 10 steps), across seeds.
+    A folded vertex mesh is invalid geometry, so any fitted motility must keep this
+    at 0."""
     from viva_multicell_blueprint.backends.vertex_mesh import n_invalid_faces
 
     worst = 0
@@ -112,8 +115,7 @@ def n_folds(blueprint, overrides, n_steps, seeds) -> int:
             out = b.update({}, 1.0)
             if k % 10:
                 continue
-            polys = [out["footprints"][c]["xy"] for c, t in out["types"].items()
-                     if t not in IMMUNE and out["footprints"][c]["xy"]]
+            polys = [f["xy"] for f in out["footprints"].values() if f["xy"]]
             worst = max(worst, n_invalid_faces(polys))
             if worst:
                 return worst
@@ -135,9 +137,9 @@ def main():
     cpm = _mean([mechanics_observables("cpm", bp, n, seed=s) for s in seeds])
     print("CPM target:", {k: round(v, 3) for k, v in cpm.items()})
 
-    # 1) The knobs act almost independently (overlay islands share no vertices with
-    #    the sheet), so fit each on its own observable: sweep, then interpolate the
-    #    monotone response to hit the CPM target.
+    # 1) Fit each knob on its own observable, in sequence: sweep, then interpolate
+    #    the monotone response to hit the CPM target. (The immune cells sit in the
+    #    sheet, so the knobs interact; each fit uses the knobs fitted before it.)
     def obs(ov):
         return _mean([mechanics_observables("vertex", bp, n, ov, seed=s) for s in seeds])
 
@@ -160,21 +162,28 @@ def main():
     # (tension contracts cells against area elasticity) -> fit it on the mean area
     ts_vals = [1.0, 2.0, 3.0, 4.0, 6.0] if not args.fast else [1.0, 4.0]
     base["tension_scale"], sweeps["tension_scale"] = fit_1d("tension_scale", ts_vals, "area_mean", base)
-    m_vals = [100, 150, 200, 250, 300] if not args.fast else [150, 250]
-    base["motility"], sweeps["motility"] = fit_1d("motility", m_vals, "immune_disp_median", base)
+    # HARD CONSTRAINT: the mesh must never fold. Step each motility down from its
+    # fit until a long run stays valid; report the observable it then reaches.
+    n_valid, valid_seeds = (100, (0,)) if args.fast else (400, (0, 1, 2))
+
+    def fold_free(knob, fit):
+        v = fit
+        while v > 1.0 and n_folds(bp, {**base, knob: v}, n_valid, valid_seeds):
+            print(f"  {knob}={v:.1f}: folds the mesh -> lower")
+            v *= 0.8
+        print(f"  {knob}: fit {fit:.1f}, fold-free cap {v:.1f}")
+        return v
+
+    m_vals = [25, 50, 100, 200, 300] if not args.fast else [50, 200]
+    mot_fit, sweeps["motility"] = fit_1d("motility", m_vals, "immune_disp_median", base)
+    base["motility"] = fold_free("motility", mot_fit)
     s_vals = [40, 55, 70, 85, 100] if not args.fast else [60, 90]
     msd_fit, sweeps["sheet_motility"] = fit_1d("sheet_motility", s_vals, "epi_msd", base)
-    # HARD CONSTRAINT: the sheet must never fold. Step the motility down from the
-    # MSD fit until a long run stays valid; report the MSD it then reaches.
-    n_valid, valid_seeds = (100, (0,)) if args.fast else (400, (0, 1, 2))
-    sm = msd_fit
-    while sm > 1.0 and n_folds(bp, {**base, "sheet_motility": sm}, n_valid, valid_seeds):
-        print(f"  sheet_motility={sm:.1f}: folds the mesh -> lower")
-        sm *= 0.8
+    sm = fold_free("sheet_motility", msd_fit)
     base["sheet_motility"] = sm
-    validity = {"msd_fit_sheet_motility": msd_fit, "fold_free_sheet_motility": sm,
+    validity = {"disp_fit_motility": mot_fit, "fold_free_motility": base["motility"],
+                "msd_fit_sheet_motility": msd_fit, "fold_free_sheet_motility": sm,
                 "validity_steps": n_valid, "validity_seeds": list(valid_seeds)}
-    print(f"  sheet_motility: MSD fit {msd_fit:.1f}, fold-free cap {sm:.1f}")
     t_vals = [0.0, 5.0, 10.0, 20.0] if not args.fast else [0.0, 10.0]
     _, sweeps["tension_noise"] = fit_1d("tension_noise", t_vals, "area_cv", base)
     # area CV responds weakly and non-monotonically to the noise (see sweeps): take

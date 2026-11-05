@@ -49,9 +49,18 @@ wanders under the temperature.
 **Tissue.** The epithelium (H/I/D) is a confluent sheet of polygons: a **regular
 hexagonal tiling** at the target area, one polygon per blueprint cell (optimal 1:1
 assignment of blueprint centroids to lattice sites; no guard ring, no polygons for
-medium). Immune cells (M/NK/CD8 and their latent pools) are **overlay** cells: free
-hexagonal islands above the sheet (Sego's immune layer, z = 1 over the z = 0
-epithelium) centred exactly on their blueprint centroid. The shared fields are
+medium). Immune cells (M/NK/CD8 and their latent pools) are members of the **same
+sheet, in the same plane**, as they are in the CPM lattice. Each one is attached to the
+tissue on the free lattice site at the sheet margin nearest its blueprint centroid
+(`attach_to_margin`), so it is bound to the tissue rather than floating free. It is a
+**smaller polygon**: it relaxes to A₀ = `immune_area_scale` × target size (0.5), so it
+can squeeze along and between epithelial cells by neighbour exchange. It also carries a
+shape stiffness Γ = `immune_perimeter_elasticity` (20) with P₀ = 3.9·√A₀. A latent
+cell has no adhesion row (tension 0), so it wets the high-tension tissue border, as
+the CPM latent cells do. Unlike a lattice cell, though, a polygon can thin into a
+sliver that folds, and the shape stiffness keeps it compact. (Free overlay islands
+above the sheet, Sego's 2-layer picture, remain available opt-in via
+`mechanics_mapping.vertex_overlay_types`; none by default.) The shared fields are
 **overlaid** on the tissue: sampled at each face centroid into `field_<name>` face
 columns, never meshed.
 
@@ -91,9 +100,13 @@ $\Lambda_{ab}(t) = \max\big(0, \Lambda_{ab} + x(t)\big)$,
 $x(t+dt) = x\,e^{-dt/\tau_\Lambda} + \sigma_\Lambda\sqrt{1-e^{-2dt/\tau_\Lambda}}\,\xi$, one
 draw per physical junction.
 
-**Topology.** `auto_reconnect` is on: a junction shorter than `threshold_length` merges
-into a 4-way vertex that detaches along the other axis (T1 neighbour exchange; T3 at the
-border), at tyssue's detachment rates (p₄ = 0.1, p₅₊ = 0.01 per unit time). Each coupled
+**Topology.** `auto_reconnect` is on: a junction shorter than `threshold_length`
+(0.2 × hexagon side = 0.62) merges into a 4-way vertex that detaches along the other
+axis (T1 neighbour exchange; T3 at the border). A rank-4 vertex detaches at p₄ = 1 per
+unit time and a rank-5+ vertex at tyssue's p₅₊ = 0.01. At tyssue's default p₄ = 0.1, a
+merged rosette stood for ~10 steps, so exchanges stalled half-done; the small immune
+polygons (side ≈ 2.2) also need the larger threshold to swap before a short junction
+inverts. The playback's vertex panel counts the neighbour exchanges frame by frame. Each coupled
 step is integrated in 4 solver sub-steps (`substeps`), so per-update vertex motion stays
 well below the T1 threshold. The shared field domain is a hard wall (`confine`
 behavior), as the lattice edge is for the CPM.
@@ -111,8 +124,9 @@ tension recomputed on the current topology every step, so a junction created by 
 gets the right tension). See `viva_multicell_blueprint/backends/vertex_coupling.py`.
 
 **Contact surface** (what the rules read as `shared_surface_by_type`): in the sheet, the
-shared junction length per neighbour type; for overlay cells, the **polygon overlap
-area** with each cell underneath (the 2-layer contact surface), credited both ways.
+shared junction length per neighbour type. This includes the in-sheet immune cells, as
+in the CPM, where contact is shared boundary. For opt-in overlay cells it is the
+**polygon overlap area** with each cell underneath, credited both ways.
 
 ## 3. Parameters, per type and per type pair (Sego blueprint)
 
@@ -126,26 +140,27 @@ area** with each cell underneath (the 2-layer contact surface), credited both wa
 | Fluctuations | T = 10 | f_mot, σ_Λ | **calibrated** (§4) |
 | Chemotaxis | λ_chem | s_mig·λ_chem, F_sat | λ_chem ratios identical; s_mig and F_sat **calibrated** (§4) |
 | Mobility | (implicit in MCS) | η = 2·K·A_0 = 100 | set for explicit-Euler stability (the area stiffness ~K·A_0 must stay below η/dt) |
-| Neighbour exchange | implicit (lattice) | T1 at ℓ < 0.1·side = 0.31 | `threshold_length` scaled to the hexagon side |
-| Immune placement | same lattice, at margin | overlay islands at the same centroids | `overlay_types` = immune types + latent pools |
+| Neighbour exchange | implicit (lattice) | T1 at ℓ < 0.2·side = 0.62, p₄ = 1 | `threshold_length` scaled to the hexagon side |
+| Immune placement | same lattice, at margin | same sheet, attached at the margin site nearest the centroid | `immune_types` = immune types + latent pools |
+| Immune size | V_T = 25 | A₀ = 12.5 (Γ = 20) | `immune_area_scale` = 0.5, `immune_perimeter_elasticity` = 20 (representation, not fitted) |
 
-Per-type-pair adhesion (blueprint `strength` = CPM J; vertex Λ = 1.74·J):
+Per-type-pair adhesion (blueprint `strength` = CPM J; vertex Λ = 1.683·J):
 
 | Pair | J | Λ | | Pair | J | Λ |
 |---|---|---|---|---|---|---|
-| epithelial–epithelial (H/I/D × H/I/D) | 5 | 8.7 | | M–M, NK–NK, CD8–CD8 | 25 | 43.5 |
-| epithelial–medium (H/I/D) | 25 | 43.5 | | M–NK, M–CD8 | 10 | 17.4 |
-| immune–medium (M/NK/CD8) | 10 | 17.4 | | NK–CD8 | 25 | 43.5 |
-| M–H, M–I, M–D | 20 | 34.8 | | NK–I, CD8–I | 10 | 17.4 |
-| NK–H, NK–D, CD8–H, CD8–D | 20 | 34.8 | | any latent type × anything | — (0) | 0 |
+| epithelial–epithelial (H/I/D × H/I/D) | 5 | 8.4 | | M–M, NK–NK, CD8–CD8 | 25 | 42.1 |
+| epithelial–medium (H/I/D) | 25 | 42.1 | | M–NK, M–CD8 | 10 | 16.8 |
+| immune–medium (M/NK/CD8) | 10 | 16.8 | | NK–CD8 | 25 | 42.1 |
+| M–H, M–I, M–D | 20 | 33.7 | | NK–I, CD8–I | 10 | 16.8 |
+| NK–H, NK–D, CD8–H, CD8–D | 20 | 33.7 | | any latent type × anything | — (0) | 0 |
 
-On the vertex side, immune–epithelium and immune–immune tensions only act where those
-cells share a junction. Overlay islands share none with the sheet, so the
-epithelium-facing rows are inert there. Contact with the epithelium is the overlap area
-instead (§2). Each island's border carries its (type, medium) tension.
+On the vertex side, immune–epithelium and immune–immune tensions act wherever those
+cells share a junction. The immune cells are in the sheet, so these rows are live, as
+in the CPM.
 
-Per-type motility layer (vertex): sheet cells (H/I/D) f_mot = 34.1 (fold-free cap, §4);
-overlay cells (immune + latent) f_mot = 236.5; persistence τ_p = 10 steps for both.
+Per-type motility group (vertex): epithelial cells (H/I/D) f_mot = 26.6; immune cells
+(immune + latent, in the sheet) f_mot = 56.1. Both are fold-free caps (§4). Persistence
+τ_p = 10 steps for both.
 
 ## 4. Calibration — making the free vertex knobs reproduce CPM behaviour
 
@@ -158,25 +173,27 @@ values in `compile/to_vertex.py: CALIBRATED_DEFAULTS`):
 
 | Knob | Fitted to | CPM | Vertex (fitted) |
 |---|---|---|---|
-| `tension_scale` κ = 1.74 | mean epithelial area | 23.0 | 22.8 |
-| `sheet_motility` = 34.1 (**cap**; MSD fit = 83) | epithelial MSD about the sheet centre, 60 steps | 9.5 µm² | **2.0 µm²** |
-| `motility` = 236.5 | median latent-immune displacement, 60 steps (walls on) | 9.4 µm | 9.4 µm |
-| `migration_scale` = 3.54, `chemotaxis_saturation` = 105 | macrophage drift speed vs virus gradient g = 0.001 / 0.003 / 0.01 / 0.03 | 0.098 / 0.145 / 0.332 / 0.350 | 0.058 / 0.163 / 0.327 / 0.350 µm/step |
-| `tension_noise` = 0 | epithelial area CV | 0.093 | 0.033 (not reachable; see below) |
+| `tension_scale` κ = 1.683 | mean epithelial area | 23.0 | 23.0 |
+| `sheet_motility` = 26.6 (**cap**; MSD fit = 81) | epithelial MSD about the sheet centre, 60 steps | 9.5 µm² | **2.2 µm²** |
+| `motility` = 56.1 (**cap**; displacement fit = 214) | median latent-immune displacement, 60 steps (walls on) | 9.4 µm | **4.6 µm** |
+| `migration_scale` = 3.54, `chemotaxis_saturation` = 105 | macrophage drift speed vs virus gradient g = 0.001 / 0.003 / 0.01 / 0.03 | 0.098 / 0.145 / 0.331 / 0.350 | 0.058 / 0.163 / 0.327 / 0.350 µm/step |
+| `tension_noise` = 5 (largest fold-free step) | epithelial area CV | 0.093 | 0.038 (not reachable; see below) |
 
 **What is *not* equivalent, honestly:**
 
-* **Epithelial wandering is ~5× lower.** Matching the CPM's epithelial MSD needs a
-  sheet motility of ~83, but at that force (and at any force above ~34) the vertex sheet
-  folds within a few hundred steps. Folding persisted with smaller time steps, a
+* **Epithelial wandering is ~4× lower, immune wandering ~2× lower.** Matching the CPM's
+  epithelial MSD needs a sheet motility of ~81, but at that force (and at any force above
+  ~27 once the in-sheet immune cells walk too) the vertex sheet folds within a few
+  hundred steps. The in-sheet immune walk is capped the same way (56 vs a fit of 214):
+  a welded polygon cannot wander as freely as the old free overlay island. Folding persisted with smaller time steps, a
   perimeter (shape) stiffness, faster rosette resolution and larger T1 thresholds.
   tyssue's reconnection resolves short junctions, not a vertex sweeping across a
   non-adjacent edge. So the motility is capped at the largest fold-free value, and the
-  vertex epithelium wanders less (MSD 2.0 vs 9.5 µm² over 60 steps). It still exchanges
+  vertex epithelium wanders less (MSD 2.2 vs 9.5 µm² over 60 steps). It still exchanges
   neighbours: 4–11 of 85 epithelial pairs swap by step 400, gains ≈ losses (genuine T1s).
-* **Area dispersion.** The vertex area CV (0.033) stays below the CPM's (0.093).
-  Tension noise raises it, but the level that would match folds the mesh, so it is
-  left at 0.
+* **Area dispersion.** The vertex area CV (0.038) stays below the CPM's (0.093).
+  Tension noise raises it, but the levels that would get closer (10, 20) fold the mesh,
+  so it stays at the largest fold-free step, 5.
 * **Tension scale depends on geometry.** On the isolated 4×4 mechanics-only sheet
   (`mechanics_sheet.yaml`) the area match is at κ ≈ 4, not 1.74. There the CPM mean
   area drops to 18.9 (vs 23.0 on the Sego sheet), with a larger fraction of cells on the
@@ -187,12 +204,14 @@ values in `compile/to_vertex.py: CALIBRATED_DEFAULTS`):
 * **Neighbour exchange.** The vertex sheet now rearranges (T1s), but far less than the
   CPM's lattice contacts turn over (60–74 of 110 pairs by step 400). CPM contacts include
   flickering diagonal-site contacts, so the two counts are not directly comparable.
-* **Extreme tension collapses the small sheet.** At κ = 8 the 4×4 sheet collapses (mean
-  area 1.8) instead of reaching a contracted equilibrium.
-* **Immune contact geometry.** The CPM immune cells touch the epithelium edge-on in the
-  same layer (contact = shared boundary). The vertex overlay touches it face-on from
-  above (contact = overlap area), as in Sego's 2-layer model. Kill rates read this contact
-  surface, so its units differ between substrates.
+* **Extreme tension collapses the small sheet.** At κ = 8 the 4×4 sheet collapses
+  completely (every junction merges away; area 0) instead of reaching a contracted
+  equilibrium. The backend reports every cell vanished rather than failing.
+* **Immune geometry.** Both substrates now have the immune cells edge-on in the tissue
+  plane, with contact = shared boundary. On the vertex side, though, they are attached to
+  the margin at t0 (the CPM leaves a medium gap of up to one cell diameter, so
+  `immune_attach_max` ≈ 5.6 µm). They are also half the CPM area, a representation
+  choice so they can squeeze along the tissue.
 * **Weak gradients.** At the shallowest gradient (g = 0.001) the vertex macrophage drifts
   ~40% slower than the CPM one. There the CPM drift is partly noise-rectified, which a
   deterministic tanh law does not reproduce.

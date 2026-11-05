@@ -13,7 +13,15 @@ kind: adversarial
 confidence: Accepted
 
 claim: >
-  In a MECHANICS-DOMINATED regime (strong differential adhesion + a strong
+  RE-RUN 2026-11-05 (reviewer: "auto-reconnect isn't working here"). Reconnect WAS on;
+  it is now also faster (merged 4-way vertices detach at p_4 = 1 per unit time instead of
+  0.1, T1 at 0.2 x side), and the playback's vertex panel counts neighbour exchanges frame
+  by frame. In this regime the vertex run still makes only 3 exchanges in 80 steps
+  (vs 74 in the Sego run): with 15 A cells (nearly all on the border) and a one-row B
+  stripe, nothing shrinks a junction to the T1 threshold, so the vertex clusters keep
+  their topology while the CPM blobs flow -- the substrate difference this control is
+  built to expose, not a disabled reconnect. Equivalence is still REJECTED (same 0.775,
+  cross 0.450, Delta +0.325 vs +/-0.10). Earlier reading (2026-10-28): In a MECHANICS-DOMINATED regime (strong differential adhesion + a strong
   chemoattractant gradient, no shared rules/ODE), the spatial equivalence test still
   REJECTS equivalence after the 2026-10-28 vertex revision. Cross-backend spatial
   agreement is 0.417 vs same-backend 0.775 (diff +0.358 > margin 0.10), now with
@@ -35,7 +43,9 @@ experiment: >
   SAME metrics.equivalence_tost used by crossparadigm-equivalence (margin +/-0.10).
 
 result: >
-  Spatial agreement (N=80, seeds {0,1,2}, mechanics seeded per replicate):
+  2026-11-05: spatial same 0.775, cross 0.450, TOST Delta +0.325 (pair CI [+0.116, +0.534]),
+  outside +/-0.10 -> NOT equivalent; vertex neighbour exchanges 3 over 80 steps.
+  Superseded 2026-10-28 result: Spatial agreement (N=80, seeds {0,1,2}, mechanics seeded per replicate):
   same-backend 0.775, cross-backend 0.417; TOST diff +0.358, outside +/-0.10 -> NOT
   equivalent. Type-A mean y: CPM 11.0 -> 11.0 (seeds 10.7 / 10.1 / 12.2); vertex
   10.7 -> 10.1 (10.4 / 9.9 / 10.0). The large directed-migration difference reported
@@ -70,14 +80,16 @@ simulation_set:
     seeds: [0, 1, 2]
     metrics:
       spatial_same_mean: 0.775
-      spatial_cross_mean: 0.417
-      spatial_tost_diff: 0.358
+      spatial_cross_mean: 0.45
+      spatial_tost_diff: 0.325
       spatial_tost_margin: 0.10
       spatial_equivalent: false
       typeA_mean_y_cpm: "11.0 -> 11.0"
       typeA_mean_y_vertex: "10.7 -> 10.1"
       superseded: "same 1.000 / cross 0.200; vertex A to y 17.9 (old uncalibrated vertex chemotaxis, deterministic replicates)"
       mechanics_seeded_per_replicate: true
+      vertex_neighbour_exchanges: 3
+      vertex_reconnect: on; p_4 = 1, T1 threshold 0.2 x side (2026-11-05)
     pass_fail_tests:
       - "spatial-equivalence-rejected: pass (test has power)"
       - "migration-direction-differs: superseded (calibrated chemotaxis: neither substrate migrates A far)"

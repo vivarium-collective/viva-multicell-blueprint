@@ -1,0 +1,21 @@
+meta:
+  investigation: influenza-crossparadigm
+  reviewer: reviewer
+  generated_at: '2026-11-05T17:15:03Z'
+  source: workbench-inline-feedback
+annotations:
+  study-flu-lung-crossparadigm-visualize-figure-spatial-playback-auto:
+  - author: reviewer
+    text: 'CD8 and NK cells are behaving eradically, seemingly randomly floating around
+      and not bound to the tissue itself. . They should probably be in the same plane
+      and tissue as the epithelium, but they should be smaller polygons so they can
+      spread out like in the CPM. '
+    ts: '2026-11-05T17:13:14Z'
+    region: 'Figure: spatial-playback (auto)'
+    group: visualize
+  study-substrate-divergence-counterfactual-visualize-figure-spatial-playback-auto:
+  - author: reviewer
+    text: Seems auto-reconnect isn't working here. Make sure it is turned on
+    ts: '2026-11-05T17:14:49Z'
+    region: 'Figure: spatial-playback (auto)'
+    group: visualize

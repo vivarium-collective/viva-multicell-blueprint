@@ -1,7 +1,8 @@
 """VertexBackend: the tyssue vertex model behind the MechanicsBackend port.
 
 Small fixtures (a 3x3 cluster of centroids). These cover the four review-focus
-seams: the hexagonal one-polygon-per-cell mesh, overlay islands, per-pair junction
+seams: the hexagonal one-polygon-per-cell mesh, in-sheet immune cells, overlay
+islands (opt-in), per-pair junction
 tension, reconnection, port-shape emission, field-driven migration via the
 ``behaviors`` port, and the all-one-type degenerate case.
 """
@@ -156,6 +157,41 @@ def test_overlay_cells_are_islands_with_overlap_contact():
     assert out["shared_surface_by_type"]["11"] == {} and out["neighbors"]["11"] == []
 
 
+def test_immune_cells_join_the_sheet_at_its_margin_as_smaller_polygons():
+    """In-sheet immune cells (the default for immune types) share vertices with the
+    tissue -- attached at the margin site nearest their centroid, even across a
+    gap -- relax to a smaller target area, and touch the epithelium by shared
+    junction length."""
+    cells = _grid_cells(types=["H"] * 9)
+    cells.append({"id": 10, "type": "M", "centroid": [6.0, 1.0], "size": 1.0})   # a gap away
+    b = _make(cells, backend_params={"immune_types": ["M"], "immune_area_scale": 0.5})
+    rep = b.residual_report
+    assert rep["n_sheet"] == 10 and rep["n_overlay"] == 0 and rep["n_attached_immune"] == 1
+    ed = b._solver.eptm.edge_df
+    fd = b._solver.eptm.face_df
+    m = fd.index[fd["unique_id"] == b.identity["10"]][0]
+    tissue = [fd.index[fd["unique_id"] == b.identity[str(i)]][0] for i in range(1, 10)]
+    assert set(ed.loc[ed["face"] == m, "srce"]) & set(ed.loc[ed["face"].isin(tissue), "srce"])
+    assert fd.loc[m, "prefered_area"] == pytest.approx(0.5)
+    assert fd.loc[tissue, "prefered_area"].tolist() == pytest.approx([1.0] * 9)
+    out = b._emit()
+    assert out["shared_surface_by_type"]["10"].get("H", 0.0) > 0
+    assert out["positions"]["10"][0] < 6.0          # pulled in from the gap
+
+
+def test_attach_to_margin_lines_cells_along_the_tissue():
+    from viva_multicell_blueprint.backends.vertex_mesh import attach_to_margin, hex_lattice_sites
+
+    sites = hex_lattice_sites(np.array([[0.0, 0.0], [4.0, 0.0]]), 1.0)
+    tissue = {int(np.argmin(((sites - [0.0, 0.0]) ** 2).sum(1)))}
+    # two cells far to the right: both attach to the tissue, not to each other
+    got = attach_to_margin(np.array([[4.0, 0.0], [4.0, 0.0]]), sites, tissue)
+    pitch = np.sort(np.hypot(*(sites - sites[next(iter(tissue))]).T))[1]
+    for k in got:
+        assert np.hypot(*(sites[k] - sites[next(iter(tissue))])) == pytest.approx(pitch, rel=1e-6)
+    assert len(set(got)) == 2
+
+
 def test_junction_tension_follows_type_pairs():
     """Per-pair adhesion is applied junction by junction (interior = J_ab, border =
     2 x J_(a,medium) per half-edge), not collapsed to one mean tension."""
@@ -182,7 +218,7 @@ def test_reconnect_enabled_and_scaled_to_cell_size():
     assert any(fn.__name__ == "reconnect" for fn, _ in s.manager.next)
     # merge threshold is a fraction of the hexagon side, not tyssue's 1e-3 default
     side = b._side
-    assert s.eptm.settings["threshold_length"] == pytest.approx(0.1 * side)
+    assert s.eptm.settings["threshold_length"] == pytest.approx(0.2 * side)
     off = _make(_grid_cells(), backend_params={"auto_reconnect": False})
     assert not any(fn.__name__ == "reconnect" for fn, _ in off._solver.manager.next)
 

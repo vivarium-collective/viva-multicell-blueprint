@@ -66,6 +66,25 @@ def type_counts(run) -> dict:
     return out
 
 
+def neighbour_exchanges(run) -> list[int]:
+    """Cumulative count of neighbour exchanges per frame: contacts (unordered cell
+    pairs in ``neighbors``) gained since the previous frame, summed. On the vertex
+    substrate every gained contact is a T1/T3 topology change, so this shows
+    ``auto_reconnect`` at work; frame 0 is 0."""
+    def pairs(frame):
+        return {tuple(sorted((str(a), str(b))))
+                for a, nbrs in (frame.get("neighbors") or {}).items() for b in nbrs}
+
+    out, total, prev = [], 0, None
+    for frame in run:
+        cur = pairs(frame)
+        if prev is not None:
+            total += len(cur - prev)
+        out.append(total)
+        prev = cur
+    return out
+
+
 def dynamics_distance(runA, runB) -> dict:
     """RMS distance between type-count trajectories (and field integrals if present)."""
     n = min(len(runA), len(runB))

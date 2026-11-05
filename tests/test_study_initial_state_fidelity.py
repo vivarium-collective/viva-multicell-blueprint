@@ -3,7 +3,7 @@
 Both backends must reproduce the blueprint's t=0 centroids / sizes / types. We
 read each backend's t0 emission (``n_steps=0``) and compare to the resolved
 blueprint cells; we also report the vertex 1:1 residual (every cell its own
-polygon on a hexagonal sheet, immune cells as overlay islands).
+polygon on ONE hexagonal sheet; immune cells attached at its margin).
 """
 from __future__ import annotations
 
@@ -45,21 +45,27 @@ def test_vertex_reproduces_t0_within_residual():
     run, n_total, n_alive, rms, type_ok = _fidelity("vertex")
     assert n_alive == n_total == 48
     assert type_ok == n_alive                # all types match
-    # hexagonal sheet re-tiles the square block: centroid residual is sub-cell
-    # (cell radius ~2.8 um); overlay islands sit exactly on their centroids
-    assert rms < 2.0
     r = run.residual
+    # hexagonal sheet re-tiles the square block: epithelial centroid residual is
+    # sub-cell (cell radius ~2.8 um)
+    assert r["sheet_centroid_rms"] < 2.0
+    # the latent immune pool attaches to the tissue margin, closing the CPM's
+    # medium gap: at most about one cell diameter (~5.6 um) off its centroid
+    assert r["n_attached_immune"] == 12
+    assert r["immune_attach_max"] < 6.0
+    assert rms < 3.5
     assert r["mesh"] == "hex"
     assert r["fraction_clean"] == 1.0 and len(r["unmapped_ids"]) == 0   # 1:1, nothing contested
     assert r["n_clean"] == 48
     # every polygon is exactly one Sego cell: no guard ring / medium polygons
     assert r["n_guard_faces"] == 0
-    assert r["n_sheet"] == 36 and r["n_overlay"] == 12   # epithelium + immune overlay
+    assert r["n_sheet"] == 48 and r["n_overlay"] == 0    # epithelium + immune, one sheet
 
 
 def test_vertex_t0_tissue_is_one_hexagonal_sheet():
-    """The epithelium is ONE confluent sheet of hexagons at the target area; the
-    immune cells are separate overlay islands (fields are overlaid, not meshed)."""
+    """Epithelium AND immune cells are ONE confluent sheet of hexagons in the same
+    plane (fields are overlaid, not meshed); immune polygons are built at the
+    lattice area and relax to their smaller target."""
     from collections import deque
 
     run, *_ = _fidelity("vertex")
@@ -67,9 +73,13 @@ def test_vertex_t0_tissue_is_one_hexagonal_sheet():
     fd, ed = eptm.face_df, eptm.edge_df
     assert len(fd) == 48
     sheet = fd[fd["layer"] == "sheet"]
-    assert set(sheet["cell_type"]) <= {"H", "I"}
+    assert len(sheet) == 48
     assert set(ed[ed["face"].isin(sheet.index)].groupby("face").size()) == {6}
     assert np.allclose(sheet["area"], 25.0)
+    immune = sheet["cell_type"].str.endswith("_latent")
+    assert immune.sum() == 12
+    assert np.allclose(sheet.loc[immune, "prefered_area"], 12.5)       # half size
+    assert np.allclose(sheet.loc[~immune, "prefered_area"], 25.0)
     # sheet faces form a single connected component through shared vertices
     verts = {f: set(ed.loc[ed["face"] == f, "srce"]) for f in sheet.index}
     seen, todo = set(), deque([sheet.index[0]])

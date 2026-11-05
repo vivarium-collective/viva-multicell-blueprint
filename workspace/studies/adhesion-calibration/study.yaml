@@ -10,7 +10,13 @@ gate_status: passed
 design_status: drafted
 
 claim: >
-  REVISED per the 2026-10-28 vertex-mechanics review. Both substrates' mechanics are now
+  RE-CALIBRATED 2026-11-05 for the in-sheet immune vertex substrate (immune cells are
+  half-size polygons in the sheet; reconnect p_4 = 1, T1 at 0.2 x side). Tension scale
+  1.683 (area 22.97 vs CPM 22.98). Both motilities are fold-free CAPS: epithelium 26.6
+  (MSD 2.2 vs CPM 9.5 um^2; fit 81), in-sheet immune 56.1 (displacement 4.6 vs 9.4 um;
+  fit 214). Tension noise 5 (area CV 0.038 vs 0.093; 10 and 20 fold). Chemotaxis
+  unchanged (scale 3.54, saturation 105). At kappa = 8 the small sheet now collapses
+  completely (area 0). Earlier calibration (2026-10-28, overlay immune layer):   REVISED per the 2026-10-28 vertex-mechanics review. Both substrates' mechanics are now
   DEFINED term by term (docs/mechanics.md). Every vertex parameter is either
   energy-matched to its CPM counterpart (area stiffness K = 2 lambda_volume, per cell
   type), lowered per type PAIR from the blueprint adhesion table (Lambda_ab = kappa *
@@ -44,7 +50,9 @@ experiment: >
   (4) Count epithelial neighbour exchanges on the Sego sheet over 400 steps.
 
 result: >
-  Calibration (Sego state, 5 seeds x 60 steps). CPM targets: mean area 23.0, area CV
+  2026-11-05 (scripts/calibrate_vertex_mechanics.py, 5 seeds x 60 steps; validity 3 seeds
+  x 400 steps, all faces incl. immune): see results/vertex_mechanics_calibration.json.
+  Superseded 2026-10-28 result:   Calibration (Sego state, 5 seeds x 60 steps). CPM targets: mean area 23.0, area CV
   0.093, epithelial MSD 9.54 um^2, latent-immune median displacement 9.37 um. Fitted
   vertex values:
   - tension_scale 1.74 -> area 22.8.

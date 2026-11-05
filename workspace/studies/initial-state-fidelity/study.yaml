@@ -10,7 +10,12 @@ gate_status: passed
 design_status: drafted
 
 claim: >
-  REVISED per the 2026-10-28 vertex-mechanics review. Both backends reproduce the
+  REVISED 2026-11-05: the vertex t0 is now ONE sheet of 48 hexagons (36 epithelial + 12
+  latent immune), the immune cells attached at the tissue margin site nearest their
+  centroid instead of sitting as overlay islands on it. Epithelial centroid residual
+  unchanged (rms 1.60, max 2.44 um); the immune cells move up to one cell diameter onto
+  the margin (rms 4.11, max 5.60 um), closing the CPM's medium gap. All 48 cells present,
+  types exact. Earlier reading (2026-10-28):   REVISED per the 2026-10-28 vertex-mechanics review. Both backends reproduce the
   blueprint's t=0 state (every cell's centroid, size and type), with every vertex
   polygon corresponding to exactly ONE Sego cell. The CPM side is EXACT (centroid
   residual 0). The vertex epithelium is a regular HEXAGONAL sheet at the target
@@ -29,7 +34,8 @@ experiment: >
   n_guard_faces, sheet_centroid_rms/max, unmapped_ids).
 
 result: >
-  All 48 cells (36 epithelial + 12 latent immune) are present on both backends with
+  2026-11-05: n_sheet 48, n_overlay 0, n_attached_immune 12; sheet_centroid_rms 1.60 um,
+  immune_attach_rms 4.11 um (max 5.60). Superseded 2026-10-28 result:   All 48 cells (36 epithelial + 12 latent immune) are present on both backends with
   100% type match. CPM seeds each cell exactly at its blueprint centroid (centroid RMS
   0.000 um, mean size 25.00). The vertex backend builds 48 faces for 48 cells: a
   single connected sheet of 36 regular hexagons (all 6-sided, area 25.0) plus 12

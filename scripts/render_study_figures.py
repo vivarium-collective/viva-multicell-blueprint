@@ -88,13 +88,15 @@ _MECH = {
     "initial_state": {"kind": "blocks",
                       "block": {"type": "H", "origin": [6, 6], "shape": [4, 4], "spacing": 5, "size": 25}},
 }
-_SCALES = (0.5, 1.0, 1.74, 2.0, 4.0, 8.0)
+_SCALES = (0.5, 1.0, 1.683, 2.0, 4.0, 8.0)
 CALIBRATION = STUDIES / "adhesion-calibration" / "results" / "vertex_mechanics_calibration.json"
 
 
 def _area_stats(run):
     f = run.frames[-1]
     a = np.array([s for cid, s in f["sizes"].items() if f["alive"].get(cid)], float)
+    if not len(a):            # the sheet collapsed: no cell left
+        return 0.0, float("nan")
     return a.mean(), (a.std() / a.mean() if a.mean() else float("nan"))
 
 

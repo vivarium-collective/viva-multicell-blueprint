@@ -12,7 +12,14 @@ title: "Backend equivalence (TOST)"
 confidence: Investigating
 
 claim: >
-  SCOPED to Claim 3 (scientific equivalence) -- NOT blueprint fidelity, NOT
+  RE-RUN 2026-11-05 on the in-sheet immune vertex substrate (immune cells are smaller
+  polygons attached to the tissue margin; faster reconnect; re-calibrated motility).
+  Verdicts unchanged: FATE equivalent (Delta -0.0014, cluster CI [-0.0034, +0.0008]
+  inside +/-0.05); exact POSITION not equivalent (same 0.674, cross 0.547, Delta
+  +0.126, cluster CI [+0.070, +0.181] vs +/-0.10). Diagnostic split: the gap is not
+  only the immune margin attachment (t0 offset up to 5.6 um) -- the epithelium alone
+  is also not equivalent (same 0.738, cross 0.622, Delta +0.116); immune-only Delta
+  +0.156. Earlier reading (2026-10-28) kept for provenance: SCOPED to Claim 3 (scientific equivalence) -- NOT blueprint fidelity, NOT
   biological validity. RE-RUN 2026-10-28 on the revised vertex substrate (hexagonal
   sheet, immune overlay, auto_reconnect, per-pair tension, CPM-calibrated motility) with
   mechanics-stochastic replicates. On cell FATE the substrates remain equivalent under
@@ -34,7 +41,11 @@ experiment: >
   the difference and its 90% CI for each metric.
 
 result: >
-  FATE agreement: same-backend 0.9887 (n=30 pairs), cross-backend 0.9901 (n=36); diff
+  2026-11-05 (N=120, seeds {0..5}): FATE same 0.9887 / cross 0.9901, Delta -0.0014, pair CI
+  [-0.0045, +0.0016], cluster CI [-0.0034, +0.0008] -> EQUIVALENT. SPATIAL same 0.6736 /
+  cross 0.5475, Delta +0.1262, pair CI [+0.051, +0.201], cluster CI [+0.070, +0.181] ->
+  NOT equivalent. By cell class: epithelium same 0.738 / cross 0.622 (Delta +0.116);
+  immune same 0.481 / cross 0.324 (Delta +0.156). Superseded 2026-10-28 result: FATE agreement: same-backend 0.9887 (n=30 pairs), cross-backend 0.9901 (n=36); diff
   -0.0014, pair 90% CI [-0.0045, +0.0016], run-cluster CI [-0.0034, +0.0008], fully
   inside +/-0.05 -> EQUIVALENT. SPATIAL (exact position, centroids within 5 um)
   agreement: same-backend 0.608, cross-backend 0.472; diff +0.135, run-cluster 90% CI
@@ -77,20 +88,22 @@ simulation_set:
     fate_equivalent: true
     fate_cluster_ci: "[-0.0034, +0.0008] (run-cluster bootstrap, PRIMARY)"
     fate_margin_biologically_justified: false
-    spatial_same_mean: 0.608
-    spatial_cross_mean: 0.472
-    spatial_diff: 0.135
-    spatial_cluster_ci: "[+0.071, +0.210]"
+    spatial_same_mean: 0.674
+    spatial_cross_mean: 0.547
+    spatial_diff: 0.126
+    spatial_cluster_ci: "[+0.070, +0.181]"
     spatial_equivalent: false
     median_displacement_cross_um: 5.7
     median_displacement_same_vertex_um: 2.3
     median_displacement_same_cpm_um: 5.2
     superseded_spatial: "same 1.000 / cross 0.083 (deterministic-mechanics replicates, old vertex substrate)"
     mechanics_seeded_per_replicate: true
+    spatial_epithelium_same_cross: 0.738 / 0.622 (diff +0.116)
+    spatial_immune_same_cross: 0.481 / 0.324 (diff +0.156)
+    vertex_substrate: in-sheet immune polygons, reconnect p_4=1 / T1 0.2 side, re-calibrated (2026-11-05)
   pass_fail_tests:
-  - "fate-equivalent-tost: pass"
-  - "spatial-equivalent: fail (diff 0.135, CI [+0.071, +0.210] vs margin 0.10)"
-
+  - 'fate-equivalent-tost: pass'
+  - 'spatial-equivalent: fail (diff 0.126, cluster CI [+0.070, +0.181] vs margin 0.10)'
 readouts:
 - name: fate_agreement
   description: Per-cell fate agreement (same-state fraction over the t0 cohort), per run pair.

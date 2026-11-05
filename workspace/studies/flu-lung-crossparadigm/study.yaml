@@ -10,7 +10,16 @@ gate_status: partial
 design_status: drafted
 
 claim: >
-  The ONE backend-neutral Sego 2022 influenza blueprint compiles to BOTH the CPM
+  REVISED 2026-11-05 (reviewer feedback: vertex CD8/NK floated free of the tissue):
+  vertex immune cells are now SMALLER POLYGONS IN THE EPITHELIAL SHEET, attached at the
+  tissue margin and moving along it by neighbour exchange, as the CPM immune pool wets
+  the epithelial edge; reconnect resolves merged rosettes faster (p_4 = 1, T1 at
+  0.2 x side); motilities re-calibrated under the no-fold cap. On this substrate FATE
+  still falls inside the same-backend seed spread (cross 0.948 vs 0.926-0.960), but
+  infected-patch OCCUPANCY (IoU 0.053, below both baselines 0.100 / 0.299) and
+  LOCATION (centroid distance 5.7 vs 3.3 um) now separate the backends -- a candidate
+  substrate signal, not yet causally attributed. Earlier reading (2026-10-28,
+  overlay immune layer) kept for provenance: The ONE backend-neutral Sego 2022 influenza blueprint compiles to BOTH the CPM
   (viva-cpm) and vertex (vivarium-tyssue) substrates and runs the Sego model WITH NAMED
   DEVIATIONS (V/L/C/F producers absent, latent-pool recruitment approximation)
   end-to-end on each. RE-RUN 2026-10-28 on the REVISED vertex substrate: a hexagonal
@@ -38,7 +47,19 @@ experiment: >
   baseline-relative relationship at N=150.
 
 result: >
-  Both backends run the Sego model (with named deviations) end-to-end. N=400, 3 CPM x
+  RE-RUN 2026-11-05 (in-sheet immune polygons, re-calibrated motility; N=400, 3 CPM x
+  3 vertex seeds, scripts/regen_capstone_metrics.py):
+  - Fate agreement: cross 0.948 (0.904-0.996) between the same-backend baselines
+    (CPM-vs-CPM 0.926 [0.901-0.955]; vertex-vs-vertex 0.960 [0.950-0.976]) -> fail to reject.
+  - Infected-patch occupancy IoU: cross 0.053 (0.005-0.150), BELOW both baselines (CPM
+    0.100, vertex 0.299) -> candidate signal.
+  - Patch centroid distance: 5.7 um cross (2.0-8.6) vs 3.3 um same-backend CPM (2.6-4.8).
+  - Final mean EPITHELIAL cell area: CPM 23.42, vertex 21.98 (ratio 0.94; the immune
+    polygons are half-size by design, so the representation check is epithelium-only).
+  - Vertex (seed 0) I-count inside the CPM 3-seed envelope at 55% of steps.
+  - 74 vertex neighbour exchanges over the run (shown in the playback).
+  The CI behavior test (N=150) still passes. Earlier result (2026-10-28, overlay immune
+  layer), superseded: Both backends run the Sego model (with named deviations) end-to-end. N=400, 3 CPM x
   3 vertex seeds:
   - Fate agreement: cross 0.938 (0.899-0.993) lies between the same-backend baselines
     (CPM-vs-CPM 0.926 [0.901-0.955]; vertex-vs-vertex 0.944 [0.921-0.973]).
@@ -88,26 +109,27 @@ simulation_set:
     base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm
     seeds: [0, 1, 2]
     metrics:
-      fate_agreement_cross: "0.938 (0.899-0.993)"
+      fate_agreement_cross: "0.948 (0.904-0.996)"
       fate_agreement_same_backend_cpm: "0.926 (0.901-0.955)"
-      fate_agreement_same_backend_vertex: "0.944 (0.921-0.973)"
-      patch_centroid_dist_cross_um: 3.60
+      fate_agreement_same_backend_vertex: "0.960 (0.950-0.976)"
+      patch_centroid_dist_cross_um: 5.68
       patch_centroid_dist_same_cpm_um: 3.33
-      infected_patch_iou_cross: 0.135
+      infected_patch_iou_cross: 0.053
       infected_patch_iou_same_cpm: 0.100
-      infected_patch_iou_same_vertex: 0.175
-      final_mean_area_cpm: 24.67
-      final_mean_area_vertex: 23.13
+      infected_patch_iou_same_vertex: 0.299
       vertex_inband_fraction: 0.551
-      vertex_substrate: "hex sheet + immune overlay, reconnect on, walls, calibrated with no-fold cap (2026-10-28)"
+      vertex_substrate: "hex sheet + in-sheet immune polygons (half size, margin-attached), reconnect p_4=1 / T1 0.2 side, walls, re-calibrated with no-fold cap (2026-11-05)"
       mechanics_seeded_per_replicate: true
+      final_mean_epithelial_area_cpm: 23.42
+      final_mean_epithelial_area_vertex: 21.98
+      vertex_neighbour_exchanges: 74
     pass_fail_tests:
-      - "both-backends-run-end-to-end: pass"
-      - "fate-agreement-within-seed-baseline: pass (cross 0.938 within same-backend 0.926-0.944)"
-      - "occupancy-iou-within-seed-baseline: pass (cross 0.135 within 0.100-0.175)"
-      - "patch-location-within-seed-baseline: pass (3.6 vs 3.3 um)"
-      - "spatial-not-representation-confounded (final area ratio 0.94): pass"
-      - "vertex-within-cpm-envelope (in-band 0.551): partial"
+      - 'both-backends-run-end-to-end: pass'
+      - 'fate-agreement-within-seed-baseline: pass (cross 0.948 within same-backend 0.926-0.960)'
+      - 'occupancy-iou-within-seed-baseline: FAIL (cross 0.053 below both 0.100 / 0.299) -- candidate substrate signal'
+      - 'patch-location-within-seed-baseline: FAIL (5.7 vs 3.3 um, cross mean outside CPM range 2.6-4.8)'
+      - 'spatial-not-representation-confounded (final epithelial area ratio 0.94): pass'
+      - 'vertex-within-cpm-envelope (in-band 0.551): partial'
   - name: crossparadigm-ci-N150
     status: completed
     base_model: viva_multicell_blueprint.composites.sego.sego_crossparadigm

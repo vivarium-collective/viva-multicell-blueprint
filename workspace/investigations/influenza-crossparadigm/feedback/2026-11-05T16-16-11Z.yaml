@@ -1,0 +1,25 @@
+meta:
+  investigation: influenza-crossparadigm
+  reviewer: reviewer
+  generated_at: '2026-11-05T16:16:11Z'
+  source: workbench-inline-feedback
+annotations:
+  study-dose-response-crossparadigm-visualize-figure-dose-response-initial-load-final-infection-auto-:
+  - author: reviewer
+    text: 'Gives a visualization class not registered: html:dose-response.html'
+    ts: '2026-11-05T16:14:59Z'
+    disposition: revise
+    region: "Figure: Dose response \u2014 initial load \u2192 final infection (auto)"
+    group: visualize
+  study-flu-lung-crossparadigm-visualize-figure-divergence-map-auto-viva-multicell-blueprint-com:
+  - author: reviewer
+    text: 'Error: ''Visualization class not registered: html:divergence.html'''
+    ts: '2026-11-05T16:15:47Z'
+    region: 'Figure: Divergence map (auto)'
+    group: visualize
+  study-flu-lung-crossparadigm-visualize-figure-dynamics-overlay-cpm-vs-vertex-i-count-band-auto:
+  - author: reviewer
+    text: 'KeyError: ''Visualization class not registered: html:dynamics-overlay.html'''
+    ts: '2026-11-05T16:15:59Z'
+    region: "Figure: Dynamics overlay \u2014 CPM vs vertex (I-count band) (auto)"
+    group: visualize

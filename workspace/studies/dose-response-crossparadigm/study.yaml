@@ -10,7 +10,9 @@ gate_status: partial
 design_status: drafted
 
 claim: >
-  Both backends agree on the DIRECTION of the dose response: a HIGHER initial viral
+  RE-RUN 2026-11-05 on the in-sheet immune vertex substrate (re-calibrated motility):
+  figure regenerated; the STRICT-DIRECTION behavior test (highest dose ends with more
+  infection than the lowest, on both backends) still passes. Earlier reading:   Both backends agree on the DIRECTION of the dose response: a HIGHER initial viral
   load (more initially-infected epithelial cells) ends with STRICTLY more infection
   than a LOWER load, on every backend and seed tested. This is a directional
   (lowest-vs-highest) result; intermediate-dose monotonicity is seed-dependent and is
