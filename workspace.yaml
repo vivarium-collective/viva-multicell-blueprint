@@ -33,6 +33,17 @@ imports:
     description: |
       Center-based 2D physics (pymunk wrapper): PymunkProcess rigid-body dynamics
       behind the blueprint's center-based paradigm (MunkBackend).
+  viva-grammar:
+    source: https://github.com/vivarium-collective/viva-grammar
+    ref: main
+    package: viva_grammar
+    mode: reference
+    description: |
+      The Macklin/PhysiCell cell-behavior hypothesis grammar (Hill-function
+      signals->behaviors) as a pluggable rule engine. Contributes
+      BlueprintGrammarProcess, a drop-in alternative to the built-in RulesProcess
+      for grammar-shaped blueprints (same fates/scalar/divisions/deaths ports;
+      per_step rate convention). build_core auto-chains viva_grammar.core.build_core.
 
 # Directory layout. New workspaces group their research directories under a
 # tidy `workspace/` subtree (the dirs below); the hidden `.pbg/` machine state
