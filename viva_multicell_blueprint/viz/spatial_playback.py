@@ -238,49 +238,67 @@ def _poly_trace(xs, ys, color, name):
         line=dict(color="rgba(40,40,40,0.55)", width=0.7), hoverinfo="skip")
 
 
-def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames=MAX_FRAMES,
-                     title="Spatial playback: CPM vs vertex", smooth_window=0):
-    codes = type_codes(run_cpm, run_vertex)
+# Human labels for each paradigm's panel (the native representation it draws).
+_PANEL_LABEL = {
+    "cpm": "CPM (voxel map)",
+    "vertex": "Vertex (polygon map)",
+    "munk": "Center-based (disc map)",
+}
+
+
+def _panel_traces(run, i, grid, codes, colors, smooth_window, has_poly):
+    """One frame of one backend panel: filled cell polygons when the run carries
+    polygon footprints (vertex faces, or munk discs), else scatter voxel fills +
+    per-cell outlines (CPM, or a synthetic position-only fallback)."""
+    if has_poly:
+        paths = _poly_paths_by_type(run[i], codes)
+        return [_poly_trace(*paths[t], colors[t], t) for t in codes]
+    zr, idr = _cpm_rasters(run, i, grid, smooth_window)
+    return _voxel_traces(zr, idr, grid, codes, colors)
+
+
+def _spatial_playback_multi(runs, grid_spec, *, dt_days=1.0, max_frames=MAX_FRAMES,
+                            title=None, smooth_window=0):
+    """N synchronized panels (one per paradigm), one shared time slider. ``runs`` is
+    an ordered ``{backend: run}`` mapping. Each panel draws that backend in its
+    native form (voxel fills for CPM, polygons for vertex/center-based); the panel
+    subtitle shows that backend's running neighbour-exchange count."""
+    backends = list(runs)
+    codes = type_codes(*runs.values())
     grid = dict(grid_spec, type_codes=codes)
     shape = grid_shape(grid)
-    n = min(len(run_cpm), len(run_vertex))
+    n = min(len(runs[b]) for b in backends)
     idx = decimate_indices(n, max_frames)
     ts = times(n, dt_days, idx)
     colors = {t: state_color(t, i) for i, t in enumerate(codes)}
     res = float(grid["grid_resolution_um"])
-    vtx_poly = _has_polygons(run_vertex)   # real vertex runs -> draw polygons
-    # running count of vertex neighbour exchanges (T1/T3 by auto_reconnect), shown
-    # in the vertex panel title so topology changes are visible frame by frame
-    swaps = neighbour_exchanges(run_vertex)
+    ncols = len(backends)
+    has_poly = {b: _has_polygons(runs[b]) for b in backends}
+    # per-backend running neighbour-exchange count (CPM boundary flips / vertex T1-T3
+    # auto_reconnect / center-based collisions), surfaced in each panel's subtitle.
+    swaps = {b: neighbour_exchanges(runs[b]) for b in backends}
+    if title is None:
+        title = "Spatial playback: " + " vs ".join(b for b in backends)
 
     def _titles(i):
-        return ("CPM (voxel map)", f"Vertex (polygon map) — neighbour exchanges: {swaps[i]}")
+        return tuple(f"{_PANEL_LABEL.get(b, b)} — neighbour exchanges: {swaps[b][i]}"
+                     for b in backends)
 
-    fig = make_subplots(rows=1, cols=2, subplot_titles=_titles(idx[0]), horizontal_spacing=0.08)
+    fig = make_subplots(rows=1, cols=ncols, subplot_titles=_titles(idx[0]),
+                        horizontal_spacing=0.06 if ncols > 2 else 0.08)
     title_annotations = [a.to_plotly_json() for a in fig.layout.annotations]
     anim = []   # trace indices updated by frames, in frame-data order
 
-    def _cpm_traces(i):
-        zr, idr = _cpm_rasters(run_cpm, i, grid, smooth_window)
-        return _voxel_traces(zr, idr, grid, codes, colors)
-
-    def _vertex_traces(i):
-        if vtx_poly:
-            paths = _poly_paths_by_type(run_vertex[i], codes)
-            return [_poly_trace(*paths[t], colors[t], t) for t in codes]
-        zr, idr = _cpm_rasters(run_vertex, i, grid, smooth_window)
-        return _voxel_traces(zr, idr, grid, codes, colors)
+    def _traces_for(b, i):
+        return _panel_traces(runs[b], i, grid, codes, colors, smooth_window, has_poly[b])
 
     # Everything is scatter-based (voxel fills + outlines, or polygons) so the
     # animation runs with redraw=True — discrete frames, no heatmap, no strobe.
-    # --- CPM panel (scatter voxel fills + per-cell outlines) ---
-    for tr in _cpm_traces(idx[0]):
-        fig.add_trace(tr, row=1, col=1); anim.append(len(fig.data) - 1)
-    # --- Vertex panel (polygons, or scatter-voxel fallback for synthetic runs) ---
-    for tr in _vertex_traces(idx[0]):
-        fig.add_trace(tr, row=1, col=2); anim.append(len(fig.data) - 1)
+    for c, b in enumerate(backends, start=1):
+        for tr in _traces_for(b, idx[0]):
+            fig.add_trace(tr, row=1, col=c); anim.append(len(fig.data) - 1)
 
-    for c in (1, 2):
+    for c in range(1, ncols + 1):
         fig.update_xaxes(title_text="x (um)", row=1, col=c, range=[0, shape[1] * res])
         fig.update_yaxes(title_text="y (um)", row=1, col=c, scaleanchor=f"x{'' if c == 1 else c}",
                          constrain="domain", range=[0, shape[0] * res])
@@ -293,7 +311,9 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
 
     frames = []
     for k, i in enumerate(idx):
-        data = list(_cpm_traces(i)) + _vertex_traces(i)
+        data = []
+        for b in backends:
+            data += list(_traces_for(b, i))
         notes = [dict(a, text=text) for a, text in zip(title_annotations, _titles(i))]
         frames.append(go.Frame(name=str(k), data=data, traces=anim,
                                layout=go.Layout(annotations=notes)))
@@ -318,19 +338,17 @@ def _spatial_playback(run_cpm, run_vertex, grid_spec, *, dt_days=1.0, max_frames
     return fig
 
 
-def spatial_playback(run_cpm, run_vertex, grid_spec, *, max_frames=MAX_FRAMES, budget=2_200_000,
-                     smooth_window=4, **kw):
-    """Two synchronized panels (CPM voxel map | vertex polygon map), shared slider.
-    Per-cell geometry is temporally smoothed over +/-``smooth_window`` sim steps
-    (:func:`_smooth_run`, ``0`` disables) to damp per-step model noise; frames are
-    then decimated to <= max_frames and further halved until the serialized figure
-    fits ``budget`` bytes (headroom under the workbench's 2.5 MB per-figure cap)."""
-    run_cpm = _smooth_run(run_cpm, smooth_window)
-    run_vertex = _smooth_run(run_vertex, smooth_window)
+def spatial_playback_multi(runs, grid_spec, *, max_frames=MAX_FRAMES, budget=2_200_000,
+                           smooth_window=4, **kw):
+    """N synchronized panels (one per paradigm), shared slider. ``runs`` is an
+    ordered ``{backend: run}`` mapping (e.g. ``{"cpm": ..., "vertex": ..., "munk": ...}``).
+    Per-cell geometry is temporally smoothed over +/-``smooth_window`` sim steps and
+    frames decimated/halved until the serialized figure fits ``budget`` bytes."""
+    runs = {b: _smooth_run(r, smooth_window) for b, r in runs.items()}
     mf = max_frames
     while True:
-        fig = _spatial_playback(run_cpm, run_vertex, grid_spec, max_frames=mf,
-                                smooth_window=smooth_window, **kw)
+        fig = _spatial_playback_multi(runs, grid_spec, max_frames=mf,
+                                      smooth_window=smooth_window, **kw)
         size = len(fig.to_json())
         if size < budget:
             return fig
@@ -340,6 +358,13 @@ def spatial_playback(run_cpm, run_vertex, grid_spec, *, max_frames=MAX_FRAMES, b
                           "figure may exceed the workbench inline cap", RuntimeWarning)
             return fig
         mf = max(2, mf // 2)
+
+
+def spatial_playback(run_cpm, run_vertex, grid_spec, **kw):
+    """Two synchronized panels (CPM voxel map | vertex polygon map), shared slider --
+    the legacy 2-backend entry point. For three paradigms use
+    :func:`spatial_playback_multi` with a ``{backend: run}`` mapping."""
+    return spatial_playback_multi({"cpm": run_cpm, "vertex": run_vertex}, grid_spec, **kw)
 
 
 def _single_playback(run, grid_spec, *, backend="cpm", dt_days=1.0, max_frames=MAX_FRAMES,
