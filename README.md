@@ -30,7 +30,7 @@ line with one plain sentence on what this workspace studies._
 
 | Composite | What it is |
 |---|---|
-| `sego_crossparadigm` | Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm\|vertex): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node. |
+| `sego_crossparadigm` | Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm\|vertex\|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node. |
 <!-- END:composites -->
 
 ### Investigations
@@ -40,7 +40,7 @@ line with one plain sentence on what this workspace studies._
 
 | Investigation | Research question |
 |---|---|
-| [Influenza cross-paradigm — one Sego 2022 blueprint, two mechanical substrates _(running)_](https://vivarium-collective.github.io/viva-multicell-blueprint/investigations/influenza-crossparadigm.html) | Can ONE backend-neutral blueprint express the whole Sego 2022 influenza model (ViralInfectionVTM) and run it faithfully on two different mechanical substrates — a Cellular Potts model (viva-cpm) and… |
+| [Influenza cross-paradigm — one Sego 2022 blueprint, three mechanical substrates _(running)_](https://vivarium-collective.github.io/viva-multicell-blueprint/investigations/influenza-crossparadigm.html) | Can ONE backend-neutral blueprint express the whole Sego 2022 influenza model (ViralInfectionVTM) and run it faithfully on three different mechanical substrates — a Cellular Potts model (viva-cpm), a… |
 <!-- END:investigations -->
 
 ## Run it locally
