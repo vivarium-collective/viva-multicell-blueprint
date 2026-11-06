@@ -1,24 +1,27 @@
 schema_version: 2
 name: influenza-crossparadigm
-title: "Influenza cross-paradigm — one Sego 2022 blueprint, two mechanical substrates"
+title: "Influenza cross-paradigm — one Sego 2022 blueprint, three mechanical substrates"
 created: "2026-10-27"
 status: running
 lead: eran
 
 question: >
   Can ONE backend-neutral blueprint express the whole Sego 2022 influenza model
-  (ViralInfectionVTM) and run it faithfully on two different mechanical substrates
-  — a Cellular Potts model (viva-cpm) and a vertex model (vivarium-tyssue) — and
-  where do the two substrates agree vs diverge when the shared mechanism is driven
-  live?
+  (ViralInfectionVTM) and run it faithfully on three different mechanical substrates
+  — a Cellular Potts model (viva-cpm), a vertex model (vivarium-tyssue), and a
+  center-based model (viva-munk) — and where do the substrates agree vs diverge when
+  the shared mechanism is driven live?
 
 hypothesis: >
   Because the field / rules / systemic-ODE / latent-pool recruitment mechanism is
-  compiled BYTE-FOR-BYTE identically onto both backends and only the single
+  compiled BYTE-FOR-BYTE identically onto all three backends and only the single
   mechanics node differs, cell-FATE dynamics should be nearly backend-independent,
   while SPATIAL morphology should diverge — each substrate samples the shared field
   at its own cell centroid and measures cell-cell contact through its own geometry.
   Divergence is therefore expected and is a finding about the substrate, not a bug.
+  (Confirmed three-way: fate agreement is statistically EQUIVALENT across all three
+  paradigm pairs, while spatial agreement is not — and the center-based model, which
+  is not calibrated to the other two, is the most spatially divergent of the three.)
 
 description: |
   This investigation is the capstone of the `viva-multicell-blueprint` build: it
@@ -44,8 +47,16 @@ description: |
   patch, a 6x6 epithelial block) so the runs actually complete; this is a
   demonstration, not paper scale. The comparison is reproducible (fixed seeds).
 
-  **Anti-goal respected.** No parameter is tuned to force the two backends to
-  agree. Honest divergence is reported.
+  **Third paradigm (center-based).** A third mechanical substrate — a center-based
+  model (viva-munk / pymunk: each cell a circular rigid body, area-matched to the
+  blueprint `size`) — is now compiled from the SAME canonical blueprint via
+  `local:MunkBackend`, visualized as a third panel in every spatial playback, and
+  scored PAIRWISE (cpm↔vertex, cpm↔munk, vertex↔munk) in the equivalence and
+  counterfactual studies. It is deliberately NOT calibrated to the other two
+  (docs/mechanics.md §3), so it is a genuinely independent representation.
+
+  **Anti-goal respected.** No parameter is tuned to force the backends to agree.
+  Honest divergence is reported.
 
 at_a_glance:
   - study: adhesion-calibration

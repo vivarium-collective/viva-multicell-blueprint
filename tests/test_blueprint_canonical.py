@@ -54,6 +54,21 @@ def test_canonical_state_is_identical_regardless_of_backend_params():
     assert Blueprint.from_dict(a).canonical_state() == Blueprint.from_dict(b).canonical_state()
 
 
+def test_canonical_blueprint_compiles_to_all_three_backends():
+    """BP-01: the SAME immutable canonical blueprint compiles unchanged to every
+    paradigm -- CPM (voxel), vertex (polygon), and center-based (disc) -- with its
+    canonical artifact untouched by the choice of backend."""
+    bp = Blueprint.from_dict(copy.deepcopy(_MIN))
+    canon = bp.canonical_state()
+    addrs = {}
+    for backend in ("cpm", "vertex", "munk"):
+        doc = compile_bp(bp, backend=backend)
+        assert "state" in doc and "mechanics" in doc["state"]
+        addrs[backend] = doc["state"]["mechanics"]["address"]
+        assert bp.canonical_state() == canon   # compiling never mutates the canonical blueprint
+    assert len(set(addrs.values())) == 3       # a genuinely distinct engine per paradigm
+
+
 def test_validator_structured_diagnostics_and_violation_warning():
     bad = copy.deepcopy(_MIN)
     del bad["domain"]

@@ -42,16 +42,23 @@ def per_cell_agreement(runA, runB, registry) -> dict:
 
 def lineage_agreement(registry) -> dict:
     """Separate metric for division-born cells: do the same t0 roots proliferate?
-    Per root, both backends' born-descendant counts (from the registry)."""
+    Per root, EVERY registered backend's born-descendant counts. A root 'agrees'
+    when all backends concur on whether it proliferated (all > 0, or all == 0) --
+    generalizes the 2-backend both/neither to N paradigms."""
     counts = registry.lineage_counts()
     roots = sorted(registry.t0_cohort())
-    both = sum(1 for r in roots if counts.get(r, {}).get("cpm", 0) > 0 and counts.get(r, {}).get("vertex", 0) > 0)
-    neither = sum(1 for r in roots if counts.get(r, {}).get("cpm", 0) == 0 and counts.get(r, {}).get("vertex", 0) == 0)
+    backends = tuple(registry.backends)
+
+    def grew(r, b):
+        return counts.get(r, {}).get(b, 0) > 0
+
+    both = sum(1 for r in roots if all(grew(r, b) for b in backends))
+    neither = sum(1 for r in roots if all(not grew(r, b) for b in backends))
     n = len(roots)
     return {
         "root_agreement": (both + neither) / n if n else float("nan"),
         "n_roots": n,
-        "n_born": {b: sum(c.get(b, 0) for c in counts.values()) for b in ("cpm", "vertex")},
+        "n_born": {b: sum(c.get(b, 0) for c in counts.values()) for b in backends},
     }
 
 
@@ -237,20 +244,25 @@ def per_cell_spatial_agreement(runA, runB, registry, tol_um=5.0) -> dict:
 
 
 def run_cluster_bootstrap_ci(cross_mat, same_cpm_mat, same_vtx_mat, *,
-                             n_boot=4000, alpha=0.05, seed=0) -> dict:
+                             n_boot=4000, alpha=0.05, seed=0, labels=("cpm", "vtx")) -> dict:
     """Dependence-aware CI for diff = mean(same) - mean(cross), resampling RUNS
     (clusters), not run-PAIRS.
 
-    The 6x6 seed grid yields 36 cross pairs and 30 same-backend pairs, but these
-    reuse only 6 CPM + 6 vertex trajectories, so the pairs are statistically
-    DEPENDENT and a pair-level t-test (TOST) badly understates the uncertainty
-    (reviewer guardrail). This resamples the CPM and vertex RUN indices with
-    replacement and recomputes the diff on each bootstrap tissue, giving a
-    cluster-robust percentile CI.
+    This is a PAIRWISE test between any two paradigms A and B (the ``cpm``/``vtx``
+    naming is historical); for a 3-way comparison it is called once per backend
+    pair (cpm-vertex, cpm-munk, vertex-munk). ``labels=(A, B)`` sets the run-count
+    key names in the result.
 
-    ``cross_mat[i][j]``     = agreement(cpm_run_i, vtx_run_j).
-    ``same_cpm_mat[i][j]``  = agreement(cpm_run_i, cpm_run_j) (diag ignored).
-    ``same_vtx_mat[i][j]``  = agreement(vtx_run_i, vtx_run_j) (diag ignored).
+    The NxM seed grid yields N*M cross pairs and same-backend pairs that reuse only
+    N A-trajectories + M B-trajectories, so the pairs are statistically DEPENDENT
+    and a pair-level t-test (TOST) badly understates the uncertainty (reviewer
+    guardrail). This resamples the A and B RUN indices with replacement and
+    recomputes the diff on each bootstrap tissue, giving a cluster-robust
+    percentile CI.
+
+    ``cross_mat[i][j]``     = agreement(A_run_i, B_run_j).
+    ``same_cpm_mat[i][j]``  = agreement(A_run_i, A_run_j) (diag ignored).
+    ``same_vtx_mat[i][j]``  = agreement(B_run_i, B_run_j) (diag ignored).
     Returns the observed diff and the (1-2*alpha) percentile CI over run resamples.
     """
     import numpy as _np
@@ -285,6 +297,9 @@ def run_cluster_bootstrap_ci(cross_mat, same_cpm_mat, same_vtx_mat, *,
         if not _np.isnan(d):
             diffs.append(d)
     lo, hi = _np.percentile(diffs, [100 * alpha, 100 * (1 - alpha)])
+    la, lb = labels
     return {"diff": obs, "ci_low": float(lo), "ci_high": float(hi),
-            "n_boot": len(diffs), "alpha": alpha, "n_cpm_runs": nc, "n_vtx_runs": nv,
+            "n_boot": len(diffs), "alpha": alpha,
+            f"n_{la}_runs": nc, f"n_{lb}_runs": nv,
+            "n_cpm_runs": nc, "n_vtx_runs": nv,   # legacy aliases (always present)
             "method": "run-cluster percentile bootstrap"}

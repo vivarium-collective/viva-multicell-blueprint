@@ -56,12 +56,13 @@ def _load_blueprint(blueprint):
     name="sego_crossparadigm",
     description=(
         "Sego 2022 influenza blueprint compiled onto a mechanics backend "
-        "(cpm|vertex): the shared field/rules/ODE/recruitment mechanism plus the "
-        "one backend-specific mechanics node."
+        "(cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus "
+        "the one backend-specific mechanics node."
     ),
     parameters={
         "backend": {"type": "string", "default": "cpm",
-                    "description": "mechanics substrate: 'cpm' or 'vertex'"},
+                    "description": "mechanics substrate: 'cpm' (Cellular Potts), "
+                                   "'vertex' (tyssue), or 'munk' (center-based pymunk)"},
         "blueprint": {"type": "string", "default": str(_SEGO),
                       "description": "backend-neutral blueprint: a path to a YAML file, "
                                      "inline YAML text, or a dict (Blueprint Studio sends inline YAML)"},

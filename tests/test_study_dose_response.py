@@ -41,7 +41,7 @@ def _dose(doc, frac, backend, seed):
 
 def test_both_backends_agree_on_strict_dose_direction():
     doc = Blueprint.load(SEGO).to_dict()
-    for backend in ("cpm", "vertex"):
+    for backend in ("cpm", "vertex", "munk"):
         for seed in SEEDS:
             rows = [_dose(doc, f, backend, seed) for f in FRACTIONS]
             seed_I = [r[0] for r in rows]

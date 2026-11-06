@@ -34,8 +34,9 @@ experiment: >
   Assert the acceptance criteria as tests.
 
 result: >
-  All BP-01 acceptance criteria pass (tests/test_blueprint_canonical.py, 9 tests):
-  the same immutable canonical blueprint compiles to both backends;
+  All BP-01 acceptance criteria pass (tests/test_blueprint_canonical.py):
+  the same immutable canonical blueprint compiles to all three backends (CPM, vertex,
+  center-based);
   `canonical_state()` is identical regardless of backend/run parameters; the
   validator emits structured error/warning diagnostics; a missing blueprint_version
   and in-blueprint backend/run parameters are warnings (not errors). The committed
@@ -80,7 +81,7 @@ simulation_set:
 behavior_tests:
 - name: same-canonical-blueprint-both-backends
   classification: primary
-  description: The same immutable canonical blueprint compiles to CPM and vertex.
+  description: The same immutable canonical blueprint compiles to CPM, vertex and center-based.
   measure: {kind: contract, field: canonical_state}
   pass_if: {op: both_backends_accept, note: "tests/test_blueprint_canonical.py::test_same_canonical_blueprint_compiles_to_both_backends"}
   requires_simulation: "false"
@@ -133,9 +134,10 @@ findings:
   tier: interpretation
   mechanism_origin: engineered
   statement: >
-    One versioned canonical blueprint compiles unchanged to both backends;
-    backend/run parameters are separated into CompileOptions and flagged by a
-    static validator; three worked examples validate and compile on both backends.
+    One versioned canonical blueprint compiles unchanged to all three backends (CPM,
+    vertex, center-based); backend/run parameters are separated into CompileOptions
+    and flagged by a static validator; three worked examples validate and compile on
+    every backend.
   evidence:
     observed: "9 BP-01 acceptance tests pass; sego + mechanics_divergence validate contract-clean; 174 passed overall"
   explanation: "A canonical schema + split + validator make the biological blueprint a first-class, tested artifact."

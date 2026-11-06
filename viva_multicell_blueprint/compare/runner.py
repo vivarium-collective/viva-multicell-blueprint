@@ -30,7 +30,7 @@ from .raster import frame_from_backend
 _GEOM_KEYS = ("positions", "sizes", "types", "alive", "neighbors",
               "shared_surface_by_type", "footprints")
 
-BACKENDS = ("cpm", "vertex")
+BACKENDS = ("cpm", "vertex", "munk")
 
 
 def _meta() -> dict:
@@ -93,13 +93,35 @@ def run_backend(blueprint, backend: str, n_steps: int, *, underlay: str = "virus
     return BackendRun(backend, frames, inst)
 
 
+def run_all(blueprint, n_steps: int, *, backends=BACKENDS, underlay: str = "virus",
+            interval: float = 1.0):
+    """Run every backend in ``backends`` and build the shared N-ary
+    :class:`IdentityRegistry`.
+
+    Returns ``(runs, registry)`` where ``runs`` is ``{backend: BackendRun}`` in the
+    requested order. The cross-paradigm comparison then runs PAIRWISE over the
+    backend pairs (cpm-vertex, cpm-munk, vertex-munk).
+    """
+    runs = {b: run_backend(blueprint, b, n_steps, underlay=underlay, interval=interval)
+            for b in backends}
+    ids = [str(c["id"]) for c in resolve_initial_state(blueprint)]
+    reg = IdentityRegistry.from_maps(
+        ids,
+        {b: runs[b].identity for b in backends},
+        {b: runs[b].residual for b in backends},
+    )
+    return runs, reg
+
+
 def run_both(blueprint, n_steps: int, *, underlay: str = "virus", interval: float = 1.0):
-    """Run both backends and build the shared :class:`IdentityRegistry`.
+    """Run the CPM + vertex pair and build the shared :class:`IdentityRegistry`
+    (legacy 2-backend path).
 
     Returns ``(cpm_run, vertex_run, registry)``.
     """
-    cpm = run_backend(blueprint, "cpm", n_steps, underlay=underlay, interval=interval)
-    vtx = run_backend(blueprint, "vertex", n_steps, underlay=underlay, interval=interval)
+    runs, _ = run_all(blueprint, n_steps, backends=("cpm", "vertex"),
+                      underlay=underlay, interval=interval)
+    cpm, vtx = runs["cpm"], runs["vertex"]
     ids = [str(c["id"]) for c in resolve_initial_state(blueprint)]
     reg = IdentityRegistry.from_backends(ids, cpm.identity, vtx.identity, vtx.residual)
     return cpm, vtx, reg

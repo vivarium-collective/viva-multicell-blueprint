@@ -17,7 +17,7 @@ def frame(types, alive=None, shift=0.0):
 
 
 def reg():
-    return IdentityRegistry(IDS, {i: n for n, i in enumerate(IDS)}, {i: n for n, i in enumerate(IDS)})
+    return IdentityRegistry.from_backends(IDS, {i: n for n, i in enumerate(IDS)}, {i: n for n, i in enumerate(IDS)})
 
 
 def test_identical_runs_agreement_one():

@@ -22,11 +22,19 @@ dependencies = [
     # Extracted from viva-template as of v0.4.16; provides the `vivarium-workbench
     # serve` CLI invoked by scripts/serve.sh.
     "vivarium-workbench",
-    # The two mechanical backends this workspace runs a blueprint on side-by-side.
+    # The three mechanical backends this workspace runs a blueprint on side-by-side.
     # viva-cpm = Cellular Potts (Rust core, maturin build); vivarium-tyssue =
-    # vertex model (wraps the vivatyssue fork). Both via git (never committed path).
+    # vertex model (wraps the vivatyssue fork); viva-munk = center-based 2D physics
+    # (pymunk rigid bodies). All via git (never committed path).
     "viva-cpm",
     "vivarium-tyssue",
+    # viva-munk = center-based (pymunk) mechanics backend. Its real runtime import
+    # is `viva_superpowers` (already a dep); its metadata still pins the pre-rename
+    # `pbg-superpowers` dist, which we neutralize via override-dependencies below
+    # (that dist's module is provided by viva-superpowers). pymunk is its one new
+    # binary dep (manylinux/macos wheels on PyPI -- no local build).
+    "viva-munk",
+    "pymunk",
     # vivarium-tyssue@master does NOT declare tyssue in its runtime deps, and we
     # use tyssue directly (Voronoi mesh build, the ActiveMigration effector), so
     # pin the pandas-3 fork explicitly here (source below).
@@ -68,6 +76,11 @@ override-dependencies = [
     # Same conflict for viva-superpowers (bare URL from workbench vs @main
     # elsewhere). Force a single URL for the whole graph.
     "viva-superpowers @ git+https://github.com/vivarium-collective/viva-superpowers.git@main",
+    # viva-munk@main still pins the pre-rename `pbg-superpowers` dist in its
+    # metadata, but imports the rebranded `viva_superpowers` module at runtime
+    # (already installed). Pin the last pbg-superpowers release so resolution is
+    # deterministic rather than letting it float.
+    "pbg-superpowers==0.23.0",
 ]
 
 [tool.uv.sources]
@@ -77,6 +90,7 @@ vivarium-workbench = { git = "https://github.com/vivarium-collective/vivarium-wo
 # Unify every reference to the main branch here (top-level sources win).
 viva-superpowers = { git = "https://github.com/vivarium-collective/viva-superpowers.git", branch = "main" }
 viva-cpm = { git = "https://github.com/vivarium-collective/viva-cpm.git", branch = "main" }
+viva-munk = { git = "https://github.com/vivarium-collective/viva-munk.git", branch = "main" }
 vivarium-tyssue = { git = "https://github.com/vivarium-collective/vivarium-tyssue.git", branch = "master" }
 # vivarium-tyssue depends on the pandas-3 tyssue fork, but uv only honors
 # [tool.uv.sources] from the TOP-LEVEL project — so the fork pin must live here,

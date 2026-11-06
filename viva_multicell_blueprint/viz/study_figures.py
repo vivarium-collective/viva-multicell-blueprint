@@ -164,7 +164,8 @@ def t0_fidelity(residuals, *, type_ok=None, n_cells=None, cell_radius_um=2.8,
     radius so "sub-cell" is visually obvious; RMS (and optional type-match) are
     annotated per backend.
     """
-    order = [b for b in ("cpm", "vertex") if b in residuals]
+    order = [b for b in ("cpm", "vertex", "munk") if b in residuals]
+    order += [b for b in residuals if b not in order]  # any further backends, stable
     fig = go.Figure()
     for b in order:
         r = np.asarray(residuals[b], float)
@@ -189,14 +190,17 @@ def t0_fidelity(residuals, *, type_ok=None, n_cells=None, cell_radius_um=2.8,
 
 
 def equivalence_plot(same, cross, tost, *, metric="fate agreement",
-                     title="Backend equivalence (TOST)", cluster_ci=None):
+                     title="Backend equivalence (TOST)", cluster_ci=None,
+                     pair_label="CPM↔vertex"):
     """Same-backend vs cross-backend agreement distributions with the equivalence
     margin band and the TOST verdict.
 
     ``same`` / ``cross`` are the agreement samples; ``tost`` is the dict from
     :func:`metrics.equivalence_tost`. The grey band is the equivalence region
     (same-backend mean ± margin); when the cross-backend box sits inside it and
-    the TOST rejects, the backends are statistically equivalent.
+    the TOST rejects, the backends are statistically equivalent. ``pair_label``
+    names the cross-backend pair for the box label (e.g. "CPM↔vertex",
+    "CPM↔center-based") in a 3-way, per-pair comparison.
     """
     import numpy as np
     same = np.asarray(same, float)
@@ -215,7 +219,7 @@ def equivalence_plot(same, cross, tost, *, metric="fate agreement",
     fig.add_trace(go.Box(y=rnd(same, 4), name="same-backend<br>(seed↔seed)", boxpoints="all",
                          jitter=0.5, pointpos=0, marker=dict(color=_CPM), line=dict(color=_CPM),
                          hovertemplate="%{y:.3f}<extra></extra>"))
-    fig.add_trace(go.Box(y=rnd(cross, 4), name="cross-backend<br>(CPM↔vertex)", boxpoints="all",
+    fig.add_trace(go.Box(y=rnd(cross, 4), name=f"cross-backend<br>({pair_label})", boxpoints="all",
                          jitter=0.5, pointpos=0, marker=dict(color=_VERTEX), line=dict(color=_VERTEX),
                          hovertemplate="%{y:.3f}<extra></extra>"))
     verdict = "EQUIVALENT" if equiv else "NOT equivalent"
