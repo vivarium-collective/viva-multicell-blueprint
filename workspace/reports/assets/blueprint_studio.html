@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#ffffff; --fg:#1b1b1f; --muted:#5b5b66; --line:#e3e3ea; --card:#f7f7fb;
-    --cpm:#0072B2; --vertex:#D55E00; --accent:#2e7d32; --accentbg:#eaf5ec; --err:#b3261e; --code:#f0f0f5;
+    --cpm:#0072B2; --vertex:#D55E00; --munk:#CC79A7; --accent:#2e7d32; --accentbg:#eaf5ec; --err:#b3261e; --code:#f0f0f5;
   }
   :root:not([data-theme="light"]){ @media (prefers-color-scheme: dark){
     :root{ --bg:#16161a; --fg:#ececf1; --muted:#a0a0ad; --line:#2c2c34; --card:#1e1e24;
@@ -26,11 +26,12 @@
   textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;min-height:260px;white-space:pre;resize:vertical}
   .row{display:flex;gap:16px;flex-wrap:wrap}
   .row>div{flex:1;min-width:160px}
-  .engines{display:flex;gap:10px;margin-top:4px}
-  .engine{flex:1;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
+  .engines{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap}
+  .engine{flex:1;min-width:120px;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
   .engine.sel[data-e=cpm]{border-color:var(--cpm);background:color-mix(in srgb,var(--cpm) 10%,transparent)}
   .engine.sel[data-e=vertex]{border-color:var(--vertex);background:color-mix(in srgb,var(--vertex) 10%,transparent)}
-  .engine.sel[data-e=both]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  .engine.sel[data-e=munk]{border-color:var(--munk);background:color-mix(in srgb,var(--munk) 10%,transparent)}
+  .engine.sel[data-e=all]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
   .btn-mini{display:inline-block;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;text-decoration:none}
   .btn-mini:hover{border-color:var(--muted)}
   .result{margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--code);font-size:13px}
@@ -82,7 +83,8 @@
         <div class="engines">
           <div class="engine sel" data-e="cpm" id="eng-cpm">CPM<small>Cellular Potts (voxel)</small></div>
           <div class="engine" data-e="vertex" id="eng-vertex">Vertex<small>tyssue (polygon)</small></div>
-          <div class="engine" data-e="both" id="eng-both">Both<small>run CPM + vertex</small></div>
+          <div class="engine" data-e="munk" id="eng-munk">Center-based<small>pymunk (disc)</small></div>
+          <div class="engine" data-e="all" id="eng-all">All three<small>CPM + vertex + center-based</small></div>
         </div>
       </div>
       <div>
@@ -275,7 +277,7 @@ async function startRun(eng, steps, overridesBase, tpl){
 $("#run").addEventListener("click", async () => {
   const tpl = $("#tpl").value;
   const steps = parseFloat($("#steps").value) || 60;
-  const engines = engine==="both" ? ["cpm","vertex"] : [engine];
+  const engines = engine==="all" ? ["cpm","vertex","munk"] : [engine];
   const overridesBase = {};
   const bp = $("#bp").value.trim();
   if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = $("#bp").value;
