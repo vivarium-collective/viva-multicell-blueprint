@@ -335,13 +335,36 @@ class CPMBackend(MechanicsBackend):
                 self._world.remove_cells([cpm])
                 self._alive[bid] = False
 
-        # (c) divisions: split the mother now; the daughter has no blueprint id
-        #     (tracked by lineage, not folded into the t=0 cohort).
-        div_ids = [self._cpm_id.get(str(ev["cell_id"] if isinstance(ev, dict) else ev))
+        # (c) divisions: viva-cpm mitosis is VOLUME-THRESHOLD based. The binding is
+        #     ``World.divide_cells(threshold: float, reset_target: float)`` -- it splits
+        #     EVERY non-medium cell with volume >= ``threshold`` (the mother keeps its id;
+        #     a NEW cell is the other daughter; both daughters' target_volume is set to
+        #     ``reset_target``). There is NO per-id split in viva-cpm (0.1.3 or main), so
+        #     we map the lineage division EVENTS onto it by dividing at a threshold equal
+        #     to the SMALLEST current volume among the requested, still-alive mother cells
+        #     -- so every requested mother divides -- and reset the daughters to the
+        #     mother's blueprint target size so they regrow as normal cells. Daughters
+        #     (new cpm ids) have no blueprint id: tracked by lineage, not folded into the
+        #     t=0 cohort (unchanged behaviour). Caveat: because the API thresholds on
+        #     volume, any non-requested cell at least as large also divides; at the
+        #     near-uniform cell volumes here divisions are rare and daughters are never
+        #     cohort-scored, so this is an accepted substrate limitation, not a fate effect.
+        #     (The previous ``divide_cells(div_ids, True)`` call passed a list + bool and
+        #     raised TypeError against this signature on every division -- a latent bug,
+        #     since no shipped study fires a CPM division.)
+        div_cpm = [self._cpm_id.get(str(ev["cell_id"] if isinstance(ev, dict) else ev))
                    for ev in divisions]
-        div_ids = [c for c in div_ids if c is not None and self._alive.get(self._cpm_to_bid.get(c, ""), False)]
-        if div_ids:
-            self._world.divide_cells(div_ids, True)
+        div_cpm = [c for c in div_cpm
+                   if c is not None and self._alive.get(self._cpm_to_bid.get(c, ""), False)]
+        if div_cpm:
+            vols = list(self._world.cell_volumes())
+            req_vols = [vols[c] for c in div_cpm if c < len(vols) and vols[c] > 0]
+            if req_vols:
+                threshold = float(min(req_vols))
+                req_sizes = [float(self._cell_meta[self._cpm_to_bid[c]]["size"])
+                             for c in div_cpm if c in self._cpm_to_bid]
+                reset_target = float(min(req_sizes)) if req_sizes else threshold
+                self._world.divide_cells(threshold, reset_target)
 
         # (d) write the AUTHORITATIVE shared field into the engine (native
         #     dynamics zeroed -> step() reads it, never re-diffuses it).
