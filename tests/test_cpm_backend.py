@@ -264,3 +264,29 @@ def test_cpm_contact_area_by_type():
     # neighbors list references blueprint ids (the abutting partner).
     assert "2" in out["neighbors"]["1"]
     assert "1" in out["neighbors"]["2"]
+
+
+def test_cpm_division_event_splits_requested_mother():
+    """A lineage division event must divide the requested mother via viva-cpm's
+    VOLUME-THRESHOLD mitosis API (divide_cells(threshold, reset_target)) -- not crash
+    with the old list+bool signature. Two well-separated cells of DIFFERENT size on a
+    deterministic lattice (mcs=0, so volume == seeded block): dividing the bigger one
+    adds exactly one daughter and leaves the smaller (sub-threshold) cell intact; the
+    mother keeps its id, stays alive, and its volume drops after the split."""
+    cells = [
+        {"id": 1, "type": "A", "centroid": [6.0, 6.0], "size": 36.0},   # ~6x6 block
+        {"id": 2, "type": "A", "centroid": [18.0, 6.0], "size": 16.0},  # ~4x4 block
+    ]
+    b = _make(cells, backend_params={"dims": [28, 14, 1], "mcs_per_update": 0})
+    out0 = b.update({}, 1.0)
+    assert out0["sizes"]["1"] == pytest.approx(36.0, abs=2)
+    n0 = b._world.n_cells()
+
+    # dividing cell 1 must NOT raise (the old divide_cells(list, True) raised TypeError)
+    out = b.update({"divisions": [{"cell_id": 1}]}, 1.0)
+
+    assert b._world.n_cells() == n0 + 1          # exactly one daughter added
+    assert out["alive"]["1"] is True             # mother keeps its id + stays tracked
+    assert out["alive"]["2"] is True
+    assert out["sizes"]["1"] < 36.0              # mother volume dropped (it split)
+    # the smaller cell (volume 16 < threshold 36) did NOT divide -> only one split total
