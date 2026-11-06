@@ -28,7 +28,7 @@ from viva_multicell_blueprint.compile._shared import resolve_initial_state
 from viva_multicell_blueprint.compare.runner import run_backend
 from viva_multicell_blueprint.viz import (
     adhesion_sweep, divergence, dose_response, dynamics_overlay, mechanics_calibration,
-    spatial_playback, t0_fidelity,
+    spatial_playback, spatial_playback_multi, t0_fidelity,
 )
 from viva_multicell_blueprint.viz._common import HTML_CAP
 
@@ -64,8 +64,13 @@ def render_flu_lung(fast: bool) -> None:
     ids = [str(c["id"]) for c in resolve_initial_state(Blueprint.load(SEGO))]
     cpm = {s: run("cpm", s) for s in seeds}
     vtx = run("vertex", 0)
-    reg = IdentityRegistry.from_backends(ids, cpm[0].identity, vtx.identity,
-                                         getattr(vtx, "residual", {}) or {})
+    munk = run("munk", 0)
+    # one representative seed-0 run per paradigm for the side-by-side trio
+    runs0 = {"cpm": cpm[0], "vertex": vtx, "munk": munk}
+    reg = IdentityRegistry.from_maps(
+        ids,
+        {b: r.identity for b, r in runs0.items()},
+        {b: getattr(r, "residual", {}) or {} for b, r in runs0.items()})
     # CPM I-count stochastic envelope as the acceptance band.
     tc = lambda r: np.array(metrics.type_counts(r.frames).get("I", [0] * (n + 1)), float)
     M = np.vstack([tc(cpm[s]) for s in seeds])
@@ -73,11 +78,17 @@ def render_flu_lung(fast: bool) -> None:
     band = {"I cells": [(float(t), float(mu[t]), float(lo[t]), float(hi[t])) for t in range(n + 1)]}
 
     _write("flu-lung-crossparadigm", "spatial-playback",
-           spatial_playback(cpm[0].frames, vtx.frames, grid))
+           spatial_playback_multi({b: r.frames for b, r in runs0.items()}, grid))
     _write("flu-lung-crossparadigm", "dynamics-overlay",
-           dynamics_overlay({"cpm": cpm[0].frames, "vertex": vtx.frames}, band))
+           dynamics_overlay({b: r.frames for b, r in runs0.items()}, band))
+    # pairwise substrate-divergence maps (cpm-vertex kept as the canonical name)
     _write("flu-lung-crossparadigm", "divergence",
            divergence(cpm[0].frames, vtx.frames, reg, grid))
+    for a, b in itertools.combinations(list(runs0), 2):
+        if (a, b) == ("cpm", "vertex"):
+            continue
+        _write("flu-lung-crossparadigm", f"divergence-{a}-{b}",
+               divergence(runs0[a].frames, runs0[b].frames, reg, grid))
 
 
 # --- adhesion-calibration: J↔tension sweep + neutral-sheet playback -----------
@@ -114,11 +125,14 @@ def render_adhesion(fast: bool) -> None:
         v_cv.append(cv)
     _write("adhesion-calibration", "adhesion-sweep",
            adhesion_sweep(_SCALES, v_mean, v_cv, c_mean, c_cv, target_size=25))
-    # playback at the calibrated default tension scale (no override)
+    # playback at the calibrated default tension scale (no override); add the
+    # center-based sheet as a third panel (munk calibration itself is future work).
     vtx_ref = run_backend(Blueprint.from_dict(copy.deepcopy(_MECH)), "vertex", n)
+    munk_ref = run_backend(Blueprint.from_dict(copy.deepcopy(_MECH)), "munk", n)
     grid = {"extent_um": [30, 30], "grid_resolution_um": 1}
     _write("adhesion-calibration", "neutral-sheet-playback",
-           spatial_playback(cpm.frames, vtx_ref.frames, grid))
+           spatial_playback_multi({"cpm": cpm.frames, "vertex": vtx_ref.frames,
+                                   "munk": munk_ref.frames}, grid))
     if CALIBRATION.exists():   # produced by scripts/calibrate_vertex_mechanics.py
         _write("adhesion-calibration", "mechanics-calibration",
                mechanics_calibration(json.loads(CALIBRATION.read_text())))
@@ -140,7 +154,7 @@ def render_dose(fast: bool) -> None:
         return int(np.array(tc.get("I", [0]))[-1]) if "I" in tc else 0
 
     series = []
-    for backend in ("cpm", "vertex"):
+    for backend in ("cpm", "vertex", "munk"):
         for seed in seeds:
             series.append({"backend": backend, "seed": seed,
                            "final_I": [final_I(f, backend, seed) for f in fractions]})
@@ -152,7 +166,7 @@ def render_fidelity(fast: bool) -> None:
     bp = Blueprint.load(SEGO)
     by = {str(c["id"]): c for c in resolve_initial_state(bp)}
     residuals, type_ok, runs = {}, {}, {}
-    for backend in ("cpm", "vertex"):
+    for backend in ("cpm", "vertex", "munk"):
         run = run_backend(Blueprint.load(SEGO), backend, 0)   # t0 frame only
         runs[backend] = run
         f = run.frames[0]
@@ -169,7 +183,7 @@ def render_fidelity(fast: bool) -> None:
            t0_fidelity(residuals, type_ok=type_ok, n_cells=len(by)))
     grid = {"extent_um": [50, 50], "grid_resolution_um": 1}
     _write("initial-state-fidelity", "t0-side-by-side",
-           spatial_playback(runs["cpm"].frames, runs["vertex"].frames, grid))
+           spatial_playback_multi({b: runs[b].frames for b in runs}, grid))
 
 
 _RENDERERS = {

@@ -46,6 +46,7 @@ def main() -> None:
     ids = [str(c["id"]) for c in resolve_initial_state(Blueprint.load(SEGO))]
     cpm = {s: _run("cpm", s, n) for s in SEEDS}
     vtx = {s: _run("vertex", s, n) for s in SEEDS}
+    munk = {s: _run("munk", s, n) for s in SEEDS}
 
     def agree(a, b):
         reg = IdentityRegistry.from_backends(ids, a.identity, b.identity, getattr(b, "residual", {}) or {})
@@ -72,22 +73,24 @@ def main() -> None:
         return float(np.mean([s for cid, s in f["sizes"].items()
                               if f["alive"].get(cid) and (types is None or f["types"].get(cid) in types)]))
 
-    cpm_pairs = list(itertools.combinations(SEEDS, 2))
+    same_pairs = list(itertools.combinations(SEEDS, 2))
     cross = [(i, j) for i in SEEDS for j in SEEDS]
+    by = {"cpm": cpm, "vertex": vtx, "munk": munk}
 
     print(f"=== capstone null-control table (N={n}) ===")
-    print("                        agreement(mean/min/max)   iou_I(mean/min/max)   I-patch centroid dist")
-    print("  same-backend CPM  : %.4f %.4f %.4f   %.3f %.3f %.3f   %.2f %.2f %.2f"
-          % (*_summ([agree(cpm[i], cpm[j]) for i, j in cpm_pairs]),
-             *_summ([iou_I(cpm[i], cpm[j]) for i, j in cpm_pairs]),
-             *_summ([cdist(cpm[i], cpm[j]) for i, j in cpm_pairs])))
-    print("  same-backend VTX  : %.4f %.4f %.4f   %.3f %.3f %.3f"
-          % (*_summ([agree(vtx[i], vtx[j]) for i, j in cpm_pairs]),
-             *_summ([iou_I(vtx[i], vtx[j]) for i, j in cpm_pairs])))
-    print("  CROSS backend     : %.4f %.4f %.4f   %.3f %.3f %.3f   %.2f %.2f %.2f"
-          % (*_summ([agree(cpm[i], vtx[j]) for i, j in cross]),
-             *_summ([iou_I(cpm[i], vtx[j]) for i, j in cross]),
-             *_summ([cdist(cpm[i], vtx[j]) for i, j in cross])))
+    print("                            agreement(mean/min/max)   iou_I(mean/min/max)   I-patch centroid dist")
+    for name, runs in by.items():
+        print("  same-backend %-6s : %.4f %.4f %.4f   %.3f %.3f %.3f"
+              % (name.upper(),
+                 *_summ([agree(runs[i], runs[j]) for i, j in same_pairs]),
+                 *_summ([iou_I(runs[i], runs[j]) for i, j in same_pairs])))
+    for a, b in itertools.combinations(by, 2):
+        ra, rb = by[a], by[b]
+        print("  CROSS %-7s/%-6s: %.4f %.4f %.4f   %.3f %.3f %.3f   %.2f %.2f %.2f"
+              % (a, b,
+                 *_summ([agree(ra[i], rb[j]) for i, j in cross]),
+                 *_summ([iou_I(ra[i], rb[j]) for i, j in cross]),
+                 *_summ([cdist(ra[i], rb[j]) for i, j in cross])))
 
     # representation control + non-circular dynamics check
     print(f"\n  final mean EPITHELIAL cell area  CPM={mean_area(cpm[0]):.2f}  VTX={mean_area(vtx[0]):.2f}  "

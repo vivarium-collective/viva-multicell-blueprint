@@ -31,7 +31,7 @@ from viva_multicell_blueprint.compare import metrics
 from viva_multicell_blueprint.compare.identity import IdentityRegistry
 from viva_multicell_blueprint.compile._shared import resolve_initial_state
 from viva_multicell_blueprint.compare.runner import run_backend
-from viva_multicell_blueprint.viz import equivalence_plot, spatial_playback
+from viva_multicell_blueprint.viz import equivalence_plot, spatial_playback, spatial_playback_multi
 
 ROOT = Path(__file__).resolve().parents[1]
 STUDIES = ROOT / "workspace" / "studies"
@@ -71,8 +71,30 @@ def _pairs_same(runs_by_backend, score):
     return out
 
 
-def _pairs_cross(cpm, vtx, score):
-    return [score(cpm[i], vtx[j]) for i in sorted(cpm) for j in sorted(vtx)]
+def _pairs_cross(a_runs, b_runs, score):
+    return [score(a_runs[i], b_runs[j]) for i in sorted(a_runs) for j in sorted(b_runs)]
+
+
+# backend -> human label for per-pair figure/box labels
+_BLABEL = {"cpm": "CPM", "vertex": "vertex", "munk": "center-based"}
+# the paradigm pairs, cpm-vertex first (its figures/keys keep the canonical names)
+_PAIRS = (("cpm", "vertex"), ("cpm", "munk"), ("vertex", "munk"))
+
+
+def _pair_analysis(runs_by_backend, a, b, score, margin, *, fast):
+    """TOST + run-cluster bootstrap for one backend pair (a, b). ``same`` pools the
+    within-backend seed pairs of BOTH a and b (the no-substrate-effect spread)."""
+    ra, rb = runs_by_backend[a], runs_by_backend[b]
+    sa, sb = sorted(ra), sorted(rb)
+    same = _pairs_same({a: ra, b: rb}, score)
+    cross = _pairs_cross(ra, rb, score)
+    tost = metrics.equivalence_tost(same, cross, margin=margin)
+    C = [[score(ra[i], rb[j]) for j in sb] for i in sa]
+    Sa = [[score(ra[i], ra[j]) if i != j else 1.0 for j in sa] for i in sa]
+    Sb = [[score(rb[i], rb[j]) if i != j else 1.0 for j in sb] for i in sb]
+    cluster = metrics.run_cluster_bootstrap_ci(C, Sa, Sb, n_boot=(1000 if fast else 4000),
+                                               labels=(a, b))
+    return {"a": a, "b": b, "same": same, "cross": cross, "tost": tost, "cluster": cluster}
 
 
 def equivalence_study(fast: bool) -> None:
@@ -83,8 +105,7 @@ def equivalence_study(fast: bool) -> None:
     seeds = (0, 1, 2) if fast else (0, 1, 2, 3, 4, 5)
     margin_fate, margin_spatial = 0.05, 0.10
     ids = [str(c["id"]) for c in resolve_initial_state(Blueprint.load(bp))]
-    cpm = {s: _run(bp, "cpm", s, n) for s in seeds}
-    vtx = {s: _run(bp, "vertex", s, n) for s in seeds}
+    runs_by_backend = {b: {s: _run(bp, b, s, n) for s in seeds} for b in ("cpm", "vertex", "munk")}
 
     def fate(a, b):
         return metrics.per_cell_agreement(a.frames, b.frames, _reg(ids, a, b))["mean"]
@@ -92,26 +113,27 @@ def equivalence_study(fast: bool) -> None:
     def spatial(a, b):
         return metrics.per_cell_spatial_agreement(a.frames, b.frames, _reg(ids, a, b), tol_um=5.0)["mean"]
 
-    sc = sorted(cpm); sv = sorted(vtx)
-    out = {"study": study, "n_steps": n, "seeds": list(seeds)}
+    out = {"study": study, "n_steps": n, "seeds": list(seeds),
+           "backends": ["cpm", "vertex", "munk"], "pairs": [f"{a}-{b}" for a, b in _PAIRS]}
     for label, score, margin in (("fate", fate, margin_fate), ("spatial", spatial, margin_spatial)):
-        same = _pairs_same({"cpm": cpm, "vertex": vtx}, score)
-        cross = _pairs_cross(cpm, vtx, score)
-        tost = metrics.equivalence_tost(same, cross, margin=margin)
-        # Dependence-aware (run-cluster) reanalysis: the seed-pairs reuse the same
-        # 6+6 runs, so resample RUNS, not pairs (reviewer guardrail).
-        C = [[score(cpm[i], vtx[j]) for j in sv] for i in sc]
-        Sc = [[score(cpm[i], cpm[j]) if i != j else 1.0 for j in sc] for i in sc]
-        Sv = [[score(vtx[i], vtx[j]) if i != j else 1.0 for j in sv] for i in sv]
-        cluster = metrics.run_cluster_bootstrap_ci(C, Sc, Sv, n_boot=4000)
-        out[label] = {"same": same, "cross": cross, "tost": tost, "cluster": cluster}
-        _write(study, f"equivalence-{label}", equivalence_plot(
-            same, cross, tost, metric=f"{label} agreement",
-            title=f"Backend equivalence — {label}", cluster_ci=cluster))
-        print(f"  {label}: same={tost['mean_same']:.4f} cross={tost['mean_cross']:.4f} "
-              f"diff={tost['diff']:+.4f} | pair-CI[{tost['ci_low']:+.4f},{tost['ci_high']:+.4f}] "
-              f"CLUSTER-CI[{cluster['ci_low']:+.4f},{cluster['ci_high']:+.4f}] margin={margin} "
-              f"-> equivalent={tost['equivalent']}")
+        out[label] = {"margin": margin, "pairs": {}}
+        for a, b in _PAIRS:
+            res = _pair_analysis(runs_by_backend, a, b, score, margin, fast=fast)
+            tost, cluster = res["tost"], res["cluster"]
+            key = f"{a}-{b}"
+            out[label]["pairs"][key] = res
+            # canonical cpm-vertex keeps the original filename + top-level keys.
+            fname = f"equivalence-{label}" if (a, b) == ("cpm", "vertex") else f"equivalence-{label}-{a}-{b}"
+            if (a, b) == ("cpm", "vertex"):
+                out[label].update({"same": res["same"], "cross": res["cross"],
+                                   "tost": tost, "cluster": cluster})
+            _write(study, fname, equivalence_plot(
+                res["same"], res["cross"], tost, metric=f"{label} agreement",
+                title=f"Backend equivalence — {label} ({_BLABEL[a]}↔{_BLABEL[b]})",
+                cluster_ci=cluster, pair_label=f"{_BLABEL[a]}↔{_BLABEL[b]}"))
+            print(f"  {label} {a}↔{b}: same={tost['mean_same']:.4f} cross={tost['mean_cross']:.4f} "
+                  f"diff={tost['diff']:+.4f} | CLUSTER-CI[{cluster['ci_low']:+.4f},{cluster['ci_high']:+.4f}] "
+                  f"margin={margin} -> equivalent={tost['equivalent']}")
     _results(study, out)
 
 
@@ -123,26 +145,31 @@ def counterfactual_study(fast: bool) -> None:
     seeds = (0, 1, 2)
     margin_spatial = 0.10
     ids = [str(c["id"]) for c in resolve_initial_state(Blueprint.load(bp))]
-    cpm = {s: _run(bp, "cpm", s, n) for s in seeds}
-    vtx = {s: _run(bp, "vertex", s, n) for s in seeds}
+    runs_by_backend = {b: {s: _run(bp, b, s, n) for s in seeds} for b in ("cpm", "vertex", "munk")}
 
     def spatial(a, b):
         return metrics.per_cell_spatial_agreement(a.frames, b.frames, _reg(ids, a, b), tol_um=5.0)["mean"]
 
-    same = _pairs_same({"cpm": cpm, "vertex": vtx}, spatial)
-    cross = _pairs_cross(cpm, vtx, spatial)
-    tost = metrics.equivalence_tost(same, cross, margin=margin_spatial)
-    _write(study, "equivalence-spatial", equivalence_plot(
-        same, cross, tost, metric="spatial agreement",
-        title="Counterfactual — spatial equivalence (TOST)"))
-    _write(study, "spatial-playback", spatial_playback(
-        cpm[0].frames, vtx[0].frames, {"extent_um": [40, 40], "grid_resolution_um": 1},
-        title="Mechanics-dominated: CPM vs vertex"))
     out = {"study": study, "n_steps": n, "seeds": list(seeds),
-           "spatial": {"same": same, "cross": cross, "tost": tost}}
+           "backends": ["cpm", "vertex", "munk"], "spatial": {"margin": margin_spatial, "pairs": {}}}
+    for a, b in _PAIRS:
+        res = _pair_analysis(runs_by_backend, a, b, spatial, margin_spatial, fast=fast)
+        tost = res["tost"]
+        out["spatial"]["pairs"][f"{a}-{b}"] = res
+        fname = "equivalence-spatial" if (a, b) == ("cpm", "vertex") else f"equivalence-spatial-{a}-{b}"
+        if (a, b) == ("cpm", "vertex"):
+            out["spatial"].update({"same": res["same"], "cross": res["cross"], "tost": tost})
+        _write(study, fname, equivalence_plot(
+            res["same"], res["cross"], tost, metric="spatial agreement",
+            title=f"Counterfactual — spatial equivalence ({_BLABEL[a]}↔{_BLABEL[b]})",
+            pair_label=f"{_BLABEL[a]}↔{_BLABEL[b]}"))
+        print(f"  spatial {a}↔{b}: same={tost['mean_same']:.4f} cross={tost['mean_cross']:.4f} "
+              f"diff={tost['diff']:+.4f} margin={margin_spatial} -> equivalent={tost['equivalent']}")
+    _write(study, "spatial-playback", spatial_playback_multi(
+        {b: runs_by_backend[b][0].frames for b in ("cpm", "vertex", "munk")},
+        {"extent_um": [40, 40], "grid_resolution_um": 1},
+        title="Mechanics-dominated: CPM vs vertex vs center-based"))
     _results(study, out)
-    print(f"  spatial: same={tost['mean_same']:.4f} cross={tost['mean_cross']:.4f} "
-          f"diff={tost['diff']:+.4f} margin={margin_spatial} -> equivalent={tost['equivalent']}")
 
 
 def main() -> None:
