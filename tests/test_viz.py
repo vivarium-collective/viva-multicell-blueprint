@@ -2,7 +2,9 @@ import numpy as np
 import plotly.graph_objects as go
 
 from viva_multicell_blueprint.compare.identity import IdentityRegistry
-from viva_multicell_blueprint.viz import divergence, dynamics_overlay, spatial_playback
+from viva_multicell_blueprint.viz import (
+    divergence, dynamics_overlay, spatial_playback, spatial_playback_multi,
+)
 from viva_multicell_blueprint.viz._common import HTML_CAP, MAX_FRAMES
 
 GRID = {"extent_um": [60.0, 60.0], "grid_resolution_um": 1.0}
@@ -37,6 +39,33 @@ def test_playback_has_two_synced_panels():
     # every frame drives BOTH panels' traces
     assert all(len(f.traces) >= 2 and len(f.data) == len(f.traces) for f in fig.frames)
     assert len(fig.layout.sliders[0].steps) == len(fig.frames)
+
+
+def test_spatial_playback_multi_three_panels():
+    """Three paradigms -> three synced panels (xaxes x, x2, x3), one slider. CPM is
+    a voxel panel (cell-edge outline); vertex + center-based are polygon panels."""
+    def vrun(n, shift=0.0):
+        out = []
+        for t in range(n):
+            f = frame(t, shift)
+            polys = {}
+            for c in IDS:
+                cx, cy = f["positions"][c]
+                polys[c] = [[cx - 3, cy - 3], [cx + 3, cy - 3], [cx + 3, cy + 3], [cx - 3, cy + 3]]
+            f["polygons"] = polys
+            out.append(f)
+        return out
+
+    runs = {"cpm": run(6), "vertex": vrun(6, 2.0), "munk": vrun(6, -2.0)}
+    fig = spatial_playback_multi(runs, GRID)
+    assert not any(tr.type == "heatmap" for tr in fig.data)
+    fill_axes = {tr.xaxis for tr in fig.data if tr.type == "scatter" and tr.fill == "toself"}
+    assert fill_axes == {"x", "x2", "x3"}
+    assert len(fig.layout.sliders) == 1 and len(fig.frames) == 6
+    assert all(len(f.data) == len(f.traces) for f in fig.frames)
+    # three panel subtitles, one per paradigm (CPM / Vertex / Center-based)
+    labels = " ".join(a.text or "" for a in fig.layout.annotations)
+    assert "CPM" in labels and "Vertex" in labels and "Center-based" in labels
 
 
 def test_dynamics_overlay_has_band_ribbons():

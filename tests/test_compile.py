@@ -117,35 +117,43 @@ def test_compile_vertex_runs_n_steps(tmp_path):
 
 def test_mechanism_stores_identical_across_backends(tmp_path):
     bp = _full_blueprint(tmp_path)
-    cpm = compile_blueprint(bp, backend="cpm")["state"]
-    vtx = compile_blueprint(bp, backend="vertex")["state"]
+    states = {b: compile_blueprint(bp, backend=b)["state"] for b in ("cpm", "vertex", "munk")}
 
-    # exactly one node differs: the mechanics store.
-    assert "mechanics" in cpm and "mechanics" in vtx
-    rest_cpm = {k: v for k, v in cpm.items() if k != "mechanics"}
-    rest_vtx = {k: v for k, v in vtx.items() if k != "mechanics"}
-    assert json.dumps(rest_cpm, sort_keys=True) == json.dumps(rest_vtx, sort_keys=True), (
-        "mechanism stores (field/rules/ode/immune + shared stores) must be "
-        "BYTE-IDENTICAL across backends"
-    )
+    # exactly one node differs across EVERY paradigm: the mechanics store.
+    rest = {}
+    for b, st in states.items():
+        assert "mechanics" in st
+        rest[b] = {k: v for k, v in st.items() if k != "mechanics"}
+    ref = json.dumps(rest["cpm"], sort_keys=True)
+    for b in ("vertex", "munk"):
+        assert json.dumps(rest[b], sort_keys=True) == ref, (
+            f"mechanism stores (field/rules/ode/immune + shared stores) must be "
+            f"BYTE-IDENTICAL across backends; {b} differs from cpm"
+        )
 
-    # all four shared mechanism processes are present + identical
+    # all four shared mechanism processes are present + identical on every backend
     for node in ("field", "rules", "systemic_ode", "immune"):
-        assert node in rest_cpm
-        assert rest_cpm[node] == rest_vtx[node]
+        assert node in rest["cpm"]
+        assert rest["cpm"][node] == rest["vertex"][node] == rest["munk"][node]
 
-    # the mechanics nodes DO differ (that is the whole point).
-    assert cpm["mechanics"]["address"] != vtx["mechanics"]["address"]
+    # the mechanics nodes DO differ (that is the whole point) -- a distinct engine each.
+    addrs = {b: states[b]["mechanics"]["address"] for b in states}
+    assert addrs == {"cpm": "local:CPMBackend", "vertex": "local:VertexBackend",
+                     "munk": "local:MunkBackend"}
+    assert len(set(addrs.values())) == 3
 
     # adhesion was lowered per backend (type_ids from cell_type order -> stable tags)
-    cpm_bp = cpm["mechanics"]["config"]["backend_params"]
-    vtx_bp = vtx["mechanics"]["config"]["backend_params"]
+    cpm_bp = states["cpm"]["mechanics"]["config"]["backend_params"]
+    vtx_bp = states["vertex"]["mechanics"]["config"]["backend_params"]
+    munk_bp = states["munk"]["mechanics"]["config"]["backend_params"]
     assert cpm_bp["type_ids"] == {"medium": 0, "H": 1, "I": 2}
     assert any(isinstance(e["a"], int) for e in cpm_bp["contact"])
     assert "tension_by_pair" in vtx_bp and vtx_bp["tension_by_pair"]
+    # the center-based node carries its own physics knobs (substeps + chemotaxis fields)
+    assert "substeps" in munk_bp and "fields" in munk_bp
 
 
-@pytest.mark.parametrize("backend", ["cpm", "vertex"])
+@pytest.mark.parametrize("backend", ["cpm", "vertex", "munk"])
 def test_full_blueprint_builds_and_runs(tmp_path, backend):
     """The FULL blueprint (adds the ODE + immune nodes) must actually BUILD and
     advance on both backends -- a port-type/config mismatch in those nodes would
@@ -213,7 +221,7 @@ def test_compiler_wires_recruitment_to_activation(tmp_path):
     from viva_multicell_blueprint.mechanism.immune import ImmuneRecruitmentProcess
 
     bp = _full_blueprint(tmp_path)
-    for backend in ("cpm", "vertex"):
+    for backend in ("cpm", "vertex", "munk"):
         state = compile_blueprint(bp, backend=backend)["state"]
         # immune node emits per-type activation COUNTS into the shared store ...
         assert state["immune"]["outputs"]["activations"] == ["activations"]
@@ -262,7 +270,7 @@ def _latent_blueprint(tmp_path):
     })
 
 
-@pytest.mark.parametrize("backend", ["cpm", "vertex"])
+@pytest.mark.parametrize("backend", ["cpm", "vertex", "munk"])
 def test_nonempty_activations_flow_store_to_backend(tmp_path, backend):
     """IMPORTANT (review fix): a NON-EMPTY ``activations`` map must flow through the
     COMPILED composite store into the backend and actually flip the latent cell's
@@ -342,7 +350,7 @@ def test_backends_and_mechanism_resolve_in_core():
 def test_compiler_wires_counts_to_ode(tmp_path):
     """Task 21: CellCountStep(types) -> ode_in_* -> SystemicODEProcess, live."""
     bp = _full_blueprint(tmp_path)
-    for backend in ("cpm", "vertex"):
+    for backend in ("cpm", "vertex", "munk"):
         state = compile_blueprint(bp, backend=backend)["state"]
         assert state["cell_counts"]["inputs"]["types"] == ["types"]
         assert state["cell_counts"]["outputs"]["H"] == ["ode_in_H"]
@@ -353,7 +361,7 @@ def test_compiler_wires_counts_to_ode(tmp_path):
     bp = _full_blueprint(tmp_path)
     bp.initial_state = {"from_data": {"cell_table": _cell_table(tmp_path, _ALL_H_TABLE)}}
     bp.rules = [{"type": "transition", "from": "H", "to": "I", "rate_expr": "100"}]
-    for backend in ("cpm", "vertex"):
+    for backend in ("cpm", "vertex", "munk"):
         comp = Composite({"state": compile_blueprint(bp, backend=backend)["state"]}, core=build_core())
         comp.run(1.0)
         h0, i0 = comp.state["ode_in_H"], comp.state["ode_in_I"]

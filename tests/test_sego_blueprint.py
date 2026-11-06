@@ -40,7 +40,7 @@ def test_sego_blueprint_validates(bp):
         parse(r["rate_expr"])
 
 
-@pytest.mark.parametrize("backend", ["cpm", "vertex"])
+@pytest.mark.parametrize("backend", ["cpm", "vertex", "munk"])
 def test_sego_compiles_to_both_backends(bp, backend):
     doc = compile_blueprint(bp, backend=backend)
     comp = Composite({"state": doc["state"]}, core=build_core())

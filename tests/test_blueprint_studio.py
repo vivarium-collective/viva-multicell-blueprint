@@ -31,7 +31,7 @@ def test_load_blueprint_accepts_inline_yaml_dict_and_path():
 
 
 def test_generator_runs_inline_blueprint_on_both_backends():
-    for backend in ("cpm", "vertex"):
+    for backend in ("cpm", "vertex", "munk"):
         doc = sego_crossparadigm(backend=backend, blueprint=_INLINE)
         assert "state" in doc
 
