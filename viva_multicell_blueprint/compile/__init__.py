@@ -7,11 +7,11 @@ is wired identically on both backends; only the single mechanics node differs
 """
 from __future__ import annotations
 
-_COMPILERS = {"cpm": "to_cpm", "vertex": "to_vertex"}
+_COMPILERS = {"cpm": "to_cpm", "vertex": "to_vertex", "munk": "to_munk"}
 
 
 def compile(blueprint, backend: str = "cpm", options=None, video_out=None) -> dict:
-    """Compile ``blueprint`` onto ``backend`` (``"cpm"`` or ``"vertex"``).
+    """Compile ``blueprint`` onto ``backend`` (``"cpm"``, ``"vertex"``, or ``"munk"``).
 
     ``options`` is an optional :class:`~viva_multicell_blueprint.blueprint.canonical.CompileOptions`
     carrying backend/run parameters (``tension_scale``, ``rules_seed``) that are kept

@@ -5,7 +5,7 @@ import numpy as np
 
 MAX_FRAMES = 28          # mirrors viva-lumenoid _MOVIE_MAX_FRAMES
 HTML_CAP = 2_500_000     # workbench _HTML_PER_FILE_MAX (bytes)
-BACKEND_COLORS = {"cpm": "#0072B2", "vertex": "#D55E00"}   # Okabe-Ito blue / vermillion
+BACKEND_COLORS = {"cpm": "#0072B2", "vertex": "#D55E00", "munk": "#CC79A7"}   # Okabe-Ito blue / vermillion / reddish-purple (center-based)
 
 # Okabe-Ito based; H blue, I orange, D dark grey, immune green.
 STATE_COLORS = {"H": "#0072B2", "I": "#E69F00", "D": "#444444", "immune": "#009E73"}
