@@ -6,7 +6,169 @@
     1,
     2
   ],
+  "backends": [
+    "cpm",
+    "vertex",
+    "munk"
+  ],
   "spatial": {
+    "margin": 0.1,
+    "pairs": {
+      "cpm-vertex": {
+        "a": "cpm",
+        "b": "vertex",
+        "same": [
+          0.45,
+          0.6,
+          0.6,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "cross": [
+          0.55,
+          0.55,
+          0.5,
+          0.4,
+          0.5,
+          0.45,
+          0.45,
+          0.3,
+          0.35
+        ],
+        "tost": {
+          "equivalent": false,
+          "diff": 0.32500000000000007,
+          "margin": 0.1,
+          "se": 0.10704360482220941,
+          "df": 5.792799693603984,
+          "ci_low": 0.11565492127406396,
+          "ci_high": 0.5343450787259362,
+          "p_lower": 0.003953200920322995,
+          "p_upper": 0.9590410928288858,
+          "p_tost": 0.9590410928288858,
+          "n_same": 6,
+          "n_cross": 9,
+          "mean_same": 0.775,
+          "mean_cross": 0.44999999999999996,
+          "alpha": 0.05
+        },
+        "cluster": {
+          "diff": 0.32500000000000007,
+          "ci_low": 0.11666666666666659,
+          "ci_high": 0.5408333333333303,
+          "n_boot": 3952,
+          "alpha": 0.05,
+          "n_cpm_runs": 3,
+          "n_vertex_runs": 3,
+          "n_vtx_runs": 3,
+          "method": "run-cluster percentile bootstrap"
+        }
+      },
+      "cpm-munk": {
+        "a": "cpm",
+        "b": "munk",
+        "same": [
+          0.45,
+          0.6,
+          0.6,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "cross": [
+          0.05,
+          0.05,
+          0.05,
+          0.1,
+          0.1,
+          0.1,
+          0.15,
+          0.15,
+          0.15
+        ],
+        "tost": {
+          "equivalent": false,
+          "diff": 0.675,
+          "margin": 0.1,
+          "se": 0.10408329997330663,
+          "df": 5.19675202998126,
+          "ci_low": 0.46700851309970365,
+          "ci_high": 0.8829914869002964,
+          "p_lower": 0.0002908607335430259,
+          "p_upper": 0.998821352358887,
+          "p_tost": 0.998821352358887,
+          "n_same": 6,
+          "n_cross": 9,
+          "mean_same": 0.775,
+          "mean_cross": 0.1,
+          "alpha": 0.05
+        },
+        "cluster": {
+          "diff": 0.675,
+          "ci_low": 0.44999999999999996,
+          "ci_high": 0.9,
+          "n_boot": 3952,
+          "alpha": 0.05,
+          "n_cpm_runs": 3,
+          "n_munk_runs": 3,
+          "n_vtx_runs": 3,
+          "method": "run-cluster percentile bootstrap"
+        }
+      },
+      "vertex-munk": {
+        "a": "vertex",
+        "b": "munk",
+        "same": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "cross": [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.25,
+          0.25,
+          0.25
+        ],
+        "tost": {
+          "equivalent": false,
+          "diff": 0.7833333333333333,
+          "margin": 0.1,
+          "se": 0.008333333333333331,
+          "df": 8.0,
+          "ci_low": 0.7678370996872426,
+          "ci_high": 0.7988295669794241,
+          "p_lower": 3.504518163534847e-14,
+          "p_upper": 0.9999999999997272,
+          "p_tost": 0.9999999999997272,
+          "n_same": 6,
+          "n_cross": 9,
+          "mean_same": 1.0,
+          "mean_cross": 0.21666666666666667,
+          "alpha": 0.05
+        },
+        "cluster": {
+          "diff": 0.7833333333333333,
+          "ci_low": 0.7666666666666666,
+          "ci_high": 0.8,
+          "n_boot": 3952,
+          "alpha": 0.05,
+          "n_vertex_runs": 3,
+          "n_munk_runs": 3,
+          "n_cpm_runs": 3,
+          "n_vtx_runs": 3,
+          "method": "run-cluster percentile bootstrap"
+        }
+      }
+    },
     "same": [
       0.45,
       0.6,

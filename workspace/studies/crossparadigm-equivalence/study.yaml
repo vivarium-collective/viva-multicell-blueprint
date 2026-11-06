@@ -32,12 +32,14 @@ claim: >
   identical by construction, and the vertex cells barely moved.
 
 experiment: >
-  Run the full Sego blueprint on BOTH backends over rules-seeds {0..5} (N=120).
-  Compute, per metric, the same-backend agreement (all within-CPM and within-vertex
-  seed pairs = 30 values) and the cross-backend agreement (all 36 CPM x vertex
-  pairs). Apply metrics.equivalence_tost (Welch TOST) against a pre-declared margin:
-  +/-0.05 for fate agreement, +/-0.10 for the strict exact-position spatial
-  agreement (centroids within one cell diameter, 5 um). Report the TOST verdict,
+  Run the full Sego blueprint on ALL THREE paradigms (CPM, vertex, center-based)
+  over rules-seeds {0..5} (N=120). For EACH backend pair (cpm↔vertex, cpm↔munk,
+  vertex↔munk) compute, per metric, the same-backend agreement (the within-backend
+  seed pairs of both members) and the cross-backend agreement (all 36 seed pairs).
+  Apply metrics.equivalence_tost (Welch TOST) + a run-cluster bootstrap against a
+  pre-declared margin: +/-0.05 for fate agreement, +/-0.10 for the strict
+  exact-position spatial agreement (centroids within one cell diameter, 5 um).
+  Report the per-pair TOST verdict,
   the difference and its 90% CI for each metric.
 
 result: >
@@ -170,18 +172,20 @@ limitations:
 - "Each backend's mechanics RNG now follows the run seed (mechanics_seed = rules_seed); earlier results used fixed mechanics seeds and are superseded."
 
 report:
-  title: "CPM and vertex are EQUIVALENT on fate; position gap fell from 0.92 to 0.14, still not equivalent"
+  title: "All three paradigms are EQUIVALENT on fate; spatially none are, and the center-based model diverges most"
   verdict: >
-    RE-RUN (2026-10-28 review: "equivalence is very bad between backends"). With the
-    revised vertex substrate and mechanics-stochastic replicates, fate stays
-    EQUIVALENT (cross 0.990 vs same 0.989, run-cluster CI [-0.003, +0.001] in +/-0.05).
-    Exact-position agreement improved from cross 0.083 vs same 1.000 (gap 0.92) to
-    cross 0.472 vs same 0.608 (gap 0.135, CI [0.071, 0.210]). This is still NOT
-    equivalent at +/-0.10. Most of the old gap came from a degenerate null:
-    same-backend replicates had identical mechanics, so their positions agreed
-    perfectly by construction, and the vertex cells barely moved. The remaining gap
-    tracks the remaining mechanical difference: the vertex epithelium, capped so its
-    mesh never folds, wanders ~5x less than the CPM's (replicate spread 2.3 vs 5.2 um).
+    THREE-WAY (center-based added 2026-11-06). The full Sego blueprint runs on CPM,
+    vertex, AND center-based (viva-munk), scored pairwise over the 6-seed grid.
+    FATE agreement is statistically EQUIVALENT for every pair: cpm↔vertex diff
+    -0.0014 (run-cluster CI [-0.003, +0.001]), cpm↔munk -0.0014, vertex↔munk -0.0015,
+    all inside +/-0.05 — fate is rule-driven and so backend-independent across all
+    three substrates. SPATIAL exact-position agreement is NOT equivalent for any pair
+    at +/-0.10, and the gap orders by how different the geometries are: cpm↔vertex
+    diff +0.126 (CI [0.070, 0.181]) < cpm↔munk +0.224 (CI [0.169, 0.291]) <
+    vertex↔munk +0.263 (CI [0.246, 0.279]). The center-based model — circular bodies
+    relaxing under hard-disc collision, and deliberately NOT calibrated to the other
+    two (docs/mechanics.md §3) — is the most spatially divergent paradigm, exactly as
+    its independence predicts. Honest divergence, no tuning to force agreement.
   confidence: medium
   evidence_quality: preliminary
   main_insight: >

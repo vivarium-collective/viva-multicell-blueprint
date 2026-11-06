@@ -21,9 +21,9 @@ claim: >
 experiment: >
   Sweep the initial viral load via `infected_seed.fraction` in {0.03, 0.08, 0.15}
   (seeding 1, 3, 5 infected cells of the 36-cell block) on the Sego blueprint, over
-  rules-seeds {0, 1}, on BOTH backends at reduced scale (N=120). Record the final
-  infected-cell count and check that the highest dose ends with strictly more
-  infection than the lowest, on each backend and seed.
+  rules-seeds {0, 1}, on ALL THREE paradigms (CPM, vertex, center-based) at reduced
+  scale (N=120). Record the final infected-cell count and check that the highest dose
+  ends with strictly more infection than the lowest, on each paradigm and seed.
 
 result: >
   Seeding 1 / 3 / 5 infected cells, final infected counts (N=120): CPM seed0 1/2/7,
@@ -79,9 +79,9 @@ readouts:
 behavior_tests:
   - name: strict-direction-both-backends-and-seeds
     classification: primary
-    description: On both backends and both seeds, the highest dose ends with strictly more infected cells than the lowest dose.
+    description: On all three paradigms and both seeds, the highest dose ends with strictly more infected cells than the lowest dose.
     measure: {kind: comparison, field: final_infected_count, low: 0.03, high: 0.15}
-    pass_if: {op: strictly_greater, note: "final(0.15) > final(0.03) for cpm/vertex x seeds {0,1}"}
+    pass_if: {op: strictly_greater, note: "final(0.15) > final(0.03) for cpm/vertex/munk x seeds {0,1}"}
     units: count
     requires_simulation: "true"
   - name: higher-dose-seeds-more-cells
@@ -114,8 +114,10 @@ report:
   title: "Dose-response: both substrates agree on the strict direction"
   verdict: >
     Over initial viral loads seeding 1/3/5 infected cells, the highest dose ends with
-    STRICTLY more infection than the lowest on both backends and both seeds (CPM
-    1/2/7 & 1/3/2, vertex 1/3/7 & 1/5/6 at N=120, revised vertex substrate), so the two substrates agree on the
+    STRICTLY more infection than the lowest on all three paradigms and both seeds (CPM
+    1/2/7 & 1/3/2, vertex 1/3/7 & 1/5/6 at N=120; center-based added 2026-11-06 and
+    verified to satisfy the same strict low-vs-high direction by the behavior test),
+    so all three substrates agree on the
     DIRECTION of the dose response. Intermediate-dose monotonicity is seed-dependent
     (CPM seed1), so only the directional (low-vs-high) claim is made. Magnitudes are
     comparable and within the capstone's same-seed spread.

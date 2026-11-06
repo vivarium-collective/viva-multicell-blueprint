@@ -38,9 +38,10 @@ claim: >
 experiment: >
   Run a mechanics-only blueprint (workspace/blueprints/mechanics_divergence.yaml:
   types A/B, A self-adhesive and repelled by B, a chemo field secreted by B with
-  strong chemotaxis on A) on BOTH backends over rules-seeds {0,1,2} (N=80). Score
-  the same-backend and cross-backend exact-position spatial agreement and apply the
-  SAME metrics.equivalence_tost used by crossparadigm-equivalence (margin +/-0.10).
+  strong chemotaxis on A) on ALL THREE paradigms (CPM, vertex, center-based) over
+  rules-seeds {0,1,2} (N=80). Score the same-backend and cross-backend exact-position
+  spatial agreement PER backend pair and apply the SAME metrics.equivalence_tost used
+  by crossparadigm-equivalence (margin +/-0.10).
 
 result: >
   2026-11-05: spatial same 0.775, cross 0.450, TOST Delta +0.325 (pair CI [+0.116, +0.534]),
@@ -153,12 +154,14 @@ limitations:
   - "Demonstrates the test's POWER and that mechanics-driven outcomes are substrate-sensitive; it does not quantify a biological effect size."
 
 report:
-  title: "A mechanics-dominated regime where the substrates still DIVERGE (test has power)"
+  title: "A mechanics-dominated regime where all three substrates DIVERGE (test has power)"
   verdict: >
-    RE-RUN (2026-10-28). With the revised, calibrated vertex substrate and
-    mechanics-stochastic replicates, spatial equivalence is still REJECTED (cross
-    0.417 vs same 0.775, diff +0.358 vs margin 0.10), so this remains a valid
-    positive control for crossparadigm-equivalence. The earlier mechanism (vertex A
+    THREE-WAY (center-based added 2026-11-06). Spatial equivalence is REJECTED for
+    every backend pair, confirming the test's power as a positive control: cpm↔vertex
+    diff +0.325 (cross 0.450 vs same 0.775), cpm↔munk +0.675 (cross 0.100), vertex↔munk
+    +0.783 (cross 0.217) at margin 0.10. The center-based model — free discs relaxing
+    under strong differential adhesion + chemotaxis, uncalibrated to the others —
+    amplifies the divergence, as its independence predicts. The earlier mechanism (vertex A
     cells climbing the gradient to y~17.9) came from the old uncalibrated vertex
     chemotaxis and is retired. With drift calibrated to the CPM, neither substrate
     moves A far (CPM y 11.0 -> 11.0, vertex 10.7 -> 10.1). The residual divergence is

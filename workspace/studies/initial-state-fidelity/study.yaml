@@ -25,7 +25,8 @@ claim: >
   guard-ring or medium polygons remain.
 
 experiment: >
-  Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM and vertex, read
+  Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM, vertex and
+  center-based (viva-munk), read
   each backend's t0 emission (no steps), and compare per cell to the resolved
   blueprint cells: centroid distance (RMS, max), type match, and size. For the vertex
   backend also check the mesh: one face per blueprint cell, the epithelial faces
@@ -182,8 +183,9 @@ findings:
     kind: computational
     status: confirms
     statement: >
-      The blueprint's t0 state materializes faithfully on both backends (CPM exact;
-      vertex one-hexagon-per-cell with a 1.6 um sub-cell epithelial residual), so the
+      The blueprint's t0 state materializes faithfully on all three backends (CPM
+      exact; vertex one-hexagon-per-cell with a 1.6 um sub-cell epithelial residual;
+      center-based one area-matched disc per cell at its centroid), so the
       cross-paradigm comparison begins from a shared initial condition.
     evidence:
       observed: "48/48 type match; CPM RMS 0.000 um; vertex 36 hexagons (area 25) + 12 overlay, 0 guard, sheet RMS 1.60 um"

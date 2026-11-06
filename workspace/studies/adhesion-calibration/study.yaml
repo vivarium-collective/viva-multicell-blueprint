@@ -305,9 +305,9 @@ visualizations:
   - name: "J ↔ tension sweep"
     address: "html:adhesion-sweep.html"
     config: {title: "Cell-shape statistics across the vertex tension sweep vs CPM"}
-  - name: "Neutral sheet playback — CPM vs vertex"
+  - name: "Neutral sheet playback — CPM vs vertex vs center-based"
     address: "html:neutral-sheet-playback.html"
-    config: {title: "Mechanics-only sheet relaxation, both backends"}
+    config: {title: "Mechanics-only sheet relaxation, all three paradigms (center-based not yet calibrated)"}
 conditions:
   baseline:
     name: neutral-mechanics-sheet

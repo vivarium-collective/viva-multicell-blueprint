@@ -1,10 +1,11 @@
-# Mechanics of the two substrates — equations, parameters, and how they are matched
+# Mechanics of the three substrates — equations, parameters, and how they are matched
 
-The cross-paradigm investigation runs ONE blueprint on two mechanical substrates. The
-shared mechanism (fields, rules, systemic ODE, recruitment) is byte-identical across
-the two compiles; **only the mechanics differ**. This page defines both mechanical
-models term by term, lists every parameter (including per-cell-type and per-type-pair
-variations) as used for the Sego 2022 influenza blueprint
+The cross-paradigm investigation runs ONE blueprint on three mechanical substrates
+(CPM, vertex, and a center-based model). The shared mechanism (fields, rules, systemic
+ODE, recruitment) is byte-identical across all three compiles; **only the mechanics
+differ**. This page defines the mechanical models term by term, lists every parameter
+(including per-cell-type and per-type-pair variations) as used for the Sego 2022
+influenza blueprint
 (`workspace/blueprints/influenza_sego2022.yaml`), and states how each vertex parameter
 is obtained from the CPM: energy-matched, lowered from the blueprint, or calibrated.
 
@@ -30,7 +31,7 @@ $\min(1, e^{-\Delta H / T})$.
 
 | Symbol | Meaning | Value (Sego blueprint) | Source |
 |---|---|---|---|
-| J(a,b) | contact energy per neighbour bond | table §3 | blueprint `adhesion` (`J = strength`, exact) |
+| J(a,b) | contact energy per neighbour bond | table §4 | blueprint `adhesion` (`J = strength`, exact) |
 | J(a,b) for a pair not in the table | — | **0** | viva-cpm default |
 | λ_V(τ) | volume constraint | 1.0, all types | CPM default (`cell_types[].mechanics.lambda_volume` overrides) |
 | V_T | target volume | 25 sites, all types | blueprint `cell_types[].target_size` |
@@ -113,7 +114,7 @@ behavior), as the lattice edge is for the CPM.
 
 **Mesh validity is a hard constraint.** An inverted or self-intersecting face is broken
 geometry, not a cell shape. Every fitted knob must keep the sheet fold-free over 3 seeds
-× 400 steps (§4). `tests/test_vertex_mesh_validity.py` pins this on the Sego run.
+× 400 steps (§5). `tests/test_vertex_mesh_validity.py` pins this on the Sego run.
 
 **Coupling** to the shared mechanism goes entirely through vivarium-tyssue *behaviors*
 handed to the solver's `behaviors` port, the way the Gillespie regulator drives the
@@ -128,17 +129,62 @@ shared junction length per neighbour type. This includes the in-sheet immune cel
 in the CPM, where contact is shared boundary. For opt-in overlay cells it is the
 **polygon overlap area** with each cell underneath, credited both ways.
 
-## 3. Parameters, per type and per type pair (Sego blueprint)
+## 3. Center-based model (viva-munk / pymunk) — `MunkBackend`
+
+The center-based paradigm (the third substrate) represents each cell as a **point-center
+with a radius** — a `pymunk` circular rigid body (Chipmunk2D) rather than CPM voxels or
+vertex polygons. One blueprint cell ↦ one circular body at its centroid, radius
+`r = sqrt(size / π)` so the emitted area equals the blueprint `size` exactly.
+
+**Dynamics.** Bodies integrate under damped 2D rigid-body physics: pairwise collision
+(hard-disc repulsion on overlap, so the sheet relaxes to a non-overlapping packing),
+velocity damping (`damping_per_second`, default 0.1 — the regime is overdamped, as
+befits a crawling tissue, not ballistic), optional active-Brownian jitter
+(`jitter_per_second`, default 0 for a deterministic comparison), and chamber walls sized
+to the blueprint domain. There is no volume/surface *energy* as in CPM/vertex; cell area
+is fixed by the disc radius and held by the hard-disc constraint.
+
+**Field seam (as for CPM).** The authoritative reaction-diffusion field lives in the
+shared `FieldProcess`; viva-munk's own field processes are **not** run. Each step the
+shared `field_grid` is sampled at every cell center and its local gradient drives a
+**chemotactic velocity** (per-type strength, from the blueprint `fields[].chemotaxis`,
+injected directly on the body since `pymunk` thrust only acts on segment cells). The
+field is read, never re-diffused here.
+
+**Contact surface** (`shared_surface_by_type`): the **chord length of the overlap lens**
+of two discs within the touching tolerance `contact_eps` — the center-based analog of
+the CPM shared face / vertex junction length. Neighbours are cells whose discs come
+within `contact_eps` of touching. Footprints are emitted as polygon discs so the
+rasterizer draws each cell as a filled circle with an outline.
+
+| Symbol | Meaning | Value (Sego blueprint) | Source |
+|---|---|---|---|
+| r | cell radius | sqrt(size/π) ≈ 2.82 (size 25) | blueprint `cell_types[].target_size` |
+| substeps | physics sub-steps per coupled step | 10 | `mechanics_mapping.substeps` |
+| damping | velocity damping per second | 0.1 | `mechanics_mapping.damping_per_second` |
+| jitter | active-Brownian impulse std | 0 (off) | `mechanics_mapping.jitter_per_second` |
+| contact_eps | touching tolerance (um) | 0.75 | `mechanics_mapping.contact_eps` |
+| chemotaxis | per-type up-gradient velocity | blueprint `fields[].chemotaxis` strengths | shared field (sampled) |
+
+**Not yet energy-calibrated to the other two.** The vertex knobs are calibrated to
+reproduce CPM behaviour (§5); the center-based model is **not** fitted to either — its
+hard-disc packing is a genuinely independent third representation. This is deliberate:
+the cross-paradigm result (§ below / the equivalence study) shows the three paradigms
+**agree on fate** (rule-driven, substrate-independent) while the center-based model is
+the **most spatially divergent** of the three. Calibrating a center-based↔CPM area/
+motility match is future work, parallel to §5.
+
+## 4. Parameters, per type and per type pair (Sego blueprint)
 
 | Parameter | CPM | Vertex | How the vertex value is set |
 |---|---|---|---|
 | Target size | V_T = 25 | A_0 = 25 | identical (blueprint `target_size`) |
 | Size stiffness | λ_V = 1 | K = 2 | **energy-matched**: CPM λ(V−V_T)² ≡ tyssue K/2(A−A_0)² ⇒ K = 2λ_V, per type |
 | Surface stiffness | λ_S = 0 | Γ = 0 | energy-matched (Γ = 2λ_S, P_0 = S_T), per type |
-| Adhesion | J(a,b) | Λ_ab = κ·J(a,b) | **lowered** per pair; one global scale κ = `tension_scale` **calibrated** (§4) |
+| Adhesion | J(a,b) | Λ_ab = κ·J(a,b) | **lowered** per pair; one global scale κ = `tension_scale` **calibrated** (§5) |
 | Missing pair | J = 0 | Λ = 0 | identical (viva-cpm default) |
-| Fluctuations | T = 10 | f_mot, σ_Λ | **calibrated** (§4) |
-| Chemotaxis | λ_chem | s_mig·λ_chem, F_sat | λ_chem ratios identical; s_mig and F_sat **calibrated** (§4) |
+| Fluctuations | T = 10 | f_mot, σ_Λ | **calibrated** (§5) |
+| Chemotaxis | λ_chem | s_mig·λ_chem, F_sat | λ_chem ratios identical; s_mig and F_sat **calibrated** (§5) |
 | Mobility | (implicit in MCS) | η = 2·K·A_0 = 100 | set for explicit-Euler stability (the area stiffness ~K·A_0 must stay below η/dt) |
 | Neighbour exchange | implicit (lattice) | T1 at ℓ < 0.2·side = 0.62, p₄ = 1 | `threshold_length` scaled to the hexagon side |
 | Immune placement | same lattice, at margin | same sheet, attached at the margin site nearest the centroid | `immune_types` = immune types + latent pools |
@@ -159,10 +205,10 @@ cells share a junction. The immune cells are in the sheet, so these rows are liv
 in the CPM.
 
 Per-type motility group (vertex): epithelial cells (H/I/D) f_mot = 26.6; immune cells
-(immune + latent, in the sheet) f_mot = 56.1. Both are fold-free caps (§4). Persistence
+(immune + latent, in the sheet) f_mot = 56.1. Both are fold-free caps (§5). Persistence
 τ_p = 10 steps for both.
 
-## 4. Calibration — making the free vertex knobs reproduce CPM behaviour
+## 5. Calibration — making the free vertex knobs reproduce CPM behaviour
 
 The temperature T and the vertex mobility/fluctuation knobs share no units, so the
 vertex knobs that have no CPM counterpart are **fitted to CPM behaviour** on the same
