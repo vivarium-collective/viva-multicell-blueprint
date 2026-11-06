@@ -25,6 +25,14 @@ imports:
     description: |
       Vertex / tissue-mechanics processes (tyssue wrapper): DifferentialAdhesion,
       DirectionalLineTension, EulerSolver, and the solver/regulation steps.
+  viva-munk:
+    source: https://github.com/vivarium-collective/viva-munk
+    ref: main
+    package: viva_munk
+    mode: reference
+    description: |
+      Center-based 2D physics (pymunk wrapper): PymunkProcess rigid-body dynamics
+      behind the blueprint's center-based paradigm (MunkBackend).
 
 # Directory layout. New workspaces group their research directories under a
 # tidy `workspace/` subtree (the dirs below); the hidden `.pbg/` machine state
