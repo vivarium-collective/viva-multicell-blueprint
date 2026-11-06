@@ -567,7 +567,7 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Model &amp; approach</h2>
-      <p class="ctr-text">Run the full Sego blueprint on BOTH backends over rules-seeds {0..5} (N=120). Compute, per metric, the same-backend agreement (all within-CPM and within-vertex seed pairs = 30 values) and the cross-backend agreement (all 36 CPM x vertex pairs). Apply metrics.equivalence_tost (Welch TOST) against a pre-declared margin: +/-0.05 for fate agreement, +/-0.10 for the strict exact-position spatial agreement (centroids within one cell diameter, 5 um). Report the TOST verdict, the difference and its 90% CI for each metric.
+      <p class="ctr-text">Run the full Sego blueprint on ALL THREE paradigms (CPM, vertex, center-based) over rules-seeds {0..5} (N=120). For EACH backend pair (cpm↔vertex, cpm↔munk, vertex↔munk) compute, per metric, the same-backend agreement (the within-backend seed pairs of both members) and the cross-backend agreement (all 36 seed pairs). Apply metrics.equivalence_tost (Welch TOST) + a run-cluster bootstrap against a pre-declared margin: +/-0.05 for fate agreement, +/-0.10 for the strict exact-position spatial agreement (centroids within one cell diameter, 5 um). Report the per-pair TOST verdict, the difference and its 90% CI for each metric.
 </p>
       <div class="ctr-meta">
         <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>crossparadigm-equivalence</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
@@ -1491,7 +1491,7 @@ pass_if: {"note": "cross spatial(t0) \u003e cross spatial(final)", "op": "strict
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "f54d537ee578fce37c8e7118231bb6212259bdc2", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/f54d537ee578fce37c8e7118231bb6212259bdc2", "branch": "main", "lockfile": "uv.lock@114a7e530289", "generated_at": "2026-11-06 15:11 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "1d3843cc5e75920ea17cc08fd21ddb58471a381b", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/1d3843cc5e75920ea17cc08fd21ddb58471a381b", "branch": "main", "lockfile": "uv.lock@110781d2194f", "generated_at": "2026-11-06 16:09 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>

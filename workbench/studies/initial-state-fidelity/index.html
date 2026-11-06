@@ -567,7 +567,7 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Model &amp; approach</h2>
-      <p class="ctr-text">Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM and vertex, read each backend&#39;s t0 emission (no steps), and compare per cell to the resolved blueprint cells: centroid distance (RMS, max), type match, and size. For the vertex backend also check the mesh: one face per blueprint cell, the epithelial faces 6-sided at area 25 and forming ONE connected sheet, immune cells as separate overlay islands, and no guard / medium faces (`residual_report`: mesh, n_sheet, n_overlay, n_guard_faces, sheet_centroid_rms/max, unmapped_ids).
+      <p class="ctr-text">Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM, vertex and center-based (viva-munk), read each backend&#39;s t0 emission (no steps), and compare per cell to the resolved blueprint cells: centroid distance (RMS, max), type match, and size. For the vertex backend also check the mesh: one face per blueprint cell, the epithelial faces 6-sided at area 25 and forming ONE connected sheet, immune cells as separate overlay islands, and no guard / medium faces (`residual_report`: mesh, n_sheet, n_overlay, n_guard_faces, sheet_centroid_rms/max, unmapped_ids).
 </p>
       <div class="ctr-meta">
         <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>initial-state-fidelity</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
@@ -607,8 +607,8 @@
         <details class="finding-details">
           <summary class="finding-row">
             <span class="finding-status-glyph">✓</span>
-            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F1-shared-t0-across-substrates].statement" data-edit-value="The blueprint&#39;s t0 state materializes faithfully on both backends (CPM exact; vertex one-hexagon-per-cell with a 1.6 um sub-cell epithelial residual), so the cross-paradigm comparison begins from a shared initial condition.
-" data-edit-multiline data-edit-label="Finding F1-shared-t0-across-substrates">The blueprint&#39;s t0 state materializes faithfully on both backends (CPM exact; vertex one-hexagon-per-cell with a 1.6 um sub-cell epithelial residual), so the cross-paradigm comparison begins from a shared initial condition.
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F1-shared-t0-across-substrates].statement" data-edit-value="The blueprint&#39;s t0 state materializes faithfully on all three backends (CPM exact; vertex one-hexagon-per-cell with a 1.6 um sub-cell epithelial residual; center-based one area-matched disc per cell at its centroid), so the cross-paradigm comparison begins from a shared initial condition.
+" data-edit-multiline data-edit-label="Finding F1-shared-t0-across-substrates">The blueprint&#39;s t0 state materializes faithfully on all three backends (CPM exact; vertex one-hexagon-per-cell with a 1.6 um sub-cell epithelial residual; center-based one area-matched disc per cell at its centroid), so the cross-paradigm comparison begins from a shared initial condition.
 </span>
             
           </summary>
@@ -1395,7 +1395,7 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "f54d537ee578fce37c8e7118231bb6212259bdc2", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/f54d537ee578fce37c8e7118231bb6212259bdc2", "branch": "main", "lockfile": "uv.lock@114a7e530289", "generated_at": "2026-11-06 15:11 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "1d3843cc5e75920ea17cc08fd21ddb58471a381b", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/1d3843cc5e75920ea17cc08fd21ddb58471a381b", "branch": "main", "lockfile": "uv.lock@110781d2194f", "generated_at": "2026-11-06 16:09 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>
