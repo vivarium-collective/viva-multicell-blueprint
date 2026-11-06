@@ -22,7 +22,7 @@ def run(n, shift=0.0):
 
 
 def reg():
-    return IdentityRegistry(IDS, {c: i for i, c in enumerate(IDS)}, {c: i for i, c in enumerate(IDS)})
+    return IdentityRegistry.from_backends(IDS, {c: i for i, c in enumerate(IDS)}, {c: i for i, c in enumerate(IDS)})
 
 
 def test_playback_has_two_synced_panels():
