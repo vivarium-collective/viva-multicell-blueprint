@@ -109,6 +109,13 @@ at_a_glance:
       per-cell trajectories + contact churn but under-fluctuates (MSD 2.7x null) and
       mis-sorts (8.5x null); center-based matches contact topology + sorting but is
       over-mobile (MSD 23x null). Localizes the per-axis calibration targets.
+  - study: vertex-cpm-fluctuation-match
+    role: >
+      PLANNED follow-up (Design phase). Seeded from adhesion-calibration's open gap:
+      the CPM-matching vertex motility/noise folds the mesh, so it was capped and the
+      vertex epithelium wanders ~5x less than the CPM (MSD 2.2 vs 9.5). This study asks
+      whether a mesh-safe fluctuation mechanism closes that pattern gap under a
+      quantitative distance-to-CPM target, or whether the residual is a structural limit.
 
 acceptance_criteria:
   - study: adhesion-calibration
@@ -147,6 +154,12 @@ acceptance_criteria:
       from the CPM are reported against the CPM-self null floor; center-based is shown to
       move + interact (munk fix validated at scale), and the per-axis divergences (vertex
       under-fluctuation + mis-sorting; munk over-mobility) are quantified as calibration targets.
+  - study: vertex-cpm-fluctuation-match
+    behavior: >
+      PLANNED. With mesh validity enforced, a provided mesh-safe fluctuation mechanism
+      drives the vertex epithelial MSD, area CV and interaction-pattern distances into a
+      tolerance band around the CPM on the large Sego model — or the residual is reported
+      honestly as a structural limit of the vertex substrate (not a forced pass).
 
 competing_frameworks:
   - name: "Cellular Potts (CPM / viva-cpm)"
@@ -346,4 +359,5 @@ members:
   - crossparadigm-equivalence
   - substrate-divergence-counterfactual
   - large-crossparadigm-comparison
+  - vertex-cpm-fluctuation-match
 
