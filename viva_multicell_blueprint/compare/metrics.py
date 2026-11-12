@@ -11,6 +11,8 @@ from __future__ import annotations
 import numpy as np
 from skimage.metrics import structural_similarity
 
+from .raster import rasterize
+
 DEAD = "dead"
 
 
@@ -303,3 +305,202 @@ def run_cluster_bootstrap_ci(cross_mat, same_cpm_mat, same_vtx_mat, *,
             f"n_{la}_runs": nc, f"n_{lb}_runs": nv,
             "n_cpm_runs": nc, "n_vtx_runs": nv,   # legacy aliases (always present)
             "method": "run-cluster percentile bootstrap"}
+
+
+# --------------------------------------------------------------------------- #
+# Cross-paradigm BEHAVIOR metrics (distance-to-CPM minimization targets).
+#
+# These quantify "same movement / same interaction pattern" across the CPM,
+# vertex and center-based (munk) mechanics backends. Every one derives purely
+# from existing frame fields (``positions`` / ``types`` / ``alive`` /
+# ``neighbors``) -- no new emissions -- and every cohort-matched pair-metric is
+# robust to:
+#   * cohort cells that die / vanish  -> dropped from that step's cohort set,
+#   * empty frames                    -> that step contributes NaN (nan-ignored),
+#   * runs of differing length        -> truncated to the shorter.
+# A *cohort* is the t0 shared set from the registry (``per_cell_scored_ids``):
+# the two backends use different native cell ids, but a run is keyed by the
+# shared blueprint id, so cohort cells are matched across backends by id.
+# --------------------------------------------------------------------------- #
+
+
+def _pos(frame, cid):
+    """``(x, y)`` float array for a live, present cell, else ``None``."""
+    if not (frame.get("alive") or {}).get(cid, False):
+        return None
+    p = (frame.get("positions") or {}).get(cid)
+    return np.asarray(p, float) if p is not None else None
+
+
+def per_cell_displacement_distance(runA, runB, registry) -> dict:
+    """RMS over the shared cohort of ``|Δpos_A - Δpos_B|`` at each step, where
+    ``Δpos(t) = pos(t) - pos(t0)`` is the cell's displacement from its t0 seed.
+
+    The whole-curve generalization of :func:`per_cell_spatial_agreement` (which
+    only looks at the final frame): it measures per-cell *trajectory* divergence
+    between the two substrates, and, by referencing each run to its own t0, is
+    insensitive to a constant offset between the two backends' coordinate frames.
+    A cohort cell that is dead/absent (in either run) at a given step -- or at
+    its own t0 -- is dropped from that step's RMS; a step with no usable cell is
+    NaN. ``mean`` is the nan-ignored mean over steps."""
+    ids = sorted(registry.per_cell_scored_ids())
+    n = min(len(runA), len(runB))
+    if n == 0 or not ids:
+        return {"mean": float("nan"), "per_step": [], "n_cohort": len(ids)}
+    a0, b0 = runA[0], runB[0]
+    per_step = []
+    for t in range(n):
+        diffs = []
+        for i in ids:
+            pa0, pb0 = _pos(a0, i), _pos(b0, i)
+            pat, pbt = _pos(runA[t], i), _pos(runB[t], i)
+            if pa0 is None or pb0 is None or pat is None or pbt is None:
+                continue
+            d = (pat - pa0) - (pbt - pb0)
+            diffs.append(float(d @ d))
+        per_step.append(float(np.sqrt(np.mean(diffs))) if diffs else float("nan"))
+    return {"mean": float(np.nanmean(per_step)) if per_step else float("nan"),
+            "per_step": per_step, "n_cohort": len(ids)}
+
+
+def msd_curve(run, cohort_ids=None) -> np.ndarray:
+    """Mean-squared displacement vs step: ``MSD(t) = <|pos(t) - pos(t0)|^2>``
+    over the cohort. ``cohort_ids`` defaults to the cells alive & present at
+    frame 0; a cohort cell that dies/vanishes drops out of later means. Steps
+    with no surviving cohort cell (or an empty run) are NaN."""
+    if not run:
+        return np.asarray([], float)
+    f0 = run[0]
+    if cohort_ids is None:
+        cohort_ids = [c for c in (f0.get("positions") or {}) if _pos(f0, c) is not None]
+    p0 = {c: _pos(f0, c) for c in cohort_ids}
+    p0 = {c: v for c, v in p0.items() if v is not None}
+    out = np.full(len(run), np.nan)
+    for t, frame in enumerate(run):
+        sq = []
+        for c, origin in p0.items():
+            p = _pos(frame, c)
+            if p is None:
+                continue
+            d = p - origin
+            sq.append(float(d @ d))
+        if sq:
+            out[t] = float(np.mean(sq))
+    return out
+
+
+def msd_distance(runA, runB, registry) -> float:
+    """RMS distance between the two runs' cohort-matched MSD curves (the shared
+    t0 cohort, truncated to the shorter run). NaN steps (no survivor on a side)
+    are ignored; returns NaN if the curves never overlap."""
+    ids = sorted(registry.per_cell_scored_ids())
+    n = min(len(runA), len(runB))
+    if n == 0 or not ids:
+        return float("nan")
+    a = msd_curve(runA[:n], ids)
+    b = msd_curve(runB[:n], ids)
+    d = a - b
+    finite = np.isfinite(d)
+    return float(np.sqrt(np.mean(d[finite] ** 2))) if finite.any() else float("nan")
+
+
+def front_trajectory(run, grid_spec, type_="I") -> np.ndarray:
+    """Per-frame patch *front* position (farthest patch pixel from the patch
+    centroid, px) for one type, from :func:`spatial_pattern` on each rasterized
+    frame. ``grid_spec`` is the common-grid spec passed to :func:`rasterize`
+    (``extent_um`` / ``grid_resolution_um`` / ``type_codes``). Frames where the
+    type's patch is absent (or empty) are NaN. This is the front-advance curve of
+    an infection/immune front."""
+    codes = grid_spec.get("type_codes") or {}
+    out = np.full(len(run), np.nan)
+    for t, frame in enumerate(run):
+        pat = spatial_pattern(rasterize(frame, grid_spec), codes, types=(type_,)).get(type_)
+        if pat is not None:
+            out[t] = pat["front"]
+    return out
+
+
+def front_speed_distance(runA, runB, grid_spec, type_="I") -> float:
+    """Distance between the two runs' front-advance curves for one type: the RMS
+    gap between their :func:`front_trajectory` curves (truncated to the shorter
+    run, NaN frames ignored). Separates a fast-advancing infection front from a
+    slow one. Returns NaN if the fronts never co-exist."""
+    n = min(len(runA), len(runB))
+    if n == 0:
+        return float("nan")
+    a = front_trajectory(runA[:n], grid_spec, type_)
+    b = front_trajectory(runB[:n], grid_spec, type_)
+    d = a - b
+    finite = np.isfinite(d)
+    return float(np.sqrt(np.mean(d[finite] ** 2))) if finite.any() else float("nan")
+
+
+def _cohort_edges(frame, cohort):
+    """Undirected edge set of ``neighbors`` restricted to cohort cells."""
+    edges = set()
+    for a, nbrs in (frame.get("neighbors") or {}).items():
+        a = str(a)
+        if a not in cohort:
+            continue
+        for b in nbrs:
+            b = str(b)
+            if b in cohort and a != b:
+                edges.add(tuple(sorted((a, b))))
+    return edges
+
+
+def neighbour_graph_distance(runA, runB, registry) -> dict:
+    """Per-step Jaccard distance between the two runs' contact graphs, restricted
+    to the shared t0 cohort. For each step the ``neighbors`` adjacency is reduced
+    to undirected edges whose BOTH endpoints are cohort cells, then
+    ``1 - |E_A & E_B| / |E_A | E_B|``. Two steps with no cohort edges on either
+    side are distance 0 (identical: no interactions). Jaccard (not normalized
+    graph-edit) is chosen because it is symmetric, bounded in ``[0, 1]`` and
+    needs no node alignment beyond the id cohort. Dead cells carry no edges, so
+    they drop out automatically. ``mean`` is over steps (truncated to shorter)."""
+    cohort = set(registry.per_cell_scored_ids())
+    n = min(len(runA), len(runB))
+    per_step = []
+    for t in range(n):
+        ea, eb = _cohort_edges(runA[t], cohort), _cohort_edges(runB[t], cohort)
+        union = ea | eb
+        per_step.append(1.0 - len(ea & eb) / len(union) if union else 0.0)
+    return {"mean": float(np.mean(per_step)) if per_step else float("nan"),
+            "per_step": per_step, "n_cohort": len(cohort)}
+
+
+def sorting_index(run) -> np.ndarray:
+    """Same-type neighbour fraction over time: per frame, the mean over live
+    cells (with >=1 live neighbour) of the fraction of their ``neighbors`` that
+    share their type. 1.0 = fully sorted (contacts only within type), ~0 = fully
+    mixed. Frames with no contacting live cell are NaN. Reads only
+    ``neighbors`` + ``types`` + ``alive``."""
+    out = np.full(len(run), np.nan)
+    for t, frame in enumerate(run):
+        types, alive = frame.get("types", {}), frame.get("alive", {})
+        nbrs = frame.get("neighbors") or {}
+        fracs = []
+        for a, ns in nbrs.items():
+            a = str(a)
+            if not alive.get(a, False):
+                continue
+            live = [str(b) for b in ns if alive.get(str(b), False) and str(b) != a]
+            if not live:
+                continue
+            same = sum(1 for b in live if str(types.get(b)) == str(types.get(a)))
+            fracs.append(same / len(live))
+        if fracs:
+            out[t] = float(np.mean(fracs))
+    return out
+
+
+def sorting_index_distance(runA, runB) -> float:
+    """RMS distance between the two runs' :func:`sorting_index` curves (truncated
+    to the shorter run, NaN frames ignored). Separates a sorting tissue from a
+    mixing one. Returns NaN if the curves never overlap."""
+    n = min(len(runA), len(runB))
+    if n == 0:
+        return float("nan")
+    d = sorting_index(runA[:n]) - sorting_index(runB[:n])
+    finite = np.isfinite(d)
+    return float(np.sqrt(np.mean(d[finite] ** 2))) if finite.any() else float("nan")
