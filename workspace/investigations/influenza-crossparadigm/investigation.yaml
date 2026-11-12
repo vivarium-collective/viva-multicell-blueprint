@@ -101,6 +101,14 @@ at_a_glance:
       (cross 0.417 vs same 0.775), so the test has power. The earlier mechanism (vertex
       climbing the gradient) was an uncalibrated-chemotaxis artifact and is retired;
       the remaining divergence is positional / sorting and not yet isolated.
+  - study: large-crossparadigm-comparison
+    role: >
+      SCALE-UP characterization on the large Sego model (120x120, ~225-cell epithelium)
+      with the new behavior metrics (distance-to-CPM). After the munk fix, all three
+      substrates MOVE; each reproduces a DIFFERENT facet of the CPM: vertex matches
+      per-cell trajectories + contact churn but under-fluctuates (MSD 2.7x null) and
+      mis-sorts (8.5x null); center-based matches contact topology + sorting but is
+      over-mobile (MSD 23x null). Localizes the per-axis calibration targets.
 
 acceptance_criteria:
   - study: adhesion-calibration
@@ -133,6 +141,12 @@ acceptance_criteria:
       In a mechanics-dominated regime the spatial equivalence TOST REJECTS, and the
       migration-direction difference (vertex climbs the gradient, CPM does not) is
       the mechanistic cause — demonstrating the test has power.
+  - study: large-crossparadigm-comparison
+    behavior: >
+      On the large Sego model, the behavior-metric distances of vertex and center-based
+      from the CPM are reported against the CPM-self null floor; center-based is shown to
+      move + interact (munk fix validated at scale), and the per-axis divergences (vertex
+      under-fluctuation + mis-sorting; munk over-mobility) are quantified as calibration targets.
 
 competing_frameworks:
   - name: "Cellular Potts (CPM / viva-cpm)"
@@ -331,4 +345,5 @@ members:
   - dose-response-crossparadigm
   - crossparadigm-equivalence
   - substrate-divergence-counterfactual
+  - large-crossparadigm-comparison
 
