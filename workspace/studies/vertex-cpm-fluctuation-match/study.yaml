@@ -1,0 +1,219 @@
+schema_version: 4
+name: vertex-cpm-fluctuation-match
+created: "2026-11-12"
+status: planned
+phase: Design
+simulation_status: not-run
+implementation_status: planned
+evaluation_status: not-evaluated
+gate_status: pending
+design_status: drafted
+title: "Vertex → CPM fluctuation match"
+kind: calibration
+confidence: Planned
+investigation: influenza-crossparadigm
+
+parent_studies:
+  - {study: adhesion-calibration, condition: ran, relation: leads-to}
+
+question: >
+  Can the vertex (tyssue) backend reproduce the CPM's emergent interaction pattern
+  on the large Sego 2022 blueprint — its per-cell motility, boundary fluctuation and
+  neighbour-exchange statistics — WITHOUT folding the mesh? Today the honest
+  CPM-matching motility/noise values invert short junctions and self-intersect the
+  polygons, so they were capped, leaving the vertex epithelium ~5x less mobile and far
+  more ordered than the CPM. This study asks whether a mesh-safe mechanism closes that
+  gap under a quantitative distance-to-CPM target.
+
+purpose:
+  question: >
+    Is the vertex/CPM pattern gap a tuning problem (bounded by capped knobs) or a
+    mechanism problem (vertex lacks a CPM-faithful, T1-safe fluctuation source)?
+  mechanism: >
+    CPM advances a stochastically-roughened voxel interface by Metropolis boundary
+    flips at temperature; the vertex fork advances a confluent, gap-free polygon
+    tiling by grad-E displacement plus discrete T1/T2/T3 neighbour swaps. The CPM's
+    per-voxel fluctuation has no direct vertex analog — it is approximated by OU
+    junction-tension noise plus an active-Brownian random walk, both of which fold the
+    mesh at CPM-matching amplitude and were therefore capped (adhesion-calibration).
+  expected_outcome: >
+    Either (A) a mesh-safe fluctuation mechanism drives the vertex motility/roughness
+    metrics into a tolerance band around the CPM while mesh validity holds over the
+    full run, or (B) it does not, and we report the residual honestly as a structural
+    limit of the vertex substrate (an HONEST OPEN QUESTION), not a forced pass.
+
+key_assumptions:
+  - "The CPM is the reference substrate; vertex is judged by distance-to-CPM on the shared large Sego 2022 blueprint, same seeds."
+  - "Mesh validity (no inverted/self-intersecting faces over the whole run) is a HARD constraint — a metric match bought by a folded mesh does not count."
+  - "Only mechanisms/parameters already in the vertex backend (or a new T1-safe fluctuation term proposed here) are used; no literature value is folded in to force a target (see falsifiability)."
+  - "The quantitative target depends on the new cross-paradigm behavior metrics (per-cell displacement/MSD distance, neighbour-graph distance over time, infection-front-speed distance) shipped alongside this investigation."
+
+# The run model: the shared Sego cross-paradigm composite on the LARGE blueprint,
+# comparing the CPM reference against vertex candidates. Variants are the candidate
+# vertex regimes this study will test (planned — not yet run).
+baseline:
+  - name: cpm-reference
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    params: {backend: cpm}
+  - name: vertex-shipped
+    composite: viva_multicell_blueprint.composites.sego.sego_crossparadigm
+    params: {backend: vertex}
+
+variants:
+  - name: vertex-knob-push
+    base_composite: vertex-shipped
+    parameter_overrides: {}   # TODO(Build): raise sheet_motility / tension_noise under a mesh-validity gate
+  - name: vertex-mesh-safe-fluctuation
+    base_composite: vertex-shipped
+    parameter_overrides: {}   # TODO(Build): sub-threshold, T1-safe fluctuation term (see implementation_requirements)
+
+# What we measure — the CPM observables the vertex must approach. These become the
+# cross-paradigm minimization target; store paths are the shared mechanics ports.
+readouts:
+  - name: epithelial_msd
+    description: Mean-squared displacement of the epithelial (H) cohort over the run; the headline motility gap (CPM ~9.5 vs vertex ~2.2 um^2 today).
+    store_path: "mechanics/positions"
+    units: um^2
+    status: planned
+  - name: immune_displacement_median
+    description: Median net displacement of immune cells over the run (CPM ~9.4 vs vertex ~4.6 um today).
+    store_path: "mechanics/positions"
+    units: um
+    status: planned
+  - name: area_cv
+    description: Coefficient of variation of cell area over the run — boundary-fluctuation proxy (CPM ~0.093 vs vertex ~0.038 today).
+    store_path: "mechanics/sizes"
+    units: fraction
+    status: planned
+  - name: infection_front_speed
+    description: Advance rate of the I-patch front (spatial_pattern front vs time), per backend.
+    store_path: "mechanics/positions"
+    units: um/step
+    status: planned
+  - name: neighbour_graph_churn
+    description: Per-step change in the cell contact graph (neighbour-exchange / graph-distance over time), per backend.
+    store_path: "mechanics/neighbors"
+    units: edges/step
+    status: planned
+
+# Acceptance tests (PLANNED). Each is a distance-to-CPM target plus the hard mesh gate.
+behavior_tests:
+  - name: epithelial-motility-matches-cpm
+    classification: primary
+    description: Vertex epithelial MSD lands within a tolerance band of the CPM MSD (not the capped ~5x-low value).
+    measure: {kind: distance, field: epithelial_msd, reference: cpm-reference}
+    pass_if: {op: within_fraction, value: 0.30, note: "|MSD_vertex - MSD_cpm| / MSD_cpm <= 0.30"}
+    units: um^2
+    requires_simulation: "true"
+  - name: boundary-fluctuation-matches-cpm
+    classification: primary
+    description: Vertex area CV approaches the CPM area CV (today 0.038 vs 0.093).
+    measure: {kind: distance, field: area_cv, reference: cpm-reference}
+    pass_if: {op: within_fraction, value: 0.30}
+    units: fraction
+    requires_simulation: "true"
+  - name: interaction-pattern-distance-drops
+    classification: primary
+    description: The neighbour-graph-churn and infection-front-speed distances from the CPM drop versus the shipped vertex baseline.
+    measure: {kind: distance, field: neighbour_graph_churn, reference: cpm-reference}
+    pass_if: {op: lt_baseline, note: "candidate distance < vertex-shipped distance"}
+    units: edges/step
+    requires_simulation: "true"
+  - name: mesh-stays-valid
+    classification: gate
+    description: No inverted or self-intersecting faces at any step of the run (HARD constraint — overrides any metric match).
+    measure: {kind: invariant, field: mesh_valid}
+    pass_if: {op: all_true, note: "mesh validity holds every step"}
+    units: boolean
+    requires_simulation: "true"
+
+controls:
+  - name: cpm-self-null
+    kind: negative
+    description: CPM-vs-CPM (seed-varied) distance is the matched null floor each vertex distance is judged against — a vertex match must approach this floor, not 0.
+  - name: vertex-shipped-baseline
+    kind: positive
+    description: The current capped vertex backend — the starting distance-to-CPM every candidate must improve on.
+
+alternative_hypotheses:
+  - hypothesis: "The gap is pure tuning — raising the capped knobs (sheet_motility, tension_noise) closes it."
+    excluded_by: "Tested directly by the vertex-knob-push variant under the mesh-validity gate; if it folds the mesh before matching, tuning alone is refuted."
+  - hypothesis: "The gap is a metric artifact (rasterization / cohort matching), not a real mobility difference."
+    excluded_by: "The new metrics operate on continuous positions/neighbour graphs (not only rasters); CPM-self null calibrates the metric's own noise floor."
+  - hypothesis: "Vertex confluence (no medium, margin-attached immune) is the dominant cause, not fluctuation amplitude."
+    excluded_by: "Separable by the immune-representation arm (free-wandering vs margin-attached) in implementation_requirements."
+
+implementation_requirements:
+  - id: req-behavior-metrics
+    title: "Cross-paradigm behavior metrics in compare/metrics.py (displacement/MSD distance, neighbour-graph distance, front-speed distance)"
+    kind: listener
+    effort: M
+    status: planned
+    unblocks: "epithelial-motility-matches-cpm,interaction-pattern-distance-drops"
+    description: "The minimization target. Ships as reusable infra via a feature PR to main; this study consumes it."
+  - id: req-mesh-validity-gate
+    title: "Per-step mesh-validity invariant exposed from the vertex backend"
+    kind: process
+    effort: S
+    status: planned
+    unblocks: "mesh-stays-valid"
+  - id: req-t1-safe-fluctuation
+    title: "A T1-safe (sub-threshold) fluctuation term for the vertex backend"
+    kind: process
+    effort: L
+    status: planned
+    description: "Candidate mesh-safe analog of the CPM temperature: bounded per-vertex jitter / boundary-roughness that cannot shrink a junction past the T1 threshold."
+    defer_until: "req-behavior-metrics lands so the effect is measurable."
+  - id: req-immune-representation-arm
+    title: "Free-wandering vs margin-attached immune representation toggle"
+    kind: parameter_hook
+    effort: M
+    status: planned
+
+design_pivot_required:
+  - id: VCF-01
+    question: "Close the gap by pushing capped knobs, or by adding a new T1-safe fluctuation mechanism?"
+    alternatives:
+      - "A. Knob-push only — raise sheet_motility / tension_noise under a mesh-validity gate; simplest, may fold before matching."
+      - "B. New mesh-safe fluctuation term — bounded per-vertex jitter / boundary roughness; more work, likely required if A folds."
+      - "C. Accept the residual — report the capped vertex as an honest structural limit if neither A nor B reaches the band."
+    status: open
+    requested_response: "Expert steer on how far to push mechanism changes into the tyssue backend vs accepting an honest residual."
+
+falsifiability: >
+  The claim 'vertex can match the CPM interaction pattern on the large Sego model' is
+  overturned if, with mesh validity enforced, no provided mechanism drives the primary
+  distance metrics into their tolerance bands — in which case the honest result is that
+  the vertex substrate cannot reproduce CPM-level fluctuation without folding, and that
+  is reported as the finding rather than patched with an un-provided term to force a pass.
+
+limitations:
+  - "Planned (Design phase) — no runs yet; all target numbers are the CPM references to approach, not results."
+  - "Depends on the new cross-paradigm behavior metrics (req-behavior-metrics) landing first; until then the distances are not computable."
+  - "A match on these metrics is necessary but not sufficient for full pattern identity; visual (flipbook) agreement is a secondary check."
+
+report:
+  title: "Can vertex reproduce CPM's interaction pattern without folding the mesh?"
+  verdict: not-yet-run
+  confidence: low
+  evidence_quality: aspirational
+  objective: >
+    Drive the vertex (tyssue) motility / boundary-fluctuation / interaction-pattern
+    metrics into a tolerance band around the CPM on the large Sego 2022 blueprint,
+    under a hard mesh-validity constraint — or report the residual as a structural limit.
+  main_insight: ""
+  caveat: >
+    The honest CPM-matching motility folds the vertex mesh today; this study exists to
+    find a mesh-safe mechanism or to document that none of the provided ones suffice.
+
+study_card:
+  goal: "Get the vertex backend to reproduce the CPM's emergent interaction pattern on the large Sego model, measured as distance-to-CPM, without folding the mesh."
+  mechanism: >
+    Replace/augment the capped OU-noise + active-Brownian motility (which folds the
+    mesh at CPM amplitude) with a T1-safe fluctuation source, and judge the result on
+    the new cross-paradigm motility / neighbour-graph / front-speed distances.
+  why_before_next: >
+    The capstone comparison and any 'all three substrates agree' claim depend on vertex
+    actually reproducing the CPM pattern; this study is where that is won or honestly bounded.
+  expected_result: "Vertex motility MSD within ~30% of CPM (vs ~5x low today) with a valid mesh, or a documented structural residual."
+  main_expert_question: "How hard should we push mechanism changes into the tyssue backend before accepting an honest residual (pivot VCF-01)?"
