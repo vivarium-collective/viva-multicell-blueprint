@@ -10,20 +10,28 @@ shows each in its native form. The animation legibility rules:
   change frame-to-frame, that makes the coloured regions morph and jump around.
   ``redraw=True`` snaps cleanly to each frame.
 
-* **CPM** — a lattice model. The solid fill is a single ``go.Heatmap`` with a
-  discrete (stepped) colorscale — one colour band per cell type, empty voxels set
-  to ``NaN`` so they render transparent (``_type_heatmap``) — plus a per-cell
-  outline overlay (``_boundary_xy`` traces the edges of the cell-id raster, so
-  touching same-type cells still read as distinct cells).
+* **CPM** — a lattice model. The solid fill is one ``fill="toself"`` scatter per
+  cell type, where each path is a cell **region's boundary contour** (one closed
+  loop per connected voxel blob, traced with ``skimage.measure.find_contours`` on
+  that type's voxel mask — ``_region_fill_paths``) — plus a per-cell outline
+  overlay (``_boundary_xy`` traces the edges of the cell-id raster, so touching
+  same-type cells still read as distinct cells).
 
-  The fill was a per-type ``fill="toself"`` scatter (``_type_fill_paths``), which
-  looked identical on first paint but **punched even-odd holes through the tissue
-  on any re-render** (reopen the Studio video, reset/replay, ``Plotly.react``):
-  Plotly fills ``toself`` with the even-odd rule across every NaN-separated voxel
-  sub-path, and re-rasterising that multi-sub-path fill is unstable. A Heatmap is a
-  true raster with no sub-path fill, so it renders solid and identically every time.
-  (The scatter helpers ``_type_fill_paths`` / ``_fill_trace`` are retained for the
-  record but no longer used by ``_voxel_traces``.)
+  Two earlier fills were tried and rejected:
+    1. a per-**voxel** ``fill="toself"`` scatter (``_type_fill_paths``, each voxel
+       its own rectangle): looked identical on first paint but **punched even-odd
+       holes through the tissue on any re-render** (reopen the Studio video,
+       reset/replay, ``Plotly.react``) — Plotly fills ``toself`` with the even-odd
+       rule across every NaN-separated sub-path, and the dense shared-edge mesh of
+       per-voxel rectangles re-rasterises unstably.
+    2. a single ``go.Heatmap`` raster: solid and stable statically, but **Plotly
+       does not redraw heatmap traces under ``Plotly.animate``** — on replay the
+       scatter outlines kept updating while the heatmap colour vanished, leaving
+       bare jittering outlines with no fill.
+  The region-contour fill keeps the solid look, animates cleanly like a scatter
+  (one simple closed loop per blob → no even-odd holes, no dense shared-edge mesh),
+  and redraws on every frame. (``_type_fill_paths`` / the heatmap helper are kept
+  for the record but unused by ``_voxel_traces``.)
 * **Vertex** — a polygon model, drawn as the actual cell polygons (the hexagonal
   sheet faces and overlay islands from ``frame['polygons']``), filled by cell state
   with visible cell edges.
@@ -39,6 +47,7 @@ from __future__ import annotations
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from skimage.measure import find_contours
 
 from ..compare.metrics import neighbour_exchanges
 from ..compare.raster import cell_id_raster, grid_shape, rasterize, type_codes
@@ -120,47 +129,54 @@ def _fill_trace(xs, ys, color, name):
                       fillcolor=color, line=dict(width=0), hoverinfo="skip")
 
 
-def _type_heatmap(z, grid, codes, colors):
-    """The CPM voxel fill as ONE ``go.Heatmap`` with a discrete (stepped) colorscale
-    — one solid colour band per cell type, empty voxels (code 0) set to ``NaN`` so
-    they render transparent.
+def _region_fill_paths(z, grid, codes):
+    """The CPM voxel fill as per-type ``fill="toself"`` paths, where each path is a
+    **region boundary contour**: one closed loop per connected voxel blob of that
+    type (``skimage.measure.find_contours`` on the type's binary mask), NOT one
+    rectangle per voxel.
 
-    This REPLACES the former per-type ``fill="toself"`` scatter rectangles
-    (``_type_fill_paths`` + ``_fill_trace``). Those drew each voxel as a separate
-    NaN-separated sub-path of one Scatter, and Plotly fills ``toself`` with the
-    EVEN-ODD rule across all sub-paths. The first paint was solid, but on any
-    *re-render* (reopen the Studio video, reset/replay the animation,
-    ``Plotly.react``) Plotly re-rasterised that multi-sub-path fill and punched
-    even-odd holes through the tissue — the speckled "moth-eaten" look. A Heatmap
-    has no sub-path fill, so it rasterises solid and identically every render.
-    ``zsmooth=False`` keeps the hard voxel edges; ``x0/dx/y0/dy`` place voxel
-    ``(r,c)`` on ``[c*res,(c+1)*res] x [r*res,(r+1)*res]``, aligned with the
-    scatter cell-outline overlay."""
+    This is the fill that survives animation AND re-render. Per-voxel rectangles
+    (``_type_fill_paths``) punched even-odd holes on re-render (dense shared-edge
+    mesh); a ``go.Heatmap`` is stable statically but Plotly does not redraw heatmaps
+    under ``Plotly.animate`` (the colour vanished on replay). A handful of simple
+    closed contour loops per type fills solid under even-odd and redraws every frame
+    like any scatter. Returns ``{type: (xs, ys)}`` with NaN-separated closed loops.
+
+    Coordinates: the mask is padded by one empty ring and contoured at level 0.5, so
+    a contour vertex at padded index ``(pr, pc)`` maps to um ``((pc-0.5)*res,
+    (pr-0.5)*res)`` — aligned with voxel ``(r,c)`` on ``[c*res,(c+1)*res] x
+    [r*res,(r+1)*res]`` and with the ``_boundary_xy`` outline overlay."""
     res = float(grid["grid_resolution_um"])
-    code_to_type = {v: k for k, v in codes.items()}
-    maxcode = max(codes.values()) if codes else 1
     za = np.asarray(z)
-    zf = np.where(za > 0, za, np.nan).astype(float)  # empty -> NaN -> transparent
-    # Stepped colorscale: value k (k=1..maxcode) fills the band [(k-1)/maxcode, k/maxcode]
-    # with that type's colour; zmin/zmax are half-steps so each integer lands mid-band.
-    scale: list = []
-    for k in range(1, maxcode + 1):
-        col = colors.get(code_to_type.get(k), "rgba(0,0,0,0)")
-        scale.append([(k - 1) / maxcode, col])
-        scale.append([k / maxcode, col])
-    return go.Heatmap(z=zf, x0=res / 2.0, dx=res, y0=res / 2.0, dy=res,
-                      zmin=0.5, zmax=maxcode + 0.5, colorscale=scale,
-                      showscale=False, hoverinfo="skip", zsmooth=False, name="cells")
+    out: dict = {t: ([], []) for t in codes}
+    for t, k in codes.items():
+        mask = za == k
+        if not mask.any():
+            continue
+        padded = np.pad(mask.astype(np.uint8), 1)
+        xs, ys = out[t]
+        for loop in find_contours(padded, 0.5):
+            for pr, pc in loop:
+                xs.append((pc - 0.5) * res)
+                ys.append((pr - 0.5) * res)
+            xs.append((loop[0][1] - 0.5) * res)  # close the ring
+            ys.append((loop[0][0] - 0.5) * res)
+            xs.append(None)                       # separate blobs
+            ys.append(None)
+    return out
 
 
 def _voxel_traces(type_raster, id_raster, grid, codes, colors):
-    """The voxel-fill Heatmap + the cell-outline scatter for one CPM frame, in a
-    fixed order (fill first, outlines on top). Takes the already-computed type/id
-    rasters so a caller can pass temporally-smoothed ones.
+    """One CPM frame: a per-type region-contour fill scatter (one per cell type, in
+    ``codes`` order) + the cell-outline scatter on top — a FIXED trace count so the
+    frames animate. Takes already-computed type/id rasters so a caller can pass
+    temporally-smoothed ones.
 
-    The fill is a single Heatmap (not per-type ``fill="toself"`` scatters) so it
-    renders solid on every re-render — see :func:`_type_heatmap`."""
-    traces = [_type_heatmap(type_raster, grid, codes, colors)]
+    The fill is per-type ``fill="toself"`` region contours (not a Heatmap, not
+    per-voxel rectangles) so it renders solid, animates, and redraws on every frame
+    — see :func:`_region_fill_paths`."""
+    paths = _region_fill_paths(type_raster, grid, codes)
+    traces = [_fill_trace(*paths[t], _hex_to_rgba(colors[t], 0.85), t) for t in codes]
     bx, by = _boundary_xy(id_raster, grid)
     traces.append(_boundary_trace(bx, by))
     return traces
@@ -297,6 +313,42 @@ def _panel_traces(run, i, grid, codes, colors, smooth_window, has_poly):
     return _voxel_traces(zr, idr, grid, codes, colors)
 
 
+def _xy_len(tr):
+    return len(tr.x) if tr.x is not None else 0
+
+
+def _pad_trace_xy(tr, length):
+    """Right-pad a trace's ``x``/``y`` with ``None`` to ``length`` points. Trailing
+    ``None`` is a path break: it adds no geometry to a line or a ``fill="toself"``
+    region, it only keeps the point count fixed."""
+    x = list(tr.x) if tr.x is not None else []
+    y = list(tr.y) if tr.y is not None else []
+    if len(x) < length:
+        x.extend([None] * (length - len(x)))
+        y.extend([None] * (length - len(y)))
+        tr.x, tr.y = x, y
+
+
+def _pad_anim_uniform(fig, frames, anim):
+    """Give every animated trace a CONSTANT point count across the base figure and
+    all frames (per animated-trace slot), padding with trailing ``None``.
+
+    Plotly animates a scatter frame-to-frame by matching points by index. When a
+    fill/line trace changes length between frames (cells appear, divide, or change
+    vertex count), the surplus points have no predecessor and Plotly draws them
+    streaking from the trace's origin — the "comet-tail" artifact seen at the start
+    of a vertex/CPM playback. Fixing the length per slot removes those surplus
+    points, so each frame redraws cleanly. ``None`` padding is inert (a path break)."""
+    if not frames:
+        return
+    for j, base_idx in enumerate(anim):
+        length = max([_xy_len(fig.data[base_idx])]
+                     + [_xy_len(fr.data[j]) for fr in frames])
+        _pad_trace_xy(fig.data[base_idx], length)
+        for fr in frames:
+            _pad_trace_xy(fr.data[j], length)
+
+
 def _spatial_playback_multi(runs, grid_spec, *, dt_days=1.0, max_frames=MAX_FRAMES,
                             title=None, smooth_window=0):
     """N synchronized panels (one per paradigm), one shared time slider. ``runs`` is
@@ -357,6 +409,7 @@ def _spatial_playback_multi(runs, grid_spec, *, dt_days=1.0, max_frames=MAX_FRAM
         notes = [dict(a, text=text) for a, text in zip(title_annotations, _titles(i))]
         frames.append(go.Frame(name=str(k), data=data, traces=anim,
                                layout=go.Layout(annotations=notes)))
+    _pad_anim_uniform(fig, frames, anim)  # constant point count -> no comet-tail streaks
     fig.frames = frames
     steps = [dict(method="animate", label=f"{t:g}",
                   args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=True),
@@ -451,6 +504,7 @@ def _single_playback(run, grid_spec, *, backend="cpm", dt_days=1.0, max_frames=M
 
     frames = [go.Frame(name=str(k), data=_frame_traces(i), traces=anim)
               for k, i in enumerate(idx)]
+    _pad_anim_uniform(fig, frames, anim)  # constant point count -> no comet-tail streaks
     fig.frames = frames
     steps = [dict(method="animate", label=f"{t:g}",
                   args=[[str(k)], dict(mode="immediate", frame=dict(duration=0, redraw=True),
