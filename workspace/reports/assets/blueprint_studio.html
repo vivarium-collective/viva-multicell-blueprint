@@ -57,6 +57,7 @@
     <label for="tpl">Start from</label>
     <select id="tpl">
       <option value="default">Sego 2022 flu-lung (committed, read-only)</option>
+      <option value="large">Sego 2022 flu-lung — LARGE (~2.4x tissue, editable)</option>
       <option value="simple">Minimal sheet (editable)</option>
       <option value="mixed">Mixed population + adhesion (editable)</option>
       <option value="infection">Infection field + rule (editable)</option>
@@ -116,6 +117,9 @@ const TEMPLATES = {
   default: {readonly:false, fetch:"sego_blueprint.yaml",
     hint:"The committed Sego 2022 flu-lung blueprint (loaded below). Edit and run it, or pick a smaller template.",
     yaml:"# loading the Sego 2022 blueprint…\n"},
+  large: {readonly:false, fetch:"sego_blueprint_large.yaml",
+    hint:"A biology-preserving ~2.4x scale-up of the Sego 2022 blueprint: 120x120 patch, 15x15 (~225-cell) epithelium, same mechanism. Heavier → slower steps; keep the step count modest. (Also startable directly as the sego_crossparadigm_large composite.)",
+    yaml:"# loading the LARGE Sego 2022 blueprint…\n"},
   simple: {readonly:false, hint:"A single epithelial type on a small sheet. Static (no fields/rules) → a run has no time-series; see the Composites Explorer for its structure.",
     yaml:`blueprint_version: "1.0"
 domain: {extent_um: [20, 20], grid_resolution_um: 1, boundary: noflux}

@@ -8,6 +8,11 @@ and the mechanics-only adhesion-calibration sheet. It simply ``compile()``s the
 backend-neutral blueprint -- the single source of truth -- so the Explorer shows
 the real shared mechanism + the one backend-specific mechanics node.
 
+``sego_crossparadigm_large`` is a thin preset wrapper over the same generator whose
+``blueprint`` defaults to a biology-preserving ~2.4x scale-up (a bigger tissue, the
+same mechanism); registering it the same way surfaces it as its own startable
+simulation in the Blueprint Studio catalog without duplicating any mechanism.
+
 Discovery: this lives in ``<pkg>/composites/*.py`` (a package directory, not a
 single ``composites.py`` module) so the workbench's workspace-scope glob
 (``_discover_workspace_generators``) imports it, and the top-level
@@ -28,6 +33,9 @@ from ..core import register_workspace_processes
 # workspace/blueprints/) is three parents up.
 _BLUEPRINTS = Path(__file__).resolve().parent.parent.parent / "workspace" / "blueprints"
 _SEGO = _BLUEPRINTS / "influenza_sego2022.yaml"
+# Biology-preserving ~2.4x scale-up of _SEGO (120x120 patch, 15x15 ~225-cell block).
+# Same mechanism, bigger tissue -- see the blueprint header for the scale-up contract.
+_SEGO_LARGE = _BLUEPRINTS / "influenza_sego2022_large.yaml"
 
 
 def _load_blueprint(blueprint):
@@ -77,3 +85,36 @@ def sego_crossparadigm(core=None, backend: str = "cpm", blueprint: str | None = 
                        video_out: str = "") -> dict:
     bp = _load_blueprint(blueprint)
     return _compile(bp, backend=backend, video_out=(video_out or None))   # {"state": {...}} envelope
+
+
+@composite_generator(
+    name="sego_crossparadigm_large",
+    description=(
+        "Scaled-up Sego 2022 influenza preset: a biology-preserving ~2.4x linear "
+        "scale-up of 'sego_crossparadigm' (120x120 patch, 15x15 ~225-cell epithelial "
+        "block) -- a bigger tissue, the SAME field/rules/ODE/recruitment mechanism. "
+        "A heavier starting point to run from in the Blueprint Studio."
+    ),
+    parameters={
+        "backend": {"type": "string", "default": "cpm",
+                    "description": "mechanics substrate: 'cpm' (Cellular Potts), "
+                                   "'vertex' (tyssue), or 'munk' (center-based pymunk)"},
+        "blueprint": {"type": "string", "default": str(_SEGO_LARGE),
+                      "description": "backend-neutral blueprint: a path to a YAML file, "
+                                     "inline YAML text, or a dict (defaults to the scaled-up Sego preset)"},
+        "video_out": {"type": "string", "default": "",
+                      "description": "if set, record a spatial-playback video to "
+                                     "reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)"},
+    },
+    core_extensions=[register_workspace_processes],
+    default_n_steps=80,
+)
+def sego_crossparadigm_large(core=None, backend: str = "cpm", blueprint: str | None = None,
+                             video_out: str = "") -> dict:
+    """Thin preset wrapper over :func:`sego_crossparadigm`: identical generator, but
+    its ``blueprint`` defaults to the larger scaled-up Sego blueprint so it surfaces
+    as its own startable simulation in the Studio catalog. DRY -- no mechanism is
+    duplicated; only the default starting geometry differs."""
+    return sego_crossparadigm(core=core, backend=backend,
+                              blueprint=(blueprint if blueprint is not None else str(_SEGO_LARGE)),
+                              video_out=video_out)
