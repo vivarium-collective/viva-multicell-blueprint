@@ -255,7 +255,7 @@ def _flipbook_html(frames, labels, title, slider_prefix):
   <h3>{_esc(title)}</h3>
   <img id="vmb-img" alt="spatial playback frame">
   <div class="ctl">
-    <button id="vmb-play" type="button">► Play</button>
+    <button id="vmb-play" type="button">Play</button>
     <input id="vmb-sl" type="range" min="0" max="{n - 1}" value="0" step="1"
            aria-label="frame">
     <span class="lbl" id="vmb-lbl"></span>
@@ -268,10 +268,10 @@ def _flipbook_html(frames, labels, title, slider_prefix):
       lbl=document.getElementById('vmb-lbl'), btn=document.getElementById('vmb-play');
   var i=0, timer=null;
   function show(k) {{ i=((k%F.length)+F.length)%F.length; img.src=F[i]; sl.value=i;
-    lbl.textContent='frame '+(i+1)+'/'+F.length+'  ·  '+PFX+L[i]; }}
-  function stop() {{ if(timer){{clearInterval(timer);timer=null;btn.textContent='► Play';}} }}
+    lbl.textContent='frame '+(i+1)+'/'+F.length+'  |  '+PFX+L[i]; }}
+  function stop() {{ if(timer){{clearInterval(timer);timer=null;btn.textContent='Play';}} }}
   function play() {{ if(F.length<2)return; timer=setInterval(function(){{show(i+1);}},220);
-    btn.textContent='❚❚ Pause'; }}
+    btn.textContent='Pause'; }}
   sl.addEventListener('input', function(e){{ stop(); show(+e.target.value); }});
   btn.addEventListener('click', function(){{ if(timer)stop(); else play(); }});
   show(0);

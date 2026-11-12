@@ -50,5 +50,5 @@ def test_run_writes_a_video_file(tmp_path):
     from process_bigraph import Composite
     Composite(doc, core=core).run(3)
     out = ROOT / "workspace" / "reports" / "assets" / "_studio_runs" / "pytest_vid.html"
-    assert out.is_file() and "vmb-flipbook" in out.read_text()[:300000]
+    assert out.is_file() and "vmb-flipbook" in out.read_text(encoding="utf-8")[:300000]
     out.unlink()  # don't leave the test artifact
