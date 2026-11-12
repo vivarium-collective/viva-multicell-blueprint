@@ -51,8 +51,11 @@ def test_behavior_metrics_integrate_and_munk_moves_at_scale():
 
 
 def test_study_yaml_wellformed_and_uses_large_preset():
-    s = yaml.safe_load(STUDY.read_text())
+    # read as utf-8 explicitly: the study.yaml carries non-ascii (em-dash, Δ, −) like
+    # the other study specs, and CI runs with an ascii default locale.
+    text = STUDY.read_text(encoding="utf-8")
+    s = yaml.safe_load(text)
     assert s["baseline"][0]["composite"].endswith("sego_crossparadigm_large")
     assert {r["name"] for r in s["readouts"]} >= {
         "msd_distance", "neighbour_graph_distance", "front_speed_distance"}
-    assert "PENDING_FILL" not in STUDY.read_text()
+    assert "PENDING_FILL" not in text
