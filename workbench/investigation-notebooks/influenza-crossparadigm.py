@@ -838,6 +838,74 @@ _save_viz('substrate-divergence-counterfactual', 'Mechanics-dominated_playback_C
 # | spatial-equivalence-rejected _(primary)_ | kind=equivalence field=spatial_agreement margin=0.1 | op tost_not_equivalent note cross spatial agreement << same; diff > margin |
 # | migration-direction-differs _(primary)_ | kind=comparison field=typeA_mean_y_change low=-40.0 high=40.0 | op lt value 3.0 field abs_typeA_mean_y_change note both backends |
 
+# ## Study: Three substrates on the large Sego model (behavior-metric distances) (`large-crossparadigm-comparison`)
+#
+# **Question.** On the LARGE Sego 2022 blueprint (120x120, ~225-cell epithelium), how far does each mechanical substrate's emergent MOVEMENT and INTERACTION pattern sit from the CPM reference, measured by the cross-paradigm behavior metrics (per-cell displacement, MSD, neighbour-graph churn, infection-front speed, cell sorting)? Each metric is a DISTANCE from the CPM; the same-backend seed-to-seed distance is the null floor a match must approach.
+#
+# **Purpose.** All three backends run the SAME shared mechanism (fields, rules, immune ODE) on the SAME large blueprint; only the mechanics node differs. Differences in the behavior metrics are therefore attributable to the substrate (CPM Metropolis lattice vs vertex confluent polygons vs center-based discs), not the biology.
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `sego-large` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm_large` | 0 | backend=cpm |
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm_large`**
+#
+# Scaled-up Sego 2022 influenza preset: a biology-preserving ~2.4x linear scale-up of 'sego_crossparadigm' (120x120 patch, 15x15 ~225-cell epithelial block) -- a bigger tissue, the SAME field/rules/ODE/recruitment mechanism. A heavier starting point to run from in the Blueprint Studio.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large = {
+    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
+    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022_large.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (defaults to the scaled-up Sego preset)
+    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: large-crossparadigm-comparison ===
+STUDY = 'large-crossparadigm-comparison'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# This study has no *recorded* runs yet. RERUN builds its declared
+# composite(s) live and runs them; a composite whose module processes
+# are not implemented yet reports the error instead of crashing.
+STEPS_sego_large = 100
+INTERVAL_sego_large = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm_large', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large['state']}, core=core)
+            _comp.run(STEPS_sego_large)
+        print('ran', 'sego-large', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm_large) for', STEPS_sego_large, 'steps')
+    except Exception as _e:
+        print(f"sego-large not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | munk-moves-and-interacts _(primary)_ | kind=distance field=per_cell_displacement_distance backend=munk | op gt value 0.5 note munk displacement distance >> 0 (was ~0 when frozen) |
+# | vertex-closest-to-cpm _(primary)_ | kind=comparison field=msd_distance | op lt note vertex_vs_cpm < munk_vs_cpm on displacement and MSD |
+# | distances-above-null-floor _(primary)_ | kind=null_control field=all_metrics | op reported note cross vs null floor reported per metric |
+
 # ## Open decisions
 # - STAGE 1 (BP-01): formalize a versioned blueprint schema + canonical IR, separate from backend geometric init (units, coord frame, boundaries, tessellation-independent IDs, footprints, fields, contacts, latent states, seeds, init order, mechanism bindings, provenance, allowable loss).
 # - STAGE 2 (BP-02/BP-04, extend initial-state-fidelity): prove blueprint fidelity beyond centroids/IDs — area, footprint, contact, adjacency, boundary, topology, round-trip, with explicit error measures and loss reports.
