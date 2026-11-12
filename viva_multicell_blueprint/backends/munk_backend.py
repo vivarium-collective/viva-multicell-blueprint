@@ -88,6 +88,40 @@ class MunkBackend(MechanicsBackend):
         # chemotaxis off the AUTHORITATIVE shared field: field_name -> {type_name: strength}.
         self._chemotaxis = self._parse_chemotaxis(bp)
 
+        # -- motility + coupling knobs (the "make it come alive" seam) ----------- #
+        # Hard-core collisions alone relax one tiny overlap and then freeze. These
+        # knobs add the three mechanisms the blueprint already declares so the
+        # center-based cells keep moving and rearranging:
+        #   * adhesion   -- a pairwise distance-based pull/push keyed by the blueprint
+        #                   adhesion matrix (differential-adhesion-hypothesis form),
+        #   * jitter     -- active-Brownian wobble so passive circles explore + resort,
+        #   * damping<1  -- momentum persists across steps instead of being bled away.
+        # max cell speed (um/s): a hard clamp applied every step so no drive
+        # (adhesion, chemotaxis, a stiff collision) can fling a cell across the
+        # chamber or diverge -- the stability guarantee for the whole backend.
+        self._max_speed = float(bp.get("max_speed", 2.0))
+        # adhesion coupling: interaction reach beyond hard contact (um) and the
+        # velocity gained per unit of differential adhesivity per step (um/s). A
+        # cohesive epithelial pair (adhesivity ~20) then feels ~0.4 um/s of pull at
+        # contact -- enough to hold the sheet together against jitter, far below the
+        # clamp so it never destabilizes.
+        self._adhesion_range = float(bp.get("adhesion_range", 3.0))
+        self._adh_scale = float(bp.get("adhesion_velocity_scale", 0.02))
+        self._adhesivity = self._parse_adhesivity(config.get("adhesion") or [])
+        # chemotaxis gain: converts the blueprint `strength` (a CPM Hamiltonian
+        # lambda, e.g. 5000 -- NOT a velocity) into a sane up-gradient drift
+        # (um/s per unit strength). With the clamp above, strength 5000 saturates
+        # at max_speed instead of teleporting the cell into the wall, while small
+        # strengths stay dose-dependent.
+        self._chemo_gain = float(bp.get("chemotaxis_gain", 0.08))
+
+        # Deterministic jitter: seed the engine's global RNG from the run's
+        # mechanics seed so replicate runs differ in draws, not in determinism.
+        seed = bp.get("mechanics_seed")
+        if seed is not None:
+            import random as _random
+            _random.seed(int(seed))
+
         cells = config.get("initial_state") or []
         self._all_ids = [str(c["id"]) for c in cells]
 
@@ -108,8 +142,15 @@ class MunkBackend(MechanicsBackend):
                 "env_size": env_w,
                 "env_height": env_h,
                 "substeps": self._substeps,
-                "damping_per_second": float(bp.get("damping_per_second", 0.1)),
-                "jitter_per_second": float(bp.get("jitter_per_second", 0.0)),
+                # damping < 1 so injected motion (jitter/adhesion/chemotaxis) and
+                # collision momentum persist across steps instead of being fully
+                # bled away in one relaxation step (the old 0.1 froze everything).
+                "damping_per_second": float(bp.get("damping_per_second", 0.85)),
+                # nonzero jitter (active-Brownian wobble) by default so passive
+                # circles explore and rearrange; the engine applies ~0.2x of this
+                # to circle particles. Tuned to give visible rearrangement of a
+                # size-25 cell (~0.5-1 um/step) without approaching the clamp.
+                "jitter_per_second": float(bp.get("jitter_per_second", 50.0)),
                 "gravity": 0.0,
                 "friction": float(bp.get("friction", 0.8)),
                 "elasticity": float(bp.get("elasticity", 0.0)),
@@ -166,6 +207,46 @@ class MunkBackend(MechanicsBackend):
                 out[str(name)] = per_type
         return out
 
+    def _parse_adhesivity(self, adhesion) -> dict:
+        """Lower the blueprint adhesion matrix into a per-type-pair *adhesivity*.
+
+        The blueprint ``strength`` is a CPM contact energy ``J`` (``compile.adhesion``:
+        higher = LESS adhesive). Two cells prefer to stick together rather than face
+        the medium exactly when the Differential-Adhesion-Hypothesis surface energy is
+        favorable, so the net adhesivity of a pair is
+
+            A(a,b) = 1/2 (J(a,medium) + J(b,medium)) - J(a,b)
+
+        -- positive when the (a,b) interface costs less than the two medium interfaces
+        it replaces (they attract), negative when the medium is preferred (they stay
+        apart). This is the center-based analog of CPM cell sorting and uses ONLY the
+        declared matrix -- no invented biology. Pairs with no declared energy (e.g. the
+        latent immune reservoir carries no adhesion rows) get adhesivity 0 (neutral),
+        matching the blueprint's "latent falls back to default contact" intent.
+        """
+        contact: dict = {}
+        medium: dict = {}
+        for e in (adhesion or []):
+            a, b, s = str(e["a"]), str(e["b"]), float(e["strength"])
+            if a == "medium" or b == "medium":
+                medium[b if a == "medium" else a] = s
+            else:
+                contact[tuple(sorted((a, b)))] = s
+        out: dict = {}
+        for (a, b), j in contact.items():
+            if a in medium and b in medium:
+                out[(a, b)] = 0.5 * (medium[a] + medium[b]) - j
+            else:
+                # No medium reference for one side: fall back to the monotone rule
+                # (lower contact energy = more adhesive) centered on the mean declared
+                # contact energy, so the sign still orders pairs sensibly.
+                ref = sum(contact.values()) / max(len(contact), 1)
+                out[(a, b)] = ref - j
+        return out
+
+    def _adhesivity_for(self, ta: str, tb: str) -> float:
+        return self._adhesivity.get(tuple(sorted((str(ta), str(tb)))), 0.0)
+
     def _env_size(self, domain, cells) -> tuple:
         """Chamber (width, height) in um: the domain extent if given, else a
         bounding box around the seeded cells plus a one-cell margin."""
@@ -218,6 +299,16 @@ class MunkBackend(MechanicsBackend):
         #     up the local field gradient (per-type strength). No field is re-diffused.
         self._apply_chemotaxis(field_grid)
 
+        # (d2) adhesion: pairwise cell-cell coupling off the blueprint adhesion matrix.
+        #      This is what makes cohorts actually INTERACT over time -- cohesive pairs
+        #      pull together, medium-preferring pairs ease apart (hard-core collisions
+        #      still supply the short-range repulsion).
+        self._apply_adhesion()
+
+        # (d3) clamp every cell's speed before integrating: the stability guarantee so
+        #      no injected drive or stiff collision can blow positions up.
+        self._clamp_speeds()
+
         # (e) step the physics: pass the authoritative state, apply the returned deltas.
         circle_in = {mid: dict(agent) for mid, agent in self._agents.items()}
         out = self._pymunk.update({"circle_particles": circle_in}, interval)
@@ -234,6 +325,8 @@ class MunkBackend(MechanicsBackend):
             agent["velocity"] = (vx + dvel[0], vy + dvel[1])
             agent["angle"] = float(agent.get("angle", 0.0)) + float(rec.get("angle", 0.0))
 
+        # keep the carried-forward velocity bounded (collisions can spike it).
+        self._clamp_speeds()
         return self._emit()
 
     def _spawn_daughter(self, bid: str) -> None:
@@ -324,8 +417,72 @@ class MunkBackend(MechanicsBackend):
                 norm = math.hypot(gx, gy)
                 if norm < 1e-12:
                     continue
+                # Convert the blueprint strength (a CPM Hamiltonian lambda) into a
+                # bounded up-gradient DRIFT speed (um/s), NOT a raw velocity: without
+                # this a strength of 5000 was added straight to velocity each step and
+                # teleported the cell into the wall. Clamp to max_speed so even a huge
+                # lambda saturates at a sane migration speed.
+                drift = min(strength * self._chemo_gain, self._max_speed)
                 vx, vy = agent["velocity"]
-                agent["velocity"] = (vx + strength * gx / norm, vy + strength * gy / norm)
+                agent["velocity"] = (vx + drift * gx / norm, vy + drift * gy / norm)
+
+    def _apply_adhesion(self) -> None:
+        """Pairwise cell-cell coupling from the blueprint adhesion matrix.
+
+        For every pair of physical bodies within the adhesion reach, add a velocity
+        along their center line proportional to the type-pair *adhesivity* (see
+        :meth:`_parse_adhesivity`): positive pulls them together, negative eases them
+        apart, faded smoothly to zero at the reach edge. The short-range hard-core
+        repulsion is left to the engine's collision solver; this term supplies the
+        longer-range attraction/sorting the matrix declares, so the cohort's contact
+        graph evolves over the run instead of freezing. A no-op when no matrix is
+        given (adhesivity empty)."""
+        if not self._adhesivity:
+            return
+        items = []
+        for mid, agent in self._agents.items():
+            x, y = agent["location"]
+            items.append((mid, agent, float(x), float(y), float(agent["radius"]),
+                          self._type_of(mid)))
+        n = len(items)
+        for i in range(n):
+            _mi, ai, xi, yi, ri, ti = items[i]
+            for j in range(i + 1, n):
+                _mj, aj, xj, yj, rj, tj = items[j]
+                a = self._adhesivity_for(ti, tj)
+                if a == 0.0:
+                    continue
+                dx, dy = xj - xi, yj - yi
+                d = math.hypot(dx, dy)
+                if d < 1e-9:
+                    continue
+                gap = d - (ri + rj)
+                if gap > self._adhesion_range:
+                    continue
+                # window: full strength at/within contact, linearly to 0 at the reach.
+                w = 1.0 if gap <= 0.0 else max(0.0, 1.0 - gap / self._adhesion_range)
+                mag = self._adh_scale * a * w
+                ux, uy = dx / d, dy / d
+                vix, viy = ai["velocity"]
+                vjx, vjy = aj["velocity"]
+                # a>0 attractive: i gains +u (toward j), j gains -u (toward i).
+                ai["velocity"] = (vix + mag * ux, viy + mag * uy)
+                aj["velocity"] = (vjx - mag * ux, vjy - mag * uy)
+
+    def _clamp_speeds(self) -> None:
+        """Clamp every body's speed to ``max_speed`` (um/s). Also scrubs any
+        non-finite velocity to zero, so a pathological drive/collision can never
+        propagate a NaN into a position -- the backend's stability guarantee."""
+        vmax = self._max_speed
+        for agent in self._agents.values():
+            vx, vy = agent["velocity"]
+            if not (math.isfinite(vx) and math.isfinite(vy)):
+                agent["velocity"] = (0.0, 0.0)
+                continue
+            s = math.hypot(vx, vy)
+            if s > vmax > 0.0:
+                f = vmax / s
+                agent["velocity"] = (vx * f, vy * f)
 
     @staticmethod
     def _sample_gradient(grid, loc):
