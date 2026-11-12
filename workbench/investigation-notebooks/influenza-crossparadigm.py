@@ -906,6 +906,87 @@ else:
 # | vertex-closest-to-cpm _(primary)_ | kind=comparison field=msd_distance | op lt note vertex_vs_cpm < munk_vs_cpm on displacement and MSD |
 # | distances-above-null-floor _(primary)_ | kind=null_control field=all_metrics | op reported note cross vs null floor reported per metric |
 
+# ## Study: Vertex → CPM fluctuation match (`vertex-cpm-fluctuation-match`)
+#
+# **Question.** Can the vertex (tyssue) backend reproduce the CPM's emergent interaction pattern on the large Sego 2022 blueprint — its per-cell motility, boundary fluctuation and neighbour-exchange statistics — WITHOUT folding the mesh? Today the honest CPM-matching motility/noise values invert short junctions and self-intersect the polygons, so they were capped, leaving the vertex epithelium ~5x less mobile and far more ordered than the CPM. This study asks whether a mesh-safe mechanism closes that gap under a quantitative distance-to-CPM target.
+#
+# **Purpose.** CPM advances a stochastically-roughened voxel interface by Metropolis boundary flips at temperature; the vertex fork advances a confluent, gap-free polygon tiling by grad-E displacement plus discrete T1/T2/T3 neighbour swaps. The CPM's per-voxel fluctuation has no direct vertex analog — it is approximated by OU junction-tension noise plus an active-Brownian random walk, both of which fold the mesh at CPM-matching amplitude and were therefore capped (adhesion-calibration).
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `cpm-reference` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=cpm |
+# | `vertex-shipped` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=vertex |
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm`**
+#
+# Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm = {
+    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
+    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (Blueprint Studio sends inline YAML)
+    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: vertex-cpm-fluctuation-match ===
+STUDY = 'vertex-cpm-fluctuation-match'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# This study has no *recorded* runs yet. RERUN builds its declared
+# composite(s) live and runs them; a composite whose module processes
+# are not implemented yet reports the error instead of crashing.
+STEPS_cpm_reference = 100
+INTERVAL_cpm_reference = 1.0
+STEPS_vertex_shipped = 100
+INTERVAL_vertex_shipped = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
+            _comp.run(STEPS_cpm_reference)
+        print('ran', 'cpm-reference', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_cpm_reference, 'steps')
+    except Exception as _e:
+        print(f"cpm-reference not runnable yet: {type(_e).__name__}: {_e}")
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
+            _comp.run(STEPS_vertex_shipped)
+        print('ran', 'vertex-shipped', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_vertex_shipped, 'steps')
+    except Exception as _e:
+        print(f"vertex-shipped not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | epithelial-motility-matches-cpm _(primary)_ | kind=distance field=epithelial_msd reference=cpm-reference | op within_fraction value 0.3 note |MSD_vertex - MSD_cpm| / MSD_cpm <= 0.30 |
+# | boundary-fluctuation-matches-cpm _(primary)_ | kind=distance field=area_cv reference=cpm-reference | op within_fraction value 0.3 |
+# | interaction-pattern-distance-drops _(primary)_ | kind=distance field=neighbour_graph_churn reference=cpm-reference | op lt_baseline note candidate distance < vertex-shipped distance |
+# | mesh-stays-valid _(gate)_ | kind=invariant field=mesh_valid | op all_true note mesh validity holds every step |
+
 # ## Open decisions
 # - STAGE 1 (BP-01): formalize a versioned blueprint schema + canonical IR, separate from backend geometric init (units, coord frame, boundaries, tessellation-independent IDs, footprints, fields, contacts, latent states, seeds, init order, mechanism bindings, provenance, allowable loss).
 # - STAGE 2 (BP-02/BP-04, extend initial-state-fidelity): prove blueprint fidelity beyond centroids/IDs — area, footprint, contact, adjacency, boundary, topology, round-trip, with explicit error measures and loss reports.
