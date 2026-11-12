@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import plotly.graph_objects as go
-
 from viva_multicell_blueprint.blueprint.model import Blueprint
 from viva_multicell_blueprint.compare.runner import run_backend
 from viva_multicell_blueprint.core import build_core
 from viva_multicell_blueprint.composites.sego import sego_crossparadigm
 from viva_multicell_blueprint.viz import single_playback
+from viva_multicell_blueprint.viz.flipbook import Flipbook
 
 ROOT = Path(__file__).resolve().parents[1]
 _BP = {
@@ -24,7 +23,8 @@ _BP = {
 def test_single_playback_renders():
     run = run_backend(Blueprint.from_dict(dict(_BP)), "cpm", 4)
     fig = single_playback(run.frames, {"extent_um": [16, 16], "grid_resolution_um": 1}, backend="cpm")
-    assert isinstance(fig, go.Figure) and fig.frames
+    assert isinstance(fig, Flipbook) and fig.frames
+    assert fig.frames[0].startswith("data:image/png;base64,")
 
 
 def test_recorder_is_registered():
@@ -50,5 +50,5 @@ def test_run_writes_a_video_file(tmp_path):
     from process_bigraph import Composite
     Composite(doc, core=core).run(3)
     out = ROOT / "workspace" / "reports" / "assets" / "_studio_runs" / "pytest_vid.html"
-    assert out.is_file() and "Plotly.newPlot" in out.read_text()[:300000]
+    assert out.is_file() and "vmb-flipbook" in out.read_text()[:300000]
     out.unlink()  # don't leave the test artifact
