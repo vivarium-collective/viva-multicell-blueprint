@@ -50,8 +50,9 @@
 
 
 
-<p id="study-question-headline" class="study-question-headline"><span class="q-glyph">Q</span> Do both substrates faithfully reproduce the blueprint&#39;s initial centroids, sizes and types, with one vertex polygon per blueprint cell?
-</p>
+<p id="study-question-headline" class="study-question-headline"><span class="q-glyph">Q</span> <span class="study-question-headline-text" data-edit-kind="study" data-edit-field="question" data-edit-value="Do both substrates faithfully reproduce the blueprint&#39;s initial centroids, sizes and types, with one vertex polygon per blueprint cell?
+" data-edit-multiline data-edit-label="Question">Do both substrates faithfully reproduce the blueprint&#39;s initial centroids, sizes and types, with one vertex polygon per blueprint cell?
+</span></p>
 
 <nav class="study-tabs" aria-label="Study sections">
   
@@ -567,7 +568,7 @@
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Model &amp; approach</h2>
-      <p class="ctr-text">Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM, vertex and center-based (viva-munk), read each backend&#39;s t0 emission (no steps), and compare per cell to the resolved blueprint cells: centroid distance (RMS, max), type match, and size. For the vertex backend also check the mesh: one face per blueprint cell, the epithelial faces 6-sided at area 25 and forming ONE connected sheet, immune cells as separate overlay islands, and no guard / medium faces (`residual_report`: mesh, n_sheet, n_overlay, n_guard_faces, sheet_centroid_rms/max, unmapped_ids).
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="objective" data-edit-value="" data-edit-multiline data-edit-label="Objective">Compile `workspace/blueprints/influenza_sego2022.yaml` onto CPM, vertex and center-based (viva-munk), read each backend&#39;s t0 emission (no steps), and compare per cell to the resolved blueprint cells: centroid distance (RMS, max), type match, and size. For the vertex backend also check the mesh: one face per blueprint cell, the epithelial faces 6-sided at area 25 and forming ONE connected sheet, immune cells as separate overlay islands, and no guard / medium faces (`residual_report`: mesh, n_sheet, n_overlay, n_guard_faces, sheet_centroid_rms/max, unmapped_ids).
 </p>
       <div class="ctr-meta">
         <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>initial-state-fidelity</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
@@ -1395,7 +1396,7 @@ pass_if: {"field": "n_type_match", "op": "eq", "value": 48}</pre>
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "4aa76f9410f8ef86fd20fd6093b7933208d777fb", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/4aa76f9410f8ef86fd20fd6093b7933208d777fb", "branch": "main", "lockfile": "uv.lock@110781d2194f", "generated_at": "2026-11-06 17:43 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "05897f7f3acd0fd45e981d20d896a69cccdf87a6", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/05897f7f3acd0fd45e981d20d896a69cccdf87a6", "branch": "main", "lockfile": "uv.lock@110781d2194f", "generated_at": "2026-11-12 02:43 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>

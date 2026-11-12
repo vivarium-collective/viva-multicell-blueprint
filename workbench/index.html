@@ -835,16 +835,15 @@ a.viv-bs-commit:hover { text-decoration: underline; }
   <aside id="viv-rail" class="viv-rail viv-rail-collapsed">
 
     <!-- The Vivarium brand logo was removed; the workspace badge (avatar) is the
-         top element of the rail. The rail opens from a compact icon bar into the
-         full labelled sidebar via the toggle below (or by dragging the right
-         edge); the choice is persisted. "About Vivarium" is reached from the
-         About button pinned in the rail footer. ⌘K still opens search. -->
+         top element of the rail. The rail defaults to the full labelled sidebar
+         and can be collapsed to a compact icon bar via the toggle below; the
+         choice is persisted. The sidebar has a fixed width (no drag-to-resize).
+         "About Vivarium" is reached from the About button pinned in the rail
+         footer. ⌘K still opens search. -->
 
     <!-- The sidebar expand/collapse toggle lives in the Settings popover (the gear
-         at the bottom of the rail). The right-edge drag handle below also sizes the
-         sidebar; both drive the persisted vivarium.rail-collapsed state. -->
-    <div id="viv-rail-resize-handle" class="viv-rail-resize-handle" aria-hidden="true"
-         onpointerdown="_vivRailResizeStart(event)" ondblclick="_vivRailResizeReset()"></div>
+         at the bottom of the rail); it drives the persisted vivarium.rail-collapsed
+         state. -->
 
     
     <!-- GitHub mark, defined once and reused (workspace-name link + collapsed icon). -->
@@ -2854,7 +2853,7 @@ Nothing on <code id="pr-base-display-2">main</code> changes until someone presse
      DataSource global that renderers call to fetch narrative data.
      local-server mode (default) fetches from the same-origin /api/* endpoints.
      Hosted mode (sub-projects #2/#3) will set a different config here. -->
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "4aa76f9410f8ef86fd20fd6093b7933208d777fb", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/4aa76f9410f8ef86fd20fd6093b7933208d777fb", "branch": "main", "lockfile": "uv.lock@110781d2194f", "generated_at": "2026-11-06 17:43 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "05897f7f3acd0fd45e981d20d896a69cccdf87a6", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/05897f7f3acd0fd45e981d20d896a69cccdf87a6", "branch": "main", "lockfile": "uv.lock@110781d2194f", "generated_at": "2026-11-12 02:43 UTC"} };</script>
 <!-- Derive the global URL prefix from the (possibly publish-injected) config.
      Many renderers prefix workspace-root-absolute links (/studies/, /api/)
      with window.__BASE_PATH__ so they resolve when the read-only bundle is
