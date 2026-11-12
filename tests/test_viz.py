@@ -30,11 +30,10 @@ def reg():
 def test_playback_has_two_synced_panels():
     fig = spatial_playback(run(6), run(6, 2.0), GRID)
     assert isinstance(fig, go.Figure)
-    # scatter-only (no animated heatmap) so the animation runs with redraw=False
-    # and never strobes; two panels = fill traces on both xaxis "x" and "x2".
-    assert not any(tr.type == "heatmap" for tr in fig.data)
-    fill_axes = {tr.xaxis for tr in fig.data if tr.type == "scatter" and tr.fill == "toself"}
-    assert fill_axes == {"x", "x2"}
+    # both panels are CPM voxel maps: the fill is a Heatmap (renders solid on every
+    # re-render — no fill="toself" even-odd holes) plus a scatter cell-outline overlay.
+    heat_axes = {tr.xaxis for tr in fig.data if tr.type == "heatmap"}
+    assert heat_axes == {"x", "x2"}
     assert len(fig.layout.sliders) == 1 and len(fig.frames) == 6
     # every frame drives BOTH panels' traces
     assert all(len(f.traces) >= 2 and len(f.data) == len(f.traces) for f in fig.frames)
@@ -58,9 +57,10 @@ def test_spatial_playback_multi_three_panels():
 
     runs = {"cpm": run(6), "vertex": vrun(6, 2.0), "munk": vrun(6, -2.0)}
     fig = spatial_playback_multi(runs, GRID)
-    assert not any(tr.type == "heatmap" for tr in fig.data)
+    # CPM panel (x) is a voxel Heatmap; vertex (x2) + center-based (x3) are polygon fills.
+    assert {tr.xaxis for tr in fig.data if tr.type == "heatmap"} == {"x"}
     fill_axes = {tr.xaxis for tr in fig.data if tr.type == "scatter" and tr.fill == "toself"}
-    assert fill_axes == {"x", "x2", "x3"}
+    assert fill_axes == {"x2", "x3"}
     assert len(fig.layout.sliders) == 1 and len(fig.frames) == 6
     assert all(len(f.data) == len(f.traces) for f in fig.frames)
     # three panel subtitles, one per paradigm (CPM / Vertex / Center-based)
@@ -96,14 +96,12 @@ def test_vertex_panel_draws_polygons_when_frames_have_them():
         return out
 
     fig = spatial_playback(run(6), vrun(6, 2.0), GRID)
-    # no heatmaps anywhere — both panels are scatter so the animation is redraw-free
-    assert not any(t.type == "heatmap" for t in fig.data)
     # the vertex panel (xaxis x2) has filled polygon scatter traces
     vtx_fills = [t for t in fig.data if t.type == "scatter" and t.fill == "toself" and t.xaxis == "x2"]
     assert vtx_fills, "expected polygon fills on the vertex panel"
-    # the CPM panel (xaxis x) is drawn as scatter voxel fills + an outline trace
-    cpm_fills = [t for t in fig.data if t.type == "scatter" and t.fill == "toself" and t.xaxis == "x"]
-    assert cpm_fills, "expected voxel fills on the CPM panel"
+    # the CPM panel (xaxis x) is drawn as a voxel Heatmap + a cell-outline scatter
+    cpm_heat = [t for t in fig.data if t.type == "heatmap" and t.xaxis == "x"]
+    assert cpm_heat, "expected a voxel heatmap on the CPM panel"
     assert any(t.name == "cell edges" and t.xaxis == "x" for t in fig.data)
     # frames still animate consistently
     assert all(len(f.data) == len(f.traces) for f in fig.frames)
