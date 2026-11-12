@@ -2,23 +2,28 @@
 time slider.
 
 The two backends have genuinely different spatial representations, and the figure
-shows each in its native form — **entirely with scatter traces, no Heatmap**. That
-is what makes the animation legible:
+shows each in its native form. The animation legibility rules:
 
-* An animated ``Heatmap`` can only update under a full per-frame ``redraw``, which
-  clears the plot's canvas to white between frames — a disorienting strobe. With
-  no Heatmap there is no canvas to clear, so a full redraw of these SVG traces is
-  flash-free.
-* The animation therefore uses ``redraw=True`` (a discrete redraw per frame), NOT
+* The animation uses ``redraw=True`` (a discrete redraw per frame), NOT
   ``redraw=False``. ``redraw=False`` takes Plotly's transition path, which tries to
-  interpolate each scatter between frames; because cells grow and the point counts
+  interpolate each trace between frames; because cells grow and the point counts
   change frame-to-frame, that makes the coloured regions morph and jump around.
   ``redraw=True`` snaps cleanly to each frame.
 
-* **CPM** — a lattice model, drawn as filled voxel rectangles (``_type_fill_paths``
-  run-length-encodes the type raster into one ``fill="toself"`` scatter per cell
-  type) with a per-cell outline overlay (``_boundary_xy`` traces the edges of the
-  cell-id raster, so touching same-type cells still read as distinct cells).
+* **CPM** — a lattice model. The solid fill is a single ``go.Heatmap`` with a
+  discrete (stepped) colorscale — one colour band per cell type, empty voxels set
+  to ``NaN`` so they render transparent (``_type_heatmap``) — plus a per-cell
+  outline overlay (``_boundary_xy`` traces the edges of the cell-id raster, so
+  touching same-type cells still read as distinct cells).
+
+  The fill was a per-type ``fill="toself"`` scatter (``_type_fill_paths``), which
+  looked identical on first paint but **punched even-odd holes through the tissue
+  on any re-render** (reopen the Studio video, reset/replay, ``Plotly.react``):
+  Plotly fills ``toself`` with the even-odd rule across every NaN-separated voxel
+  sub-path, and re-rasterising that multi-sub-path fill is unstable. A Heatmap is a
+  true raster with no sub-path fill, so it renders solid and identically every time.
+  (The scatter helpers ``_type_fill_paths`` / ``_fill_trace`` are retained for the
+  record but no longer used by ``_voxel_traces``.)
 * **Vertex** — a polygon model, drawn as the actual cell polygons (the hexagonal
   sheet faces and overlay islands from ``frame['polygons']``), filled by cell state
   with visible cell edges.
@@ -115,12 +120,47 @@ def _fill_trace(xs, ys, color, name):
                       fillcolor=color, line=dict(width=0), hoverinfo="skip")
 
 
+def _type_heatmap(z, grid, codes, colors):
+    """The CPM voxel fill as ONE ``go.Heatmap`` with a discrete (stepped) colorscale
+    — one solid colour band per cell type, empty voxels (code 0) set to ``NaN`` so
+    they render transparent.
+
+    This REPLACES the former per-type ``fill="toself"`` scatter rectangles
+    (``_type_fill_paths`` + ``_fill_trace``). Those drew each voxel as a separate
+    NaN-separated sub-path of one Scatter, and Plotly fills ``toself`` with the
+    EVEN-ODD rule across all sub-paths. The first paint was solid, but on any
+    *re-render* (reopen the Studio video, reset/replay the animation,
+    ``Plotly.react``) Plotly re-rasterised that multi-sub-path fill and punched
+    even-odd holes through the tissue — the speckled "moth-eaten" look. A Heatmap
+    has no sub-path fill, so it rasterises solid and identically every render.
+    ``zsmooth=False`` keeps the hard voxel edges; ``x0/dx/y0/dy`` place voxel
+    ``(r,c)`` on ``[c*res,(c+1)*res] x [r*res,(r+1)*res]``, aligned with the
+    scatter cell-outline overlay."""
+    res = float(grid["grid_resolution_um"])
+    code_to_type = {v: k for k, v in codes.items()}
+    maxcode = max(codes.values()) if codes else 1
+    za = np.asarray(z)
+    zf = np.where(za > 0, za, np.nan).astype(float)  # empty -> NaN -> transparent
+    # Stepped colorscale: value k (k=1..maxcode) fills the band [(k-1)/maxcode, k/maxcode]
+    # with that type's colour; zmin/zmax are half-steps so each integer lands mid-band.
+    scale: list = []
+    for k in range(1, maxcode + 1):
+        col = colors.get(code_to_type.get(k), "rgba(0,0,0,0)")
+        scale.append([(k - 1) / maxcode, col])
+        scale.append([k / maxcode, col])
+    return go.Heatmap(z=zf, x0=res / 2.0, dx=res, y0=res / 2.0, dy=res,
+                      zmin=0.5, zmax=maxcode + 0.5, colorscale=scale,
+                      showscale=False, hoverinfo="skip", zsmooth=False, name="cells")
+
+
 def _voxel_traces(type_raster, id_raster, grid, codes, colors):
-    """The per-type fill scatters + the cell-outline scatter for one CPM frame,
-    in a fixed order (types sorted as in ``codes``, then outlines). Takes the
-    already-computed type/id rasters so a caller can pass temporally-smoothed ones."""
-    paths = _type_fill_paths(type_raster, grid, codes)
-    traces = [_fill_trace(*paths[t], colors[t], t) for t in codes]
+    """The voxel-fill Heatmap + the cell-outline scatter for one CPM frame, in a
+    fixed order (fill first, outlines on top). Takes the already-computed type/id
+    rasters so a caller can pass temporally-smoothed ones.
+
+    The fill is a single Heatmap (not per-type ``fill="toself"`` scatters) so it
+    renders solid on every re-render — see :func:`_type_heatmap`."""
+    traces = [_type_heatmap(type_raster, grid, codes, colors)]
     bx, by = _boundary_xy(id_raster, grid)
     traces.append(_boundary_trace(bx, by))
     return traces
