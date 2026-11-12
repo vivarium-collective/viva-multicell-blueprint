@@ -9,6 +9,8 @@ a cohort port citizen), and chemotaxis off the authoritative shared field.
 """
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pytest
 
@@ -208,3 +210,132 @@ def test_munk_chemotaxis_climbs_shared_field_gradient():
     for _ in range(8):
         x = b.update({"field_grid": {"chemokine": grid}}, 1.0)["positions"]["1"][0]
     assert x > x0 + 0.5  # moved meaningfully toward higher concentration
+
+
+# --------------------------------------------------------------------------- #
+# "Cells move and interact": the fix that makes the center-based backend alive.
+# On main the passive epithelium is frozen (no force, no coupling, damping bleeds
+# everything in one step); these lock in motion + adhesion-driven interaction.
+# --------------------------------------------------------------------------- #
+
+# epithelial adhesion rows from the Sego blueprint: H-H contact energy 5, H-medium
+# 25 -> differential adhesivity +20 (cohesive sheet).
+_SEGO_EPI_ADHESION = [
+    {"a": "H", "b": "H", "strength": 5},
+    {"a": "H", "b": "medium", "strength": 25},
+]
+
+
+def _epithelial_sheet(n=5, pitch=5, size=25, origin=10):
+    """An n x n block of H cells on a `pitch`-um lattice (mirrors the blueprint
+    block's geometry at a tractable scale)."""
+    return [
+        {"id": i * n + j + 1, "type": "H",
+         "centroid": [origin + i * pitch, origin + j * pitch], "size": size}
+        for i in range(n) for j in range(n)
+    ]
+
+
+def _edge_set(out):
+    """Undirected neighbour-contact graph as a set of sorted id pairs."""
+    edges = set()
+    for cid, nbrs in out["neighbors"].items():
+        for n in nbrs:
+            edges.add(tuple(sorted((cid, n))))
+    return edges
+
+
+def test_munk_epithelium_actually_moves():
+    """The epithelial cohort's mean per-cell displacement over a run is well above
+    zero (on main it is ~0: no force, no jitter, damping 0.1 freezes the sheet)."""
+    cells = _epithelial_sheet()
+    b = _make(cells, domain={"extent_um": [50.0, 50.0]}, adhesion=_SEGO_EPI_ADHESION,
+              backend_params={"substeps": 10, "mechanics_seed": 1})
+    p0 = {k: np.array(v, dtype=float) for k, v in b.update({}, 1.0)["positions"].items()}
+    out = None
+    for _ in range(20):
+        out = b.update({}, 1.0)
+    p1 = {k: np.array(v, dtype=float) for k, v in out["positions"].items()}
+
+    disp = float(np.mean([np.linalg.norm(p1[k] - p0[k]) for k in p0]))
+    assert disp > 1.0, f"epithelium barely moved: mean disp {disp:.3f} um"
+
+    # STABLE: finite, and every cell stays inside the 50 um chamber (walls hold them).
+    for v in p1.values():
+        assert np.all(np.isfinite(v))
+        assert -1.0 <= v[0] <= 51.0 and -1.0 <= v[1] <= 51.0
+
+
+def test_munk_neighbor_graph_evolves_over_run():
+    """Cells INTERACT: the contact graph is not static -- edges form/break as the
+    jittering, adhering sheet rearranges."""
+    cells = _epithelial_sheet()
+    b = _make(cells, domain={"extent_um": [50.0, 50.0]}, adhesion=_SEGO_EPI_ADHESION,
+              backend_params={"substeps": 10, "mechanics_seed": 3})
+    e_first = _edge_set(b.update({}, 1.0))
+    out = None
+    for _ in range(20):
+        out = b.update({}, 1.0)
+    e_last = _edge_set(out)
+    assert e_first != e_last, "neighbour graph never changed -- cells are frozen"
+    assert len(e_first ^ e_last) > 0
+
+
+def test_munk_adhesion_is_type_dependent():
+    """A controlled comparison: a strongly-adhesive type pair ends in contact while a
+    weakly-adhesive (medium-preferring) pair drifts apart, from the SAME start
+    separation with jitter off -- so the difference is adhesion, not noise."""
+    adhesion = [
+        # A: low contact energy + high medium energy -> big + adhesivity (sticks).
+        {"a": "A", "b": "A", "strength": 1}, {"a": "A", "b": "medium", "strength": 30},
+        # B: high contact energy + low medium energy -> - adhesivity (prefers medium).
+        {"a": "B", "b": "B", "strength": 30}, {"a": "B", "b": "medium", "strength": 5},
+    ]
+
+    def end_separation(t):
+        cells = [{"id": 1, "type": t, "centroid": [22.0, 25.0], "size": 12.0},
+                 {"id": 2, "type": t, "centroid": [28.0, 25.0], "size": 12.0}]
+        b = _make(cells, domain={"extent_um": [50.0, 50.0]}, adhesion=adhesion,
+                  backend_params={"substeps": 10, "jitter_per_second": 0.0,
+                                  "mechanics_seed": 2})
+        out = None
+        for _ in range(15):
+            out = b.update({}, 1.0)
+        return math.dist(out["positions"]["1"], out["positions"]["2"])
+
+    sticky, loose = end_separation("A"), end_separation("B")
+    assert sticky < 6.0, f"adhesive pair did not pull together (sep {sticky:.2f})"
+    assert loose > 6.0, f"medium-preferring pair did not separate (sep {loose:.2f})"
+    assert sticky < loose
+
+
+def test_munk_runs_through_composite_and_moves():
+    """End-to-end through the real runner/composite (not just the backend in
+    isolation): a compiled munk blueprint runs N coupled steps and its cohort
+    moves, with no NaN/explosion."""
+    from viva_multicell_blueprint.blueprint.model import Blueprint
+    from viva_multicell_blueprint.compare.runner import run_backend
+
+    bp = Blueprint.from_dict({
+        "domain": {"extent_um": [40, 40], "grid_resolution_um": 1, "boundary": "noflux"},
+        "cell_types": [{"name": "H", "target_size": 25}],
+        "initial_state": {"kind": "blocks",
+                          "block": {"type": "H", "origin": [12, 12], "shape": [3, 3],
+                                    "spacing": 5, "size": 25}},
+        "adhesion": [{"a": "H", "b": "H", "strength": 5},
+                     {"a": "H", "b": "medium", "strength": 25}],
+        "fields": [{"name": "virus", "D": 0.1, "decay": 0.01,
+                    "dynamics": {"dt": 0.5, "substeps": 2},
+                    "secretion": [{"type": "H", "rate": 0.2}]}],
+    })
+    run = run_backend(bp, "munk", n_steps=15)
+    f0, f1 = run.frames[0], run.frames[-1]
+    ids = set(f0["positions"]) & set(f1["positions"])
+    disp = float(np.mean([
+        np.linalg.norm(np.array(f1["positions"][k], dtype=float)
+                       - np.array(f0["positions"][k], dtype=float))
+        for k in ids
+    ]))
+    assert disp > 0.5, f"composite munk run did not move the cohort (disp {disp:.3f})"
+    for k in ids:
+        assert np.all(np.isfinite(np.array(f1["positions"][k], dtype=float)))
