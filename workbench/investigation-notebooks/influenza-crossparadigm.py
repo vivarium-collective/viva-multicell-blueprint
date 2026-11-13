@@ -896,6 +896,15 @@ if RERUN:
 else:
     print("RERUN=False — not re-simulating.")
 
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **Spatial playback — CPM on the large Sego tissue**
+
+# Spatial playback — CPM on the large Sego tissue
+_save_viz('large-crossparadigm-comparison', 'Spatial_playback_CPM_on_the_large_Sego_tissue', _render_one('html:spatial-playback-cpm-large.html', {'title': 'Large Sego 2022 — CPM reference playback (120x120, ~225-cell epithelium)'}, RUNS_DB, STUDY_YAML))
+
 # ### Acceptance criteria
 #
 # _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
