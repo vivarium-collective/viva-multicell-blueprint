@@ -28,13 +28,14 @@ from viva_multicell_blueprint.compile._shared import resolve_initial_state
 from viva_multicell_blueprint.compare.runner import run_backend
 from viva_multicell_blueprint.viz import (
     adhesion_sweep, divergence, dose_response, dynamics_overlay, mechanics_calibration,
-    spatial_playback, spatial_playback_multi, t0_fidelity,
+    single_playback, spatial_playback, spatial_playback_multi, t0_fidelity,
 )
 from viva_multicell_blueprint.viz._common import HTML_CAP
 
 ROOT = Path(__file__).resolve().parents[1]
 STUDIES = ROOT / "workspace" / "studies"
 SEGO = ROOT / "workspace" / "blueprints" / "influenza_sego2022.yaml"
+SEGO_LARGE = ROOT / "workspace" / "blueprints" / "influenza_sego2022_large.yaml"
 
 
 def _write(study_slug: str, name: str, fig) -> None:
@@ -186,11 +187,29 @@ def render_fidelity(fast: bool) -> None:
            spatial_playback_multi({b: runs[b].frames for b in runs}, grid))
 
 
+# --- large-crossparadigm-comparison: CPM reference spatial-playback video -----
+def render_large(fast: bool) -> None:
+    """Detailed single-panel CPM playback on the LARGE Sego blueprint (120x120,
+    ~225-cell epithelium) — the reference-substrate video for the three-way
+    behavior-metric comparison. CPM only (vertex/munk distances are quantified
+    numerically in the study's readouts), full horizon, full 120x120 frame."""
+    n = 40 if fast else 80          # the large composite's default_n_steps
+    d = copy.deepcopy(Blueprint.load(SEGO_LARGE).to_dict())
+    d.setdefault("mechanics_mapping", {})["rules_seed"] = 0
+    cpm = run_backend(Blueprint.from_dict(d), "cpm", n)
+    grid = {"extent_um": [120, 120], "grid_resolution_um": 1}
+    _write("large-crossparadigm-comparison", "spatial-playback-cpm-large",
+           single_playback(cpm.frames, grid, backend="cpm",
+                           title="Large Sego 2022 — CPM reference playback "
+                                 "(120x120, ~225-cell epithelium)"))
+
+
 _RENDERERS = {
     "flu-lung-crossparadigm": render_flu_lung,
     "adhesion-calibration": render_adhesion,
     "dose-response-crossparadigm": render_dose,
     "initial-state-fidelity": render_fidelity,
+    "large-crossparadigm-comparison": render_large,
 }
 
 
