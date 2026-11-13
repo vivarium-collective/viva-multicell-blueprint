@@ -182,3 +182,69 @@ study_card:
     vertex-cpm-fluctuation-match) minimize against, on the large tissue.
   expected_result: "Vertex closest to CPM (but under-fluctuating); center-based moves but diverges most; all distances above the null floor."
   main_expert_question: "Which metric axis matters most as the headline distance-to-CPM target for calibration?"
+
+# Spatial-playback VIDEO of the reference substrate on the large tissue. CPM only:
+# it is the reference every behavior-metric distance is measured against, so its
+# spatial narrative is what the vertex/munk numbers are trying to reproduce. The
+# vertex/munk patterns are carried quantitatively by the readouts above (and
+# side-by-side on the SMALL tissue by flu-lung-crossparadigm's spatial_playback).
+# Rendered by scripts/render_study_figures.py --study large-crossparadigm-comparison
+# (80-step CPM run on influenza_sego2022_large, decimated to 28 frames, 120x120).
+visualizations:
+  - name: "Spatial playback — CPM on the large Sego tissue"
+    address: "html:spatial-playback-cpm-large.html"
+    config: {title: "Large Sego 2022 — CPM reference playback (120x120, ~225-cell epithelium)"}
+
+# Detailed walkthrough of what the CPM video shows, tied to the behavior metrics.
+biological_summary: >
+  THE VIDEO (spatial-playback-cpm-large). The playback opens on a confluent
+  ~225-cell epithelial sheet (H, uninfected) tiling the central 120x120 patch,
+  with a small seed of infected cells (I) and a sparse set of recruited immune
+  effectors (macrophages M, NK, CD8) at the margins. Over the 80-step run the
+  frames show the canonical Sego 2022 flu-lung sequence play out across a tissue
+  large enough for real spatial structure:
+
+
+  1. INFECTION FRONT. Infected cells (I) secrete the virus field, which diffuses
+  into neighbouring sites; the H->I transition fires at rate g_hv*field['virus'],
+  so infection advances as a roughly radial front eating into the H sheet from the
+  seed outward. This is the geometry the `front_speed_distance` readout measures:
+  the CPM front has a characteristic advance rate that the vertex (2.3x null) and
+  munk (4.8x null) substrates spread faster than, because their mechanics move the
+  virus-secreting cells differently.
+
+
+  2. DEATH + CLEARANCE. Behind the front, infected cells die (I->D, rate mu_i) both
+  intrinsically and by NK/CD8 contact-kill (rate ~ shared_surface with the effector
+  * resist / size). Dying cells (D) appear as a trailing shell inside the infected
+  zone, and a slow D->H regeneration term lets a fraction of cleared sites return to
+  the uninfected state. The visible outcome is a moving annulus: H ahead of the
+  front, I at the front, D/clearing behind it.
+
+
+  3. IMMUNE INFILTRATION. Infected cells also secrete chemokine; recruited M/NK/CD8
+  migrate up that gradient into the lesion. In the CPM these effectors are the cells
+  that actually MOVE through the sheet — the epithelium itself is near-static
+  (Metropolis fluctuations about fixed lattice positions), so most of the per-cell
+  displacement and MSD signal is immune-cell motility plus front remodelling, not
+  bulk epithelial flow. This is why center-based (munk), which lets every disc drift,
+  over-shoots MSD by 23x: it moves cells the CPM holds still.
+
+
+  WHAT THE METRICS READ OFF THIS VIDEO. `per_cell_displacement` / `msd` quantify how
+  far cells travel (immune infiltration + front churn); `neighbour_graph` quantifies
+  contact remodelling as H->I->D sweeps through and effectors dock onto targets
+  (the CPM's contact-churn is matched to ~1.1-1.2x by both other substrates);
+  `front_speed` quantifies the infection-front geometry above; `sorting_index`
+  quantifies how sharply cell types segregate (H/I/D zoning + immune clustering) —
+  the CPM keeps types well-mixed at the front, which is where vertex diverges most
+  (8.5x null, it over-segregates). The video is the qualitative object; the readouts
+  are its projection onto five scalar axes, each a distance a calibrated substrate
+  must drive toward the CPM-self null floor.
+
+
+  SECONDARY CHECK. The video is a necessary-not-sufficient visual companion to the
+  numbers: two substrates can match a scalar metric while looking different, so the
+  playback is where a reviewer confirms the metrics are reading the pattern they
+  intend. It is CPM-only by design — the reference the distances are measured from;
+  the three-way side-by-side playback lives on flu-lung-crossparadigm (small tissue).
