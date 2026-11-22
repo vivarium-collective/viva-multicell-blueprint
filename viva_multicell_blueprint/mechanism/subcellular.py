@@ -82,7 +82,10 @@ class TestLinearModule:
         return {"x", "drive", "gt1"}
 
 
-MODULES = {"test_linear": TestLinearModule}
+from viva_multicell_blueprint.mechanism.subcellular_modules.tellurium_module import (  # noqa: E402
+    TelluriumModule)
+
+MODULES = {"test_linear": TestLinearModule, "tellurium": TelluriumModule}
 
 
 def resolve_inputs(coupling_inputs, cell_id, port_maps, const=None) -> dict:

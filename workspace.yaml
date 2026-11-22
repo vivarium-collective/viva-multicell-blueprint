@@ -44,6 +44,14 @@ imports:
       BlueprintGrammarProcess, a drop-in alternative to the built-in RulesProcess
       for grammar-shaped blueprints (same fates/scalar/divisions/deaths ports;
       per_step rate convention). build_core auto-chains viva_grammar.core.build_core.
+  viva-tellurium:
+    source: https://github.com/vivarium-collective/viva-tellurium
+    ref: main
+    package: viva_tellurium
+    mode: reference
+    description: |
+      Tellurium / libroadrunner SBML-Antimony ODE bridge. Backs the blueprint's
+      subcellular "tellurium" module (one RoadRunner ODE solver per cell).
 
 # Directory layout. New workspaces group their research directories under a
 # tidy `workspace/` subtree (the dirs below); the hidden `.pbg/` machine state
