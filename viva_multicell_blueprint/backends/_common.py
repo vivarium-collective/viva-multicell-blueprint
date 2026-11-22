@@ -49,7 +49,7 @@ def select_activations(activations, ids, current_type, latent_map, generic, skip
     active_type), ...]``; the backend APPLIES them through its own set-type call.
 
     ``skip(active_type, pool)`` (optional) is consulted before selecting for a type;
-    return True to skip it (the backend's unknown-type guard, which also warns).
+    return True to skip it (the backend's unknown-type guard; the warning is emitted by the callback).
     """
     pairs: list = []
     if not activations:

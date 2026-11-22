@@ -2,7 +2,7 @@
 mechanics backend, exposed to the dashboard's Composite Explorer and used as the
 baseline composite of the ``influenza-crossparadigm`` studies.
 
-One generator, parameterized by ``backend`` (``cpm``|``vertex``) and the
+One generator, parameterized by ``backend`` (``cpm``|``vertex``|``munk``) and the
 ``blueprint`` path, so the same runnable artifact serves the full flu-lung study
 and the mechanics-only substrate-behavior-at-scale sheet. Both generators here are thin
 aliases of the canonical ``blueprint_pipeline`` (``composites/pipeline.py``), which

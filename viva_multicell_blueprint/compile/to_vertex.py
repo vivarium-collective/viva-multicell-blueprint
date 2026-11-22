@@ -1,16 +1,17 @@
 """Compile a blueprint onto the vertex (vivarium-tyssue) mechanics backend (spec §5).
 
 ``vertex_mechanics_node`` builds the single mechanics node (assembled by
-:func:`..compile.compile`); the shared mechanism (field/rules/ODE/immune) is
-byte-identical to the CPM compile and the node is a :class:`VertexBackend`. The neutral type-pair
+:func:`..compile.compile`). The node is a :class:`VertexBackend`; the shared
+mechanism (field/rules/ODE/immune) is byte-identical to the CPM and munk compiles.
+The neutral type-pair
 ``adhesion`` is lowered to per-pair tyssue junction tension via Task-12's
 ``to_vertex_tension``; field chemotaxis is flattened to the per-field
 ``{field, type, strength}`` list the vertex backend turns into ActiveMigration
-directors each step; immune types (and their latent pools) are declared IMMUNE
+directors each step. Immune types (and their latent pools) are declared IMMUNE
 types -- smaller polygons attached to the margin of the same sheet as the
 epithelium (an explicit ``vertex_overlay_types`` list moves types to a free
-overlay layer instead); and the calibrated fluctuation/mobility knobs (:data:`CALIBRATED_DEFAULTS`)
-are supplied unless the blueprint overrides them.
+overlay layer instead). The calibrated fluctuation/mobility knobs
+(:data:`CALIBRATED_DEFAULTS`) are supplied unless the blueprint overrides them.
 """
 from __future__ import annotations
 

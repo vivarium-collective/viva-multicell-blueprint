@@ -1,8 +1,9 @@
 """Compile a blueprint onto the CPM (viva-cpm) mechanics backend (spec section 5).
 
 ``cpm_mechanics_node`` builds the single mechanics node of the compiled composite
-(the document is assembled by :func:`..compile.compile`); the shared mechanism (field/rules/ODE/immune) is byte-identical to the vertex
-compile and whose single mechanics node is a :class:`CPMBackend`. The neutral
+(the document is assembled by :func:`..compile.compile`). The node is a
+:class:`CPMBackend`; the shared mechanism (field/rules/ODE/immune) is
+byte-identical to the vertex and munk compiles. The neutral
 type-pair ``adhesion`` is lowered to the CPM contact (J) matrix via Task-12's
 ``to_cpm_contact``, with an EXPLICIT ``type_ids`` map derived from the blueprint
 ``cell_types`` declaration order so the integer tags are stable.

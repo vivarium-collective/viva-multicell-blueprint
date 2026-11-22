@@ -1,9 +1,10 @@
 """Compile a blueprint onto the center-based (viva-munk) mechanics backend.
 
 ``munk_mechanics_node`` builds the single mechanics node of the compiled composite
-(the document is assembled by :func:`..compile.compile`); the shared mechanism (field/rules/ODE/immune) is byte-identical to the CPM and
-vertex compiles and whose single mechanics node is a :class:`MunkBackend` -- the
-center-based paradigm (``pymunk`` circular bodies). As on the CPM side, field
+(the document is assembled by :func:`..compile.compile`). The node is a
+:class:`MunkBackend` -- the center-based paradigm (``pymunk`` circular bodies) --
+and the shared mechanism (field/rules/ODE/immune) is byte-identical to the CPM and
+vertex compiles. As on the CPM side, field
 chemotaxis is carried as type-name + strength so the center-based cells bias their
 motion off the authoritative shared field; the field itself is never re-diffused
 in the backend.

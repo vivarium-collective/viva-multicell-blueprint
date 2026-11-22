@@ -1,28 +1,9 @@
-# Sego et al. 2022 influenza (ViralInfectionVTM) as ONE backend-neutral blueprint.
-# Template expressiveness acceptance test (spec sections 7, 9): the whole model is
-# DATA here -- every epithelial rate is a rate_expr rule, every field a `fields`
-# entry, the immune recruitment + Price-2015 ODE are components. Compiles to the CPM
-# and vertex backends unchanged.
-#
-# SCALED-UP PRESET: this is a biology-preserving ~2.4x linear scale-up of the
-# canonical tractable blueprint `influenza_sego2022.yaml` -- a BIGGER tissue, the
-# SAME mechanism. ONLY geometry and cell counts change: the 50x50 patch becomes
-# 120x120, the 6x6 (36-cell) epithelial block becomes 15x15 (~225 cells) re-centered
-# in the larger domain, and the three latent immune margin pools scale proportionally.
-# EVERYTHING else -- all cell_types, the entire adhesion matrix, every field, every
-# rule, units, the immune-recruitment + Price-2015 ODE components and all their
-# constants -- is COPIED VERBATIM from the canonical blueprint. The ODE coupling
-# count (systemic_ode.coupling.num_epithelial) tracks the block, so it becomes 225.
-#
-# PROVENANCE: every number is from viva-cpm
-#   viva_cpm_studies/influenza/params.yaml @ b952eec2   ("Sego 2022 params.yaml @ b952eec2")
-# which transcribes the CC3D source / Sego 2022 Tables 3-4. Nothing is invented; items the
-# source does not give as a single constant are listed under PENDING at the end.
-#
-# UNITS: 1 grid unit = 1 CC3D lattice site (2 um in the source) and 1 step = 1 MCS (60 s).
-# `*_um` keys are therefore in lattice sites; all D / decay / rates are the source's
-# lattice^2/MCS and per-MCS values (params.yaml *_lat2_per_mcs / *_per_mcs).
-# Larger scale: a 120x120-site patch with a 15x15 block of epithelium (scaled-up preset).
+# Sego et al. 2022 influenza (ViralInfectionVTM) as ONE backend-neutral blueprint: the whole model is data.
+# Provenance: transcribed from viva-cpm viva_cpm_studies/influenza/params.yaml (Sego 2022 Tables 3-4); see PENDING at the end for gaps.
+# Units: 1 grid unit = 1 CC3D lattice site (2 um); 1 step = 1 MCS (60 s); `*_um` keys are in lattice sites.
+# Scaled-up preset of influenza_sego2022.yaml (the scale-up contract): ~2.4x linear -- a 120x120 patch and a 15x15
+# (~225-cell) epithelial block, immune margin pools scaled proportionally, systemic_ode.coupling.num_epithelial = 225.
+# Everything else (cell_types, adhesion, fields, rules, ODE constants) is copied verbatim: bigger tissue, same mechanism.
 
 blueprint_version: "1.0"   # BP-01 canonical schema version
 domain:

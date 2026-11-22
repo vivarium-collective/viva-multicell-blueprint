@@ -1,6 +1,6 @@
 """The MechanicsBackend contract (spec section 6) -- the single seam between the
 shared mechanism (fields, rules, immune, ODE) and the mechanical substrates
-(CPM, vertex).
+(CPM, vertex, center-based munk).
 
 Design choice: a process-bigraph ``Process`` subclass, matching how
 ``viva_cpm`` / ``vivarium_tyssue`` declare processes (``config_schema``,

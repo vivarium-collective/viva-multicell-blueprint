@@ -4,9 +4,9 @@ The compiler lowers a backend-neutral :class:`Blueprint` onto each mechanical
 substrate. Everything in this module is **backend-independent** — it builds the
 shared ``FieldProcess`` / ``RulesProcess`` / ``SystemicODEProcess`` /
 ``ImmuneRecruitmentProcess`` nodes and the shared stores they read and write.
-``to_cpm`` / ``to_vertex`` add exactly ONE more node (the mechanics backend) and
-nothing else, so the two compiled composites are byte-identical everywhere except
-that single node (the invariant the tests assert).
+``to_cpm`` / ``to_vertex`` / ``to_munk`` each add exactly ONE more node (the
+mechanics backend) and nothing else, so the three compiled composites are
+byte-identical everywhere except that single node (the invariant the tests assert).
 
 Addresses use the ``local:<ClassName>`` form; the classes are registered into the
 workspace core by :func:`viva_multicell_blueprint.core.build_core` (the
@@ -371,7 +371,7 @@ def _immune_node(blueprint) -> dict:
 
 def build_mechanism_state(blueprint) -> dict:
     """The backend-independent part of the composite state: shared stores + the
-    shared mechanism process nodes. IDENTICAL for CPM and vertex."""
+    shared mechanism process nodes. Identical for CPM, vertex and munk."""
     state: dict = dict(_shared_store_defaults(blueprint))
     state["field"] = _field_node(blueprint)
     state["rules"] = _rules_node(blueprint)
