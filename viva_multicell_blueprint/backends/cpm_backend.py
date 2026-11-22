@@ -470,6 +470,9 @@ class CPMBackend(MechanicsBackend):
         post = np.asarray(self._world.snapshot())
         types = list(self._world.cell_types())
         for new in range(n_before + 1, self._world.n_cells() + 1):
+            # BEST-EFFORT attribution: the mother is the majority owner (bincount argmax) of
+            # the daughter's voxels in the pre-split snapshot. Under heavy simultaneous splits
+            # a daughter can be mis-attributed; unattributable ones are warn-guarded + dropped.
             owned = pre[post == new]
             owned = owned[owned > 0]
             mcpm = int(np.bincount(owned.astype(int)).argmax()) if owned.size else None

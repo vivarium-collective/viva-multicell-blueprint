@@ -44,6 +44,7 @@ from __future__ import annotations
 import copy
 import math
 
+import numpy as np
 from viva_munk import core_import
 from viva_munk.processes.multibody import PymunkProcess
 
@@ -119,9 +120,9 @@ class MunkBackend(MechanicsBackend):
         # Deterministic jitter: seed the engine's global RNG from the run's
         # mechanics seed so replicate runs differ in draws, not in determinism.
         seed = bp.get("mechanics_seed")
-        if seed is not None:
-            import random as _random
-            _random.seed(int(seed))
+        # Per-instance RNG (NOT the process-global ``random``): several MunkBackends in one
+        # process (all-engines run, sweeps) must not interleave/re-seed each other's draws.
+        self._rng = np.random.default_rng(int(seed) if seed is not None else None)
 
         cells = config.get("initial_state") or []
         self._all_ids = [str(c["id"]) for c in cells]
@@ -400,14 +401,12 @@ class MunkBackend(MechanicsBackend):
                 self._act(bid)["adhesion"] = copy.deepcopy(v)
 
     def _apply_motility(self) -> None:
-        import random as _random
-
         for bid, st in self._cell_act.items():
             m = st.get("motility")
             agent = self._agents.get(bid)
             if not m or agent is None:
                 continue
-            th = _random.uniform(0.0, 2.0 * math.pi)
+            th = float(self._rng.uniform(0.0, 2.0 * math.pi))
             vx, vy = agent["velocity"]
             kick = float(m) * self._motility_gain
             agent["velocity"] = (vx + kick * math.cos(th), vy + kick * math.sin(th))

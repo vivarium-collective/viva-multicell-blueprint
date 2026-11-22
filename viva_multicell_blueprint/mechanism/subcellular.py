@@ -242,10 +242,14 @@ class SubcellularProcess(Process):
 
         # spawn first (a mother that dies this step is still in _cells), then drop
         new = [c for c in mine if c not in self._cells]
+        # _split_done is scoped to ONE tick: mothers halved at request time last tick (so a
+        # daughter appearing now must not halve them again). It is rebuilt every update, so a
+        # declined / never-materialised division leaves no stale entry: the cell is already
+        # halved and simply re-requests (and re-halves) only if it re-crosses the threshold.
+        halved_last_tick, self._split_done = self._split_done, set()
         if self._division == "split":  # halve each mother once, however many daughters
             for mo in sorted({lineage[c] for c in new if lineage.get(c) in self._cells}):
-                if mo in self._split_done:      # already halved when it requested division
-                    self._split_done.discard(mo)
+                if mo in halved_last_tick:      # already halved when it requested division
                     continue
                 self._cells[mo] = self._module.split(self._cells[mo])
         for c in new:
@@ -253,9 +257,6 @@ class SubcellularProcess(Process):
                 self._cells[c] = self._spawn(c, inputs, lineage.get(c))
         for c in [c for c in self._cells if c not in mine]:
             del self._cells[c]
-
-        # drop bookkeeping for mothers no longer live (died / division never materialised)
-        self._split_done &= set(mine)
 
         out = {"sub_scalar": {}, "req_target_size": {}, "req_motility": {}, "req_adhesion": {},
                "req_divide": [], "req_die": [], "req_become": {}, "req_secrete": {}}

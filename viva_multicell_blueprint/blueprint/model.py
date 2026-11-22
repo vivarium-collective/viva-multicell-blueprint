@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 from .schema import validate
-from .v2 import normalize_to_flat
+from .v2 import _SECTIONS, normalize_to_flat
 
 
 _REQUIRED = ("domain", "cell_types", "initial_state")
@@ -41,7 +41,8 @@ class Blueprint:
     def from_dict(cls, doc: dict) -> "Blueprint":
         flat = normalize_to_flat(doc)
         # A sectioned v2 doc is also checked against the v2 section layout.
-        errs = validate(doc) if flat != doc else []
+        is_v2 = any(section in doc for section in _SECTIONS)
+        errs = validate(doc) if is_v2 else []
         doc = flat
         errs = errs + validate(doc)
         if errs:

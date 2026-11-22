@@ -200,3 +200,32 @@ def test_split_done_cleared_when_mother_leaves_live_set():
     w["alive"] = {"1": False}
     p.update(w, 1)
     assert p._split_done == set()
+
+
+def test_declined_division_does_not_grow_unbounded_or_wedge():
+    """A cell requests division but the backend never divides it (no daughter in
+    lineage, mother stays alive). It must re-halve on each re-crossing (S bounded) and
+    must not hold a stale _split_done entry across ticks."""
+    import pytest as _pt
+    _pt.importorskip("viva_tellurium")
+    from viva_multicell_blueprint.core import build_core
+    from viva_multicell_blueprint.mechanism.subcellular import SubcellularProcess
+    src = "model g\n species S; S = 30.0; mu = 0.3;\n J0: -> S; mu * S;\nend\n"
+    cfg = {"cell_type": "T", "module": "tellurium", "model": {"source": src}, "params": {},
+           "division": "split",
+           "coupling": {"const": {"t": 40.0}, "inputs": {},
+                        "outputs": {"target_size": "S", "divide_when": {"var": "S", "gt": "const.t"}}}}
+    p = SubcellularProcess(cfg, core=build_core())
+    w = {"types": {"1": "T"}, "sizes": {"1": 2.0}, "positions": {"1": [1.0, 1.0]},
+         "neighbors": {"1": []}, "alive": {"1": True}, "field_grid": {}, "divisions": [],
+         "deaths": [], "lineage": {}}
+    peak, reqs = 0.0, 0
+    for _ in range(30):
+        out = p.update(w, 1)
+        reqs += len(out["req_divide"])
+        peak = max(peak, out["sub_scalar"]["1"]["S"])
+    assert peak < 80.0, peak            # old wedge: S grew ~30*1.35^30 unbounded
+    assert reqs > 1                     # it does re-request on each re-crossing
+    assert reqs < 30                    # but not every tick (halving drops it below)
+    # the marker is one-tick scoped: a further tick with no request leaves no stale entry
+    assert p._split_done <= {"1"}
