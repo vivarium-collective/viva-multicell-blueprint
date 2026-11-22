@@ -4,8 +4,7 @@ Small fixtures (2-4 circular cells in a tiny chamber). These cover the seams the
 paradigm needs: exact 1:1 seeding from the canonical cell list, port-shape
 emission, the circle-circle contact readback grouped by neighbor type name into
 ``shared_surface_by_type``, fates / deaths / activations (latent->active immune
-recruitment, as CPM), lineage division (a daughter body joins the engine but is not
-a cohort port citizen), and chemotaxis off the authoritative shared field.
+recruitment, as CPM), lineage division (a daughter joins the cohort with lineage), and chemotaxis off the authoritative shared field.
 """
 from __future__ import annotations
 
@@ -175,20 +174,18 @@ def test_munk_activation_unknown_type_warns_not_silent():
     assert out["types"]["1"] == "epithelium"
 
 
-def test_munk_division_adds_daughter_body_not_cohort_citizen():
-    """A division event spawns a lineage daughter in the engine (so it collides with
-    the cohort) but the daughter has no blueprint id -> it is NOT emitted on the ports."""
+def test_munk_division_daughter_is_cohort_citizen_with_lineage():
+    """A division spawns a daughter that is a full cohort citizen (id ``<mother>.<k>``,
+    present on every per-cell port) and is recorded in ``lineage``."""
     cells = _three_cells()
     b = _make(cells, backend_params={"substeps": 1})
     n_before = len(b._agents)
     out = b.update({"divisions": [{"cell_id": 10}]}, 1.0)
-    # the engine now holds one more body...
     assert len(b._agents) == n_before + 1
-    assert any(mid.startswith("10:d") for mid in b._agents)
-    # ...but the emitted cohort is still exactly the three seeded ids.
-    ids = {"10", "20", "30"}
-    for port in (p for p in OUTPUT_PORTS if p != "lineage"):  # lineage is per-event, not per-cell
+    ids = {"10", "20", "30", "10.1"}
+    for port in (p for p in OUTPUT_PORTS if p != "lineage"):
         assert set(out[port]) == ids
+    assert out["lineage"] == {"10.1": "10"}
 
 
 def test_munk_chemotaxis_climbs_shared_field_gradient():
