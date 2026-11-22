@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 pytest.importorskip("viva_tellurium")
@@ -46,11 +48,48 @@ def test_species_grows_and_feeds_target_size():
     assert o2["req_target_size"]["1"] > o1["req_target_size"]["1"]
 
 
-def test_mapped_input_changes_trajectory():
-    base = make({"inputs": {"drive": "scalar.d"}, "outputs": {"target_size": "S"}})
-    w = world(scalar={"1": {"d": 0.0}, "2": {"d": 1.0}})
-    o = base.update(w, 1)
-    assert o["req_target_size"]["2"] > o["req_target_size"]["1"]
+def test_mapped_input_matches_analytic():
+    # dS/dt = (mu + drive) * S, mu = 0.5, S0 = 1  ->  S(1) = exp(mu + drive)
+    p = make({"inputs": {"drive": "scalar.d"}, "outputs": {"target_size": "S"}})
+    o = p.update(world(scalar={"1": {"d": 0.0}, "2": {"d": 1.0}}), 1)
+    assert o["req_target_size"]["1"] == pytest.approx(math.exp(0.5), rel=1e-5)
+    assert o["req_target_size"]["2"] == pytest.approx(math.exp(1.5), rel=1e-5)
+
+
+def test_interleaved_cells_with_different_initial_species_stay_isolated():
+    m = MODULES["tellurium"]({"source": GROWTH}, {})
+    a = m.init_cell("a", {})
+    b = m.init_cell("b", {})
+    a["species"]["S"] = 1.0
+    b["species"]["S"] = 5.0
+    ea, eb = 1.0, 5.0
+    for _ in range(4):  # A, B, A, B ... ; B also gets a drive, A none
+        a = m.step(a, {}, 0.5)
+        b = m.step(b, {"drive": 0.5}, 0.5)
+        ea *= math.exp(0.5 * 0.5)
+        eb *= math.exp(1.0 * 0.5)
+        assert m.read(a)["S"] == pytest.approx(ea, rel=1e-5)
+        assert m.read(b)["S"] == pytest.approx(eb, rel=1e-5)
+        assert m.read(a)["drive"] == 0.0 and m.read(b)["drive"] == 0.5
+
+
+RULED = """
+model ruled
+  species S;
+  S = 1.0;
+  k = 0.5;
+  r := k * 2;
+  J0: -> S; r * S;
+end
+"""
+
+
+def test_assignment_rule_param_not_settable_and_steps():
+    m = MODULES["tellurium"]({"source": RULED}, {})
+    assert "r" not in m.input_vars() and "k" in m.input_vars()
+    st = m.step(m.init_cell("c", {}), {"k": 1.0}, 1.0)   # r = 2 -> S = e^2
+    assert m.read(st)["S"] == pytest.approx(math.exp(2.0), rel=1e-5)
+    assert m.read(st)["r"] == pytest.approx(2.0)
 
 
 def test_vars_and_unknown_var_rejected():

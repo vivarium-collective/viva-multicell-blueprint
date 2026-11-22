@@ -35,6 +35,8 @@ dependencies = [
     # binary dep (manylinux/macos wheels on PyPI -- no local build).
     "viva-munk",
     "pymunk",
+    # subcellular "tellurium" module (RoadRunner ODE per cell); on PyPI.
+    "viva-tellurium>=0.2.3",
     # vivarium-tyssue@master does NOT declare tyssue in its runtime deps, and we
     # use tyssue directly (Voronoi mesh build, the ActiveMigration effector), so
     # pin the pandas-3 fork explicitly here (source below).

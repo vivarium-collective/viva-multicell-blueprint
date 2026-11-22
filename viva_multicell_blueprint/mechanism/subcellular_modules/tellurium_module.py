@@ -7,7 +7,11 @@
 One RoadRunner instance is shared by all cells of the module; each cell's state is a
 plain deep-copyable dict ``{"species", "params", "time", "rates"}``. ``step`` loads the
 cell state into the instance, applies mapped inputs (species or global parameters),
-integrates, and stores the result back. Reuses viva-tellurium's RoadRunner build path.
+integrates, and stores the result back. Parameters determined by an assignment rule are
+not settable: they are excluded from ``input_vars`` and recomputed by RoadRunner (readable
+via ``read``). Integration always runs from t=0 each step (no carried simulation time), so
+models with explicit time dependence (the ``time`` csymbol, timed events) are out of scope.
+Reuses viva-tellurium's RoadRunner build path.
 """
 from __future__ import annotations
 
@@ -33,20 +37,22 @@ class TelluriumModule:
         self._species = list(rr.getFloatingSpeciesIds())
         self._settable_species = self._species + list(rr.getBoundarySpeciesIds())
         self._globals = list(rr.getGlobalParameterIds())
+        ruled = set(rr.getAssignmentRuleIds())
+        self._settable_globals = [g for g in self._globals if g not in ruled]
         self._rxns = list(rr.getReactionIds())
         self._overrides = {k: float(v) for k, v in (params.get("parameters") or {}).items()}
-        self._defaults = {p: float(rr[p]) for p in self._globals}
+        self._defaults = {p: float(rr[p]) for p in self._settable_globals}
         self._init_species = {s: float(rr[s]) for s in self._species}
 
     # -- protocol ---------------------------------------------------------
     def input_vars(self):
-        return set(self._settable_species) | set(self._globals)
+        return set(self._settable_species) | set(self._settable_globals)
 
     def output_vars(self):
         return set(self._species) | set(self._globals) | set(self._rxns)
 
     def init_cell(self, cell_id, inputs):
-        return {"species": dict(self._init_species), "params": {}, "time": 0.0,
+        return {"species": dict(self._init_species), "params": {}, "time": 0.0, "derived": {},
                 "rates": self._rates_for(self._init_species, {})}
 
     def _load(self, state, extra=None):
@@ -65,7 +71,7 @@ class TelluriumModule:
         params = dict(state["params"])
         species = dict(state["species"])
         for k, v in (mapped_inputs or {}).items():
-            if k in self._globals:
+            if k in self._settable_globals:
                 params[k] = float(v)
             elif k in self._species:
                 species[k] = float(v)
@@ -81,15 +87,19 @@ class TelluriumModule:
         new_species = {s: float(rr[s]) for s in self._species}
         rates = dict(zip(self._rxns, map(float, rr.getReactionRates())))
         return {"species": new_species, "params": params,
+                "derived": {g: float(rr[g]) for g in self._globals if g not in self._defaults},
                 "time": state["time"] + float(interval), "rates": rates}
 
     def read(self, state):
         out = {s: float(v) for s, v in state["species"].items()}
         for p in self._globals:
-            out[p] = float(state["params"].get(p, self._overrides.get(p, self._defaults[p])))
+            if p in self._defaults:
+                out[p] = float(state["params"].get(p, self._overrides.get(p, self._defaults[p])))
+            elif p in state.get("derived", {}):
+                out[p] = float(state["derived"][p])
         out.update(state["rates"])
         return out
 
     def split(self, state):
         return {**state, "species": {s: v / 2.0 for s, v in state["species"].items()},
-                "params": dict(state["params"]), "rates": dict(state["rates"])}
+                "params": dict(state["params"]), "derived": dict(state.get("derived", {})), "rates": dict(state["rates"])}

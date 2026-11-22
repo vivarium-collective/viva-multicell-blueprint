@@ -46,7 +46,7 @@ imports:
       per_step rate convention). build_core auto-chains viva_grammar.core.build_core.
   viva-tellurium:
     source: https://github.com/vivarium-collective/viva-tellurium
-    ref: main
+    ref: '0.2.3'
     package: viva_tellurium
     mode: reference
     description: |
