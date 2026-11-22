@@ -89,8 +89,8 @@ def test_large_preset_defaults_to_large_blueprint():
 def test_only_geometry_and_counts_differ_from_canonical():
     """Biology-preservation guard: every section except domain/initial_state and the
     ODE coupling COUNT is byte-for-byte identical to the canonical blueprint."""
-    base = yaml.safe_load(SEGO.read_text())
-    large = yaml.safe_load(SEGO_LARGE.read_text())
+    base = yaml.safe_load(SEGO.read_text(encoding="utf-8"))
+    large = yaml.safe_load(SEGO_LARGE.read_text(encoding="utf-8"))
     for section in ("cell_types", "adhesion", "fields", "rules", "mechanics_mapping", "immune"):
         assert large[section] == base[section], f"{section} drifted -- biology must be identical"
     # the ODE block differs ONLY in the coupling count (eta numerator)
@@ -105,6 +105,6 @@ def test_only_geometry_and_counts_differ_from_canonical():
 def test_served_large_copy_matches_source():
     """The Studio serves a copy of the large blueprint at reports/assets/ (the
     blueprints dir isn't web-served). Guard against it drifting from the source."""
-    src = yaml.safe_load(SEGO_LARGE.read_text())
-    served = yaml.safe_load((ROOT / "workspace" / "reports" / "assets" / "sego_blueprint_large.yaml").read_text())
+    src = yaml.safe_load(SEGO_LARGE.read_text(encoding="utf-8"))
+    served = yaml.safe_load((ROOT / "workspace" / "reports" / "assets" / "sego_blueprint_large.yaml").read_text(encoding="utf-8"))
     assert served == src, "reports/assets/sego_blueprint_large.yaml drifted; re-copy it"

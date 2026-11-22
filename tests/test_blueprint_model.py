@@ -74,6 +74,6 @@ def test_dump_omits_absent_optional_sections(tmp_path):
     bp = Blueprint.load(_write(tmp_path, MINIMAL))
     out = tmp_path / "out.yaml"
     bp.dump(out)
-    dumped = yaml.safe_load(out.read_text())
+    dumped = yaml.safe_load(out.read_text(encoding="utf-8"))
     assert dumped == MINIMAL
     assert "immune" not in dumped and "systemic_ode" not in dumped
