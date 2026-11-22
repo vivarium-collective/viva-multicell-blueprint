@@ -40,6 +40,7 @@ from collections import defaultdict
 import numpy as np
 from process_bigraph import Process
 
+from viva_multicell_blueprint.mechanism.fields import sample_at_centroid
 from viva_multicell_blueprint.mechanism.rate_expr import CellContext, evaluate, parse
 
 _FATE_KINDS = {"transition", "allee", "recovery", "kill"}
@@ -88,8 +89,7 @@ class RulesProcess(Process):
 
     @staticmethod
     def _exposure(grid, pos):
-        idx = tuple(int(min(max(round(float(v)), 0), n - 1)) for v, n in zip(pos, grid.shape))
-        return float(grid[idx])
+        return sample_at_centroid(grid, pos)
 
     def update(self, inputs, interval=1):
         positions = inputs.get("positions") or {}
