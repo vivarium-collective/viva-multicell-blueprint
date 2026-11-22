@@ -46,7 +46,7 @@
         "archived",
         "closed"
       ],
-      "description": "Overall status of the investigation. 'planning' is accepted as an alias for 'planned' for back-compat. 'closed' is the terminal post-merge state set by the close-investigation workflow (`/viva-investigation close <slug>`) after the report.html has been checked in and the PR opened."
+      "description": "Overall status of the investigation. 'planning' is accepted as an alias for 'planned' for back-compat. 'closed' is the terminal post-merge state set by the close-investigation workflow (`/viva:investigate close <slug>`) after the report.html has been checked in and the PR opened."
     },
     "question": {
       "type": "string",
@@ -238,7 +238,7 @@
     },
     "contributors": {
       "type": "array",
-      "description": "S5: who built this investigation. Auto-derived by `/viva-investigation close` from `git log --pretty='%an|%ae' <main>..<branch>` plus any agent-session metadata under .pbg/agent-sessions/, then editable by the author. Survives squash-merges where git authors would otherwise be lost. Lets future contributors see who came before and gives credit when others build on top.",
+      "description": "S5: who built this investigation. Auto-derived by `/viva:investigate close` from `git log --pretty='%an|%ae' <main>..<branch>` plus any agent-session metadata under .pbg/agent-sessions/, then editable by the author. Survives squash-merges where git authors would otherwise be lost. Lets future contributors see who came before and gives credit when others build on top.",
       "items": {
         "type": "object",
         "required": [
@@ -293,7 +293,7 @@
     "closed_at": {
       "type": "string",
       "format": "date-time",
-      "description": "S5: ISO-8601 timestamp when `/viva-investigation close` stamped the investigation. Set automatically by the close mechanic; not user-edited. Distinct from `created` (start of work)."
+      "description": "S5: ISO-8601 timestamp when `/viva:investigate close` stamped the investigation. Set automatically by the close mechanic; not user-edited. Distinct from `created` (start of work)."
     },
     "report_url": {
       "type": "string",

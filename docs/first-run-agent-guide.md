@@ -115,12 +115,12 @@ Point the user at the four things the dashboard exposes:
 Add content through the `/viva-*` skills rather than hand-editing files — they
 drive the workbench API and keep the workspace valid:
 
-- `/viva-study <slug>` — start a study (spec with `phase: Design|Build|Simulate|Evaluate|Decide`).
-- `/viva-investigation <slug>` — group related studies into an investigation
+- `/viva:study <slug>` — start a study (spec with `phase: Design|Build|Simulate|Evaluate|Decide`).
+- `/viva:investigate <slug>` — group related studies into an investigation
   (DAG via `inputs.from` / `pipeline_gate.prerequisites`).
-- `/viva-expert <tool>` — wrap a simulator as a process-bigraph Process/Step.
-- `/viva-viz` — generate a Visualization from a natural-language description.
-- `/viva-report` — regenerate the workspace reports.
+- `/viva:model <tool>` — wrap a simulator as a process-bigraph Process/Step.
+- `/viva:viz` — generate a Visualization from a natural-language description.
+- `/viva:report` — regenerate the workspace reports.
 
 After adding composites or investigations, regenerate the README tables:
 

@@ -347,7 +347,7 @@
 - [ ] **Step 2 (initial-state-fidelity):** both backends reproduce t=0 centroids/sizes/types; report the vertex 1:1 residual. Test: residual below threshold.
 - [ ] **Step 3 (flu-lung-crossparadigm capstone):** run the Sego blueprint on both backends at a CI-reduced scale; compute all three comparison families + render the viz. Tests: runs complete; agreement/dynamics/pattern metrics computed; figures render under the cap.
 - [ ] **Step 4 (dose-response, stretch):** do both backends agree on the Fig-5/7 monotone direction.
-- [ ] **Step 5:** `vivarium-workbench gen-readme --check` + `lint-workspace.py` green; `/viva-report --audit` clean. Commit.
+- [ ] **Step 5:** `vivarium-workbench gen-readme --check` + `lint-workspace.py` green; `/viva:report --audit` clean. Commit.
 
 ---
 

@@ -78,7 +78,7 @@ So the independent variable is exactly: **how cells (epithelial and immune) move
 
 ## 6. Components & file structure
 
-New repo `viva-multicell-blueprint`, a process-bigraph workspace (scaffolded via `/viva-workspace` from `viva-template`). Import package `viva_multicell_blueprint`. Depends (via `[tool.uv.sources]` git) on `viva-cpm`, `vivarium-tyssue`, `vivarium-workbench`, `process-bigraph`.
+New repo `viva-multicell-blueprint`, a process-bigraph workspace (scaffolded via `/viva:workspace` from `viva-template`). Import package `viva_multicell_blueprint`. Depends (via `[tool.uv.sources]` git) on `viva-cpm`, `vivarium-tyssue`, `vivarium-workbench`, `process-bigraph`.
 
 ```
 viva_multicell_blueprint/

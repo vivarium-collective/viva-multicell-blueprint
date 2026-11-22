@@ -419,7 +419,7 @@ def main() -> None:
                     inv_warnings.append(
                         f"  WARN investigation {i_name}: references study "
                         f"{slug!r} which has no studies/{slug}/study.yaml on "
-                        "disk. Seed it with `/viva-study new` or remove the "
+                        "disk. Seed it with `/viva:study new` or remove the "
                         "reference."
                     )
         except Exception as exc:

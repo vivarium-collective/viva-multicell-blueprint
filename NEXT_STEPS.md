@@ -49,7 +49,7 @@ bash scripts/serve.sh   # opens browser at http://localhost:<port>
 | **Registry** | `#registry` | Browse the curated catalog (`scripts/_catalog/modules.json`), install viva-* modules, and view live `build_core()` introspection of discovered Processes/Steps/Types. |
 | **Composites** | `#simulation-setup` | Browse and explore composites available in the workspace. Each composite packages a runnable simulation state with parameters you can configure. |
 | **Investigations** | `#investigations` | Declarative research recipes — pick a composite, declare simulations (single / sweep / seeds), name observables, choose visualizations. Run, save, compare. |
-| **Visualizations** | `#visualizations` | Charts rendered from observable trajectories. Configure a registered Visualization class with specific settings, or describe a chart in natural language and let `/viva-viz` generate it. |
+| **Visualizations** | `#visualizations` | Charts rendered from observable trajectories. Configure a registered Visualization class with specific settings, or describe a chart in natural language and let `/viva:viz` generate it. |
 | **GitHub Branches** | `#branches` | All `stage/*` branches in the workspace with one-click merge / PR / diff actions. Branches accumulate as the dashboard creates them on actions (Add observable, Install module, …); use this tab to land them on main. |
 
 (Note: the **Composites** tab still routes under `#simulation-setup` for
@@ -103,10 +103,10 @@ Composite documents — process-bigraph state trees — live here. Pick one, ins
 ## 4 — Studies and Investigations
 
 A **study** (`studies/<slug>/study.yaml`) is one research question, with a
-`phase:` of `Design | Build | Simulate | Evaluate | Decide`. Use `/viva-study
+`phase:` of `Design | Build | Simulate | Evaluate | Decide`. Use `/viva:study
 <slug>` from the [viva-superpowers] plugin to scaffold one. Decide-phase
 studies can record `followup_proposals[]`; seed a child study from any
-proposal with `/viva-study seed-from-followup <parent>/<proposal_id>` (the
+proposal with `/viva:study seed-from-followup <parent>/<proposal_id>` (the
 child gets a `seeded_from:` provenance stamp).
 
 ### The study.yaml narrative spine (schema v4)
@@ -143,7 +143,7 @@ and a reviewer can land on a study without reading the YAML.
 An **investigation** (`investigations/<slug>/investigation.yaml`) groups
 related studies and orders them as a DAG. A complete investigation pairs the
 study list with a narrative spine that mirrors the study spine at a level up.
-Use `/viva-investigation <slug>` to scaffold.
+Use `/viva:investigate <slug>` to scaffold.
 
 - `executive:` — `{what_is_this, verdict, verdict_status, decisions_needed: [...]}`. The headline panel.
 - `scientific_argument:` — `{main_claim, evidence_for, evidence_against, key_figures, caveats}`. The chain of reasoning.
@@ -170,7 +170,7 @@ compare.
 Charts rendered from observable trajectories. Two creation paths:
 
 - **Configure a registered class** — pick from the Visualization classes discovered in the Registry (subclasses of `pbg_superpowers.visualization.Visualization` in any installed viva-* package), give it settings.
-- **Generate from natural language** — describe what you want; the dashboard writes a request file and prompts you to run `/viva-viz <name>`, which scaffolds a new Visualization function into `viva_multicell_blueprint/visualizations/` and commits it on a stage branch.
+- **Generate from natural language** — describe what you want; the dashboard writes a request file and prompts you to run `/viva:viz <name>`, which scaffolds a new Visualization function into `viva_multicell_blueprint/visualizations/` and commits it on a stage branch.
 
 ## 6 — GitHub Branches
 
@@ -199,7 +199,7 @@ If you intentionally want the image private even though the repo is public, leav
 ## Two paths to the same workspace
 
 - **Browser dashboard** is the primary UI. Pure-CLI workflows are supported via `python3 scripts/lint-workspace.py` + direct YAML edits, but the buttons handle branch-creation and PR setup for you.
-- **Claude Code + [viva-superpowers]** adds skills that pair with the dashboard: `/viva-study` and `/viva-investigation` (scaffold a study or investigation), `/viva-viz` (generate a visualization), `/viva-expert` (wrap a simulator; pass `--lightweight` for in-workspace, or omit for a sibling repo + composite form via `<name> <tools…>`), `/viva-report` (regenerate per-model reports). The dashboard and the skills share the same `workspace.yaml`.
+- **Claude Code + [viva-superpowers]** adds skills that pair with the dashboard: `/viva:study` and `/viva:investigate` (scaffold a study or investigation), `/viva:viz` (generate a visualization), `/viva:model` (wrap a simulator; pass `--lightweight` for in-workspace, or omit for a sibling repo + composite form via `<name> <tools…>`), `/viva:report` (regenerate per-model reports). The dashboard and the skills share the same `workspace.yaml`.
 
 ## Config files to know
 
