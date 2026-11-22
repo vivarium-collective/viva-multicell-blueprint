@@ -12,7 +12,7 @@ def bp(**kw):
         domain={"extent_um": [10, 10], "grid_resolution_um": 1.0},
         cell_types=[{"name": "A"}, {"name": "B"}],
         initial_state={"cells": CELLS},
-        adhesion=[{"a": "A", "b": "B", "J": 1.0}],
+        adhesion=[{"a": "A", "b": "B", "strength": 1.0}],
     )
     base.update(kw)
     return Blueprint(**base)
