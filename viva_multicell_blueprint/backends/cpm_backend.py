@@ -111,6 +111,8 @@ class CPMBackend(MechanicsBackend):
         self._div_count = {}
         self._lineage = {}
         self._warned_motility = False
+        self._warned_adhesion = False
+        self._warned_daughter = False
 
         spec, self._field_idx, self._cpm_id = self._build_spec(config, cells, bp)
         self._world = load_world(spec)
@@ -415,6 +417,15 @@ class CPMBackend(MechanicsBackend):
             if cpm is not None and self._alive.get(bid, False):
                 self._cell_state[bid]["target"] = float(v)
                 self._world.set_target_volume(cpm, float(v))
+        if inputs.get("adhesion") and not self._warned_adhesion:
+            self._warned_adhesion = True
+            warnings.warn(
+                "CPMBackend: adhesion is applied per TYPE PAIR (viva-cpm's contact matrix "
+                "is global, last write wins), not per cell; same-type cells with differing "
+                "adhesion values collapse to one value, and dict keys naming undeclared "
+                "types are discarded.",
+                RuntimeWarning, stacklevel=2,
+            )
         for cid in sorted_cell_ids((inputs.get("adhesion") or {}).keys()):
             adh = inputs["adhesion"][cid] if cid in inputs["adhesion"] else None
             bid = str(cid)
@@ -464,6 +475,14 @@ class CPMBackend(MechanicsBackend):
             mcpm = int(np.bincount(owned.astype(int)).argmax()) if owned.size else None
             mother = self._cpm_to_bid.get(mcpm) if mcpm is not None else None
             if mother is None:
+                if not self._warned_daughter:
+                    self._warned_daughter = True
+                    warnings.warn(
+                        f"CPMBackend: viva-cpm created daughter cell {new} whose mother "
+                        f"could not be attributed; it has no blueprint id and is absent "
+                        f"from the emitted maps and lineage.",
+                        RuntimeWarning, stacklevel=2,
+                    )
                 continue
             did = self._mint_id(mother)
             self._cpm_id[did] = new

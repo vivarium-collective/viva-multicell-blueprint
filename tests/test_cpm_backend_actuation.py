@@ -121,3 +121,56 @@ def test_motility_warns_unsupported_once():
         b.update({"motility": {"1": 3.0}}, 1.0)
     assert sum(issubclass(x.category, RuntimeWarning) for x in w) == 1
     assert b._cell_state["1"]["motility"] == 3.0
+
+
+def _adh_warnings(w):
+    return [x for x in w if issubclass(x.category, RuntimeWarning) and "adhesion" in str(x.message)]
+
+
+def test_adhesion_warns_once_across_steps():
+    b = _make(_cells())
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        b.update({"adhesion": {"1": {"A": 3.0}}}, 1.0)
+        b.update({"adhesion": {"1": {"A": 4.0}}}, 1.0)
+    assert len(_adh_warnings(w)) == 1
+    assert "type" in str(_adh_warnings(w)[0].message).lower()
+
+
+def test_adhesion_differing_same_type_warns():
+    b = _make(_cells())
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        b.update({"adhesion": {"1": 3.0, "2": 9.0}}, 1.0)
+    assert len(_adh_warnings(w)) == 1
+
+
+def test_adhesion_unknown_type_key_not_silent():
+    b = _make(_cells())
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        b.update({"adhesion": {"1": {"nosuchtype": 3.0}}}, 1.0)
+    assert len(_adh_warnings(w)) == 1
+
+
+def test_adhesion_empty_does_not_warn():
+    b = _make(_cells())
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        b.update({"adhesion": {}}, 1.0)
+    assert _adh_warnings(w) == []
+
+
+def test_unattributable_daughter_warns_once():
+    b = _make(_cells(), {"mcs_per_update": 0})
+    n = b._world.n_cells()
+    b._cpm_to_bid.clear()  # force mother lookup to fail
+    import numpy as np
+    pre = np.asarray(b._world.snapshot()).copy()
+    b._world.divide_cells(1.0, 1.0)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        b._register_daughters(n, pre)
+        b._register_daughters(n, pre)
+    ws = [x for x in w if issubclass(x.category, RuntimeWarning) and "daughter" in str(x.message)]
+    assert len(ws) == 1
