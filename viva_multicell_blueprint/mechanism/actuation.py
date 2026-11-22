@@ -9,6 +9,14 @@ single authoritative per-cell channels the mechanics backend consumes.
 * ``divisions`` / ``deaths``: union of both sources, de-duplicated by cell_id.
 * ``target_size`` / ``motility`` / ``adhesion`` / ``secrete``: ``req_*`` pass-through.
 
+PRECONDITION (read this): the Step assumes it runs once per producer cycle at the SAME
+interval as its producers (Rules / Subcellular), and that the Composite is run forward,
+not rebuilt or restored mid-run. Under those conditions the per-input cursor consumes
+each appended event exactly once. KNOWN LIMITATIONS (not handled): mismatched intervals
+(the Step may then miss or double-see appends) and a mid-run rebuild/restore (the
+in-memory cursor resets to 0, so the whole accumulated list is re-consumed once). A
+persisted watermark is deliberately out of scope for Pass 1.
+
 Accumulation: ``list[node]`` stores APPEND each step (``divisions``/``deaths`` from
 Rules, ``req_divide``/``req_die`` from Subcellular grow cumulatively). This Step keeps a
 per-input cursor and consumes only the entries new since its last update; its own

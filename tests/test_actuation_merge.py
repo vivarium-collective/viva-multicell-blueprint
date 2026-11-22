@@ -75,6 +75,8 @@ def test_multistep_composite_no_stale_repeat():
         def update(self, i, interval=1):
             Sink.seen.append(len(i["divisions"])); return {}
 
+    Once.n = 0
+    Sink.seen = []
     core.register_link("Once", Once)
     core.register_link("Sink", Sink)
     mp = lambda ins, outs, addr, cfg=None: {"_type": "step", "address": addr,
@@ -93,3 +95,53 @@ def test_multistep_composite_no_stale_repeat():
     # raw store keeps the request forever (stale); the backend-facing channel carries
     # it for one step only, so the sink sees it exactly once in total.
     assert sum(Sink.seen) == 1, Sink.seen
+
+
+def test_real_topology_rules_and_subcellular_events_once_each():
+    """Rules-like + subcellular-like producers -> merge -> sink, all interval 1.0.
+    Divisions (step 2) and deaths (step 4) from BOTH sides reach the sink exactly once
+    each and never repeat on later steps (cumulative-list input paths on both sides)."""
+    core = build_core()
+    log = {"div": [], "die": []}   # per-test state: no class-level leakage across runs
+
+    def producer(name, div_port, die_port, div_cell, die_cell):
+        class P(Process):
+            def __init__(self, *a, **k):
+                super().__init__(*a, **k)
+                self.n = 0
+            def inputs(self): return {}
+            def outputs(self): return {div_port: "list[node]", die_port: "list[node]"}
+            def update(self, i, interval=1):
+                self.n += 1
+                return {div_port: [{"cell_id": div_cell}] if self.n == 2 else [],
+                        die_port: [{"cell_id": die_cell}] if self.n == 4 else []}
+        P.__name__ = name
+        return P
+
+    class Sink(Process):
+        def inputs(self): return {"divisions": "list[node]", "deaths": "list[node]"}
+        def outputs(self): return {}
+        def update(self, i, interval=1):
+            log["div"] += [d["cell_id"] for d in i["divisions"]]
+            log["die"] += [d["cell_id"] for d in i["deaths"]]
+            return {}
+
+    core.register_link("RulesLike", producer("RulesLike", "divisions", "deaths", "r1", "r2"))
+    core.register_link("SubLike", producer("SubLike", "req_divide", "req_die", "s1", "s2"))
+    core.register_link("Sink", Sink)
+    proc = lambda addr, ins, outs: {"_type": "process", "interval": 1.0, "address": addr,
+                                    "config": {}, "inputs": ins, "outputs": outs}
+    c = Composite({"state": {
+        "divisions": [], "deaths": [], "req_divide": [], "req_die": [],
+        "out_divisions": [], "out_deaths": [],
+        "rules": proc("local:RulesLike", {}, {"divisions": ["divisions"], "deaths": ["deaths"]}),
+        "sub": proc("local:SubLike", {}, {"req_divide": ["req_divide"], "req_die": ["req_die"]}),
+        "m": {"_type": "step", "address": "local:CellActuationMergeStep", "config": {},
+              "inputs": {"divisions": ["divisions"], "deaths": ["deaths"],
+                         "req_divide": ["req_divide"], "req_die": ["req_die"]},
+              "outputs": {"divisions": ["out_divisions"], "deaths": ["out_deaths"]}},
+        "sink": proc("local:Sink", {"divisions": ["out_divisions"], "deaths": ["out_deaths"]}, {}),
+    }}, core=core)
+    c.run(8)
+    assert sorted(log["div"]) == ["r1", "s1"], log
+    assert sorted(log["die"]) == ["r2", "s2"], log
