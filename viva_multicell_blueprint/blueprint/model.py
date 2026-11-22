@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 
 from .schema import validate
+from .v2 import normalize_to_flat
 
 
 _REQUIRED = ("domain", "cell_types", "initial_state")
@@ -24,6 +25,7 @@ class Blueprint:
     immune: list | dict = field(default_factory=list)
     systemic_ode: dict | None = None
     mechanics_mapping: dict = field(default_factory=dict)
+    subcellular: dict = field(default_factory=dict)
 
     def canonical_state(self) -> dict:
         """The backend-neutral, immutable biological blueprint (BP-01).
@@ -37,6 +39,7 @@ class Blueprint:
 
     @classmethod
     def from_dict(cls, doc: dict) -> "Blueprint":
+        doc = normalize_to_flat(doc)
         errs = validate(doc)
         if errs:
             raise ValueError("invalid blueprint: " + "; ".join(errs))

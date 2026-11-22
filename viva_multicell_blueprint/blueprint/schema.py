@@ -13,8 +13,31 @@ SCHEMA_PATH = Path(__file__).resolve().parents[2] / ".pbg" / "schemas" / "multic
 
 
 @lru_cache(maxsize=1)
-def _validator() -> Draft202012Validator:
-    return Draft202012Validator(json.loads(SCHEMA_PATH.read_text()))
+def _schema() -> dict:
+    return json.loads(SCHEMA_PATH.read_text())
+
+
+@lru_cache(maxsize=None)
+def _branch_validator(name: str) -> Draft202012Validator:
+    """Validator for one oneOf branch (flat_v1 / sectioned_v2), keeping $defs.
+
+    Validating the matching branch directly (instead of the top-level oneOf)
+    keeps error messages specific, e.g. ``domain`` is required.
+    """
+    schema = _schema()
+    return Draft202012Validator({"$ref": f"#/$defs/{name}", "$defs": schema["$defs"]})
+
+
+class _Dispatch:
+    """Pick the schema branch by document shape; errors come from that branch."""
+
+    def iter_errors(self, doc):
+        v2 = isinstance(doc, dict) and ("initial_conditions" in doc or "model_definition" in doc)
+        return _branch_validator("sectioned_v2" if v2 else "flat_v1").iter_errors(doc)
+
+
+def _validator() -> _Dispatch:
+    return _Dispatch()
 
 
 def validate(doc) -> list[str]:
