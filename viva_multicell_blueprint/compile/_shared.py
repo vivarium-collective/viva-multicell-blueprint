@@ -420,14 +420,71 @@ def _video_node(blueprint, backend: str, video_out: str) -> dict:
     }
 
 
+# Stores the subcellular layer + merge add (Case B). Rules writes ``rules_*``; each
+# SubcellularProcess writes ``req_*``/``sub_scalar``; the merge is the SOLE writer of
+# the authoritative backend-input stores (fates/divisions/deaths/target_size/
+# motility/adhesion).
+_SUB_STORE_DEFAULTS = {
+    "rules_fates": {}, "rules_divisions": [], "rules_deaths": [],
+    "req_target_size": {}, "req_motility": {}, "req_adhesion": {},
+    "req_divide": [], "req_die": [], "req_become": {}, "req_secrete": {},
+    "sub_scalar": {}, "target_size": {}, "motility": {}, "adhesion": {},
+}
+_SUB_IN = ("types", "sizes", "positions", "neighbors", "alive", "field_grid",
+           "divisions", "deaths", "lineage", "scalar", "shared_surface_by_type")
+_SUB_OUT = ("sub_scalar", "req_target_size", "req_motility", "req_adhesion",
+            "req_divide", "req_die", "req_become", "req_secrete")
+
+
+def _wire_subcellular(state: dict, subcellular_nodes, merge_node) -> None:
+    """Rewire Rules' outputs to its own ``rules_*`` stores and add the subcellular
+    + merge nodes (in place). The merge reads ``rules_*`` + ``req_*`` and writes the
+    authoritative backend-input stores the mechanics node already reads."""
+    if merge_node is None:
+        raise ValueError("subcellular_nodes require a merge_node")
+    if len(subcellular_nodes) > 1:
+        # every SubcellularProcess writes overwrite[...] req_* maps; two writers on one
+        # store would silently clobber each other, and the merge has one input set.
+        raise NotImplementedError(
+            "multiple subcellular cell types are not supported yet: their req_* "
+            "overwrite stores would collide (one SubcellularProcess per blueprint)")
+    state.update({k: (v.copy() if isinstance(v, (dict, list)) else v)
+                  for k, v in _SUB_STORE_DEFAULTS.items()})
+    rules = dict(state["rules"])
+    rules["outputs"] = {**rules["outputs"], "fates": ["rules_fates"],
+                        "divisions": ["rules_divisions"], "deaths": ["rules_deaths"]}
+    state["rules"] = rules
+    for node in subcellular_nodes:
+        n = dict(node)
+        n["inputs"] = {p: [p] for p in _SUB_IN}
+        n["outputs"] = {p: [p] for p in _SUB_OUT}
+        state["subcellular"] = n
+    m = dict(merge_node)
+    m["inputs"] = {
+        "fates": ["rules_fates"], "divisions": ["rules_divisions"], "deaths": ["rules_deaths"],
+        "req_become": ["req_become"], "req_target_size": ["req_target_size"],
+        "req_motility": ["req_motility"], "req_adhesion": ["req_adhesion"],
+        "req_secrete": ["req_secrete"], "req_divide": ["req_divide"], "req_die": ["req_die"],
+    }
+    m["outputs"] = {k: [k] for k in ("fates", "divisions", "deaths", "target_size",
+                                     "motility", "adhesion")}
+    state["actuation_merge"] = m
+
+
 def assemble(blueprint, mechanics_node: dict, video_out: "str | None" = None,
-             backend: str = "cpm") -> dict:
+             backend: str = "cpm", subcellular_nodes=None, merge_node=None) -> dict:
     """Combine the shared mechanism with the ONE backend-specific mechanics node.
 
     When ``video_out`` is set (Blueprint Studio), also add a SpatialVideoStep that
     records the run and writes a downloadable spatial-playback HTML.
+
+    ``subcellular_nodes`` + ``merge_node`` (optional, from the pipeline builders)
+    insert the subcellular layer between Rules and the mechanics backend; when both
+    are absent the output is exactly the classic (Rules-direct) document.
     """
     state = build_mechanism_state(blueprint)
+    if subcellular_nodes:
+        _wire_subcellular(state, subcellular_nodes, merge_node)
     state["mechanics"] = mechanics_node
     if video_out:
         state["spatial_video"] = _video_node(blueprint, backend, video_out)
