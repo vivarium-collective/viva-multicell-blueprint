@@ -454,11 +454,10 @@ def _wire_subcellular(state: dict, subcellular_nodes, merge_node) -> None:
     rules["outputs"] = {**rules["outputs"], "fates": ["rules_fates"],
                         "divisions": ["rules_divisions"], "deaths": ["rules_deaths"]}
     state["rules"] = rules
-    for node in subcellular_nodes:
-        n = dict(node)
-        n["inputs"] = {p: [p] for p in _SUB_IN}
-        n["outputs"] = {p: [p] for p in _SUB_OUT}
-        state["subcellular"] = n
+    n = dict(subcellular_nodes[0])
+    n["inputs"] = {p: [p] for p in _SUB_IN}
+    n["outputs"] = {p: [p] for p in _SUB_OUT}
+    state["subcellular"] = n
     m = dict(merge_node)
     m["inputs"] = {
         "fates": ["rules_fates"], "divisions": ["rules_divisions"], "deaths": ["rules_deaths"],

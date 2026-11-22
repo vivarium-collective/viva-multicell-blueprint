@@ -20,7 +20,7 @@ def _demo_v2(rules=True):
             "fields": [{"name": "v", "D": 0.1, "decay": 0.1}],
             "subcellular": {"epithelial": {"module": "test_linear", "model": {"x0": 1.0},
                                            "params": {"rate": 1.0},
-                                           "coupling": {"inputs": {}, "outputs": {}}}}}}
+                                           "coupling": {"inputs": {}, "outputs": {"target_size": "x"}}}}}}
     if rules:
         mm["model_definition"]["rules"] = [{"type": "kill", "target": "epithelial", "rate_expr": "0.0"}]
     return mm
@@ -49,25 +49,36 @@ def test_pipeline_wires_subcellular_and_merge_when_present(be):
         assert mech["inputs"][k] == [k]
     # merge is the SOLE writer of the backend input stores
     mname = next(k for k, n in st.items() if n is m)
-    writers = [k for k, n in st.items() if isinstance(n, dict) and n.get("outputs")
-               and ["fates"] in n["outputs"].values()]
-    assert writers == [mname]
+    for k in ("fates", "divisions", "deaths", "target_size", "motility", "adhesion"):
+        writers = [name for name, n in st.items() if isinstance(n, dict) and n.get("outputs")
+                   and [k] in n["outputs"].values()]
+        assert writers == [mname], (k, writers)
     s = sub[0]
     assert s["inputs"]["lineage"] == ["lineage"] and s["inputs"]["types"] == ["types"]
     assert s["outputs"]["req_target_size"] == ["req_target_size"]
 
 
-def test_pipeline_runs_with_subcellular():
+@pytest.mark.parametrize("be", ["cpm", "vertex", "munk"])
+def test_pipeline_runs_with_subcellular(be):
     core = build_core()
-    doc = blueprint_pipeline(backend="cpm", blueprint=_demo_v2())
-    comp = Composite(doc, core=core)
+    comp = Composite(blueprint_pipeline(backend=be, blueprint=_demo_v2()), core=core)
     comp.run(3)
-    assert comp.state["types"]
+    # the ODE stepped for the live cells (subcellular ran) ...
+    assert comp.state["sub_scalar"], "SubcellularProcess produced nothing"
+    assert set(comp.state["sub_scalar"]) <= set(comp.state["types"])
+    # ... and the merge forwarded its request to the authoritative store
+    assert comp.state["target_size"], "merge did not forward req_target_size"
+    assert set(comp.state["target_size"]) == set(comp.state["req_target_size"])
 
 
-def test_pipeline_registered_in_core():
-    core = build_core()
-    comp = Composite(blueprint_pipeline(backend="cpm"), core=core)
+def test_pipeline_generator_registered_by_name():
+    from process_bigraph.composite_generator import _REGISTRY
+    entries = [e for e in _REGISTRY.values() if e.name == "blueprint_pipeline"]
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry.default_n_steps == 80
+    assert set(entry.parameters) >= {"backend", "blueprint", "video_out"}
+    comp = Composite(blueprint_pipeline(backend="cpm"), core=build_core())
     assert "mechanics" in comp.state
 
 
