@@ -78,7 +78,7 @@ infrastructure rather than carrying it.
 When an investigation is done (research question answered, narrative
 written, report rendered), run:
 
-    /viva-investigation close <slug>
+    /viva:investigate close <slug>
 
 This stamps the investigation YAML with `status: closed`, populates
 `contributors[]` (derived from `git log` + agent sessions), copies the
@@ -86,4 +86,4 @@ rendered HTML report into `workspace/investigations/<slug>/report.html` (git-
 tracked artifact), commits on the branch, and opens a PR. **Never auto-
 merges.** Reviewer clicks merge in the GitHub UI.
 
-See `/viva-investigation close --help` for details.
+See `/viva:investigate close --help` for details.

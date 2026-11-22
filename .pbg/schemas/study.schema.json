@@ -425,7 +425,7 @@
       "deprecated": true,
       "x-replaced-by": "runs.db",
       "type": "array",
-      "description": "DEPRECATED in v4. Use runs.db (per-study SQLite) as the source of truth — runs_meta + history. F2 made the DB canonical; this field remains only for v3 back-compat and is no longer written by /viva-study run-baseline. Will be removed in a future schema bump.",
+      "description": "DEPRECATED in v4. Use runs.db (per-study SQLite) as the source of truth — runs_meta + history. F2 made the DB canonical; this field remains only for v3 back-compat and is no longer written by /viva:study run-baseline. Will be removed in a future schema bump.",
       "items": {
         "type": "object",
         "additionalProperties": true,
@@ -1321,7 +1321,7 @@
             "description": "Optional block surfacing literature-vs-model divergences as part of the test, not just pass/fail. Lets the dashboard show whether a failing test is a calibration problem, a threshold-vs-reality mismatch, or a conceptual disagreement.",
             "properties": {
               "observed_value": {
-                "description": "Value measured against the live model (populated by /viva-study preview-viz or run-tests). Numeric in most cases; string allowed for categorical outcomes.",
+                "description": "Value measured against the live model (populated by /viva:study preview-viz or run-tests). Numeric in most cases; string allowed for categorical outcomes.",
                 "oneOf": [
                   {
                     "type": "number"
@@ -1485,7 +1485,7 @@
     },
     "discovery_implications": {
       "type": "object",
-      "description": "Richer Decide-phase synthesis, rendered as the dashboard's 'Discovery implications' section: where this study's results leave the mechanism model and what to investigate next. All sub-fields optional; absent => the section is omitted. The rigor scorecard (pbg_superpowers.rigor) flags a study declaring neither this nor follow_up_studies with a `next_steps` gap. Its `followup_study_proposals` are seedable via /viva-study seed-from-followup (the richer path).",
+      "description": "Richer Decide-phase synthesis, rendered as the dashboard's 'Discovery implications' section: where this study's results leave the mechanism model and what to investigate next. All sub-fields optional; absent => the section is omitted. The rigor scorecard (pbg_superpowers.rigor) flags a study declaring neither this nor follow_up_studies with a `next_steps` gap. Its `followup_study_proposals` are seedable via /viva:study seed-from-followup (the richer path).",
       "additionalProperties": true,
       "properties": {
         "resolved_uncertainties": {
@@ -1542,7 +1542,7 @@
     },
     "followup_proposals": {
       "type": "array",
-      "description": "Decide-phase output. Each entry is a proposal for a follow-up study motivated by a gap this study revealed. Lifted into a child study via /viva-study seed-from-followup, which stamps the child with `seeded_from:` and auto-adds the parent to its `pipeline_gate.prerequisites`.",
+      "description": "Decide-phase output. Each entry is a proposal for a follow-up study motivated by a gap this study revealed. Lifted into a child study via /viva:study seed-from-followup, which stamps the child with `seeded_from:` and auto-adds the parent to its `pipeline_gate.prerequisites`.",
       "items": {
         "type": "object",
         "required": [
@@ -1576,7 +1576,7 @@
               "seeded"
             ],
             "default": "proposed",
-            "description": "Lifecycle of the proposal itself. Flipped to `seeded` automatically by /viva-study seed-from-followup."
+            "description": "Lifecycle of the proposal itself. Flipped to `seeded` automatically by /viva:study seed-from-followup."
           },
           "seeded_study": {
             "type": "string",
@@ -1801,7 +1801,7 @@
     },
     "seeded_from": {
       "type": "object",
-      "description": "Provenance stamp set automatically by /viva-study seed-from-followup when this study is created from a parent's followup_proposals entry. Queryable lineage: `grep -r 'seeded_from' studies/*/study.yaml` finds all seeded children. Pass 10B adds an optional `finding:` field, populated when the child was seeded from a specific finding via `--from-finding <id>`; this lets follow-up lineage trace not just which proposal seeded which child but which *finding* on the parent motivated the follow-up.",
+      "description": "Provenance stamp set automatically by /viva:study seed-from-followup when this study is created from a parent's followup_proposals entry. Queryable lineage: `grep -r 'seeded_from' studies/*/study.yaml` finds all seeded children. Pass 10B adds an optional `finding:` field, populated when the child was seeded from a specific finding via `--from-finding <id>`; this lets follow-up lineage trace not just which proposal seeded which child but which *finding* on the parent motivated the follow-up.",
       "additionalProperties": true,
       "properties": {
         "study": {
@@ -1817,14 +1817,14 @@
         "finding": {
           "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-          "description": "Pass 10B. Optional. Finding id (e.g. `F-03`) on the parent study that motivated this seeded child. Set automatically when `/viva-study seed-from-followup --from-finding <id>` is used. Enables queries like `grep -r 'finding: F-' studies/*/study.yaml` to trace finding-to-followup lineage."
+          "description": "Pass 10B. Optional. Finding id (e.g. `F-03`) on the parent study that motivated this seeded child. Set automatically when `/viva:study seed-from-followup --from-finding <id>` is used. Enables queries like `grep -r 'finding: F-' studies/*/study.yaml` to trace finding-to-followup lineage."
         }
       }
     },
     "follow_up_of": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9_-]*$",
-      "description": "v4 narrative field. Slug of the study this one is a parallel/cleanup follow-up of (e.g. dnaa-02f follow_up_of: dnaa-02). Distinct from `seeded_from` (which is set automatically by /viva-study seed-from-followup) and from `parent_studies` (which is a DAG dependency). Lets a study explicitly mark itself as a sibling that runs in parallel to resolve an unresolved tension surfaced by the parent."
+      "description": "v4 narrative field. Slug of the study this one is a parallel/cleanup follow-up of (e.g. dnaa-02f follow_up_of: dnaa-02). Distinct from `seeded_from` (which is set automatically by /viva:study seed-from-followup) and from `parent_studies` (which is a DAG dependency). Lets a study explicitly mark itself as a sibling that runs in parallel to resolve an unresolved tension surfaced by the parent."
     },
     "runtime": {
       "type": "object",

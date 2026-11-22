@@ -58,14 +58,14 @@ running workbench.
 [viva-superpowers](https://github.com/vivarium-collective/viva-superpowers) is the
 Claude Code plugin whose skills build and extend this kind of workspace:
 
-- `/viva-study <slug>` — start a study (Design → Build → Simulate → Evaluate → Decide).
-- `/viva-investigation <slug>` — group studies under one research question.
-- `/viva-expert <tool>` — wrap a simulator as a process-bigraph process or step (`--lightweight` writes in-workspace).
-- `/viva-viz` — generate a visualization from a description.
-- `/viva-report` — rebuild the reports.
+- `/viva:study <slug>` — start a study (Design → Build → Simulate → Evaluate → Decide).
+- `/viva:investigate <slug>` — group studies under one research question.
+- `/viva:model <tool>` — wrap a simulator as a process-bigraph process or step (`--lightweight` writes in-workspace).
+- `/viva:viz` — generate a visualization from a description.
+- `/viva:report` — rebuild the reports.
 
 Decide-phase studies can record `followup_proposals[]`; seed a child study from one
-with `/viva-study seed-from-followup <parent>/<proposal_id>`.
+with `/viva:study seed-from-followup <parent>/<proposal_id>`.
 
 ## Layout
 
