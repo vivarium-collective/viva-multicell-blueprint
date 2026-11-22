@@ -83,6 +83,10 @@ override-dependencies = [
     # (already installed). Pin the last pbg-superpowers release so resolution is
     # deterministic rather than letting it float.
     "pbg-superpowers==0.23.0",
+    # vivarium-workbench @main requires viva-emitters[sqlite,...]>=0.4.3, but the
+    # sqlite extra is only on PyPI's viva-emitters <0.4.3, so a fresh resolve is
+    # unsatisfiable. Force viva-emitters to its git @main (0.4.5, extras intact).
+    "viva-emitters @ git+https://github.com/vivarium-collective/viva-emitters.git@main",
 ]
 
 [tool.uv.sources]

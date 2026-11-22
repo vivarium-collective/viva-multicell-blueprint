@@ -13,7 +13,7 @@ VIVA_CPM = Path("/Users/eranagmon/code/viva-cpm/viva_cpm_studies/influenza/param
 
 def price_params():
     assert FIXTURE.exists(), f"missing test fixture {FIXTURE}"
-    return yaml.safe_load(FIXTURE.read_text())["price_ode"]
+    return yaml.safe_load(FIXTURE.read_text(encoding="utf-8"))["price_ode"]
 
 
 INP = {"H": 200000.0, "I": 20000.0, "M": 5.0, "K": 2.0, "E": 0.0, "DH": 0.0,
@@ -68,7 +68,7 @@ def test_recruit_drivers_emitted():
 def test_fixture_matches_viva_cpm_when_available():
     if not VIVA_CPM.exists():
         pytest.skip("viva-cpm checkout not available")
-    assert yaml.safe_load(VIVA_CPM.read_text())["price_ode"] == price_params()
+    assert yaml.safe_load(VIVA_CPM.read_text(encoding="utf-8"))["price_ode"] == price_params()
 
 
 def test_numerical_regression_pin():

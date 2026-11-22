@@ -14,7 +14,7 @@ SCHEMA_PATH = Path(__file__).resolve().parents[2] / ".pbg" / "schemas" / "multic
 
 @lru_cache(maxsize=1)
 def _schema() -> dict:
-    return json.loads(SCHEMA_PATH.read_text())
+    return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 
 
 @lru_cache(maxsize=None)

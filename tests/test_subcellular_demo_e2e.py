@@ -38,7 +38,7 @@ def _run(backend, mod):
 
 
 def test_studio_points_at_blueprint_pipeline():
-    html = STUDIO.read_text()
+    html = STUDIO.read_text(encoding="utf-8")
     assert 'const COMPOSITE = "viva_multicell_blueprint.composites.pipeline.blueprint_pipeline"' in html
 
 

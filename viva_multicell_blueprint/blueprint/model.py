@@ -58,7 +58,7 @@ class Blueprint:
 
     @classmethod
     def load(cls, path) -> "Blueprint":
-        return cls.from_dict(yaml.safe_load(Path(path).read_text()))
+        return cls.from_dict(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
 
     def dump(self, path) -> None:
         Path(path).write_text(yaml.safe_dump(self.to_dict(), sort_keys=False))

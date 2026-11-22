@@ -22,7 +22,7 @@ from viva_multicell_blueprint.core import build_core
 # The canonical Price-2015 params block (copied from viva-cpm), reused so the full
 # blueprint's systemic_ode node is a REAL, buildable ODE rather than a stub.
 _PRICE_PARAMS = yaml.safe_load(
-    (Path(__file__).parent / "fixtures" / "price_ode_params.yaml").read_text()
+    (Path(__file__).parent / "fixtures" / "price_ode_params.yaml").read_text(encoding="utf-8")
 )["price_ode"]
 
 # A small CSV cell table: 4 non-collinear cells, two types (H, I) -> a 2x2 block
