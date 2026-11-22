@@ -1,0 +1,44 @@
+# v2 demo: ONE cell type carries a per-cell tellurium growth ODE. A diffusing
+# nutrient field (secreted by the cells) is sampled at each cell's centroid and
+# drives the growth rate; the ODE species S sets target_size (cells grow) and
+# crossing a threshold triggers division (S is halved on division).
+blueprint_version: "2.0"
+initial_conditions:
+  domain: {extent_um: [30, 30], grid_resolution_um: 1, boundary: noflux}
+  cell_types:
+    - {name: cell, target_size: 25}
+  adhesion:
+    - {a: cell, b: cell, strength: 5}
+    - {a: cell, b: medium, strength: 20}
+  initial_state:
+    kind: blocks
+    block: {type: cell, origin: [10, 10], shape: [2, 2], spacing: 6, size: 25}
+model_definition:
+  fields:
+    - name: nutrient
+      D: 0.15
+      decay: 0.01
+      dynamics: {dt: 0.2, substeps: 5}
+      secretion:
+        - {type: cell, rate: 1.0}
+  subcellular:
+    cell:
+      module: tellurium
+      division: split
+      model:
+        source: |
+          model growth
+            species S;
+            S = 25.0;
+            mu = 0.15;
+            nut = 0.0;
+            J0: -> S; mu * (1 + nut) * S;
+          end
+      params: {}
+      coupling:
+        const: {divide_at: 40.0}
+        inputs:
+          nut: field.nutrient@centroid
+        outputs:
+          target_size: S
+          divide_when: {var: S, gt: const.divide_at}
