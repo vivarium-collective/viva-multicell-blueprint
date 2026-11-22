@@ -1,7 +1,7 @@
 """Compile a blueprint onto the CPM (viva-cpm) mechanics backend (spec section 5).
 
-``compile(blueprint, backend="cpm")`` returns a process-bigraph composite document
-whose shared mechanism (field/rules/ODE/immune) is byte-identical to the vertex
+``cpm_mechanics_node`` builds the single mechanics node of the compiled composite
+(the document is assembled by :func:`..compile.compile`); the shared mechanism (field/rules/ODE/immune) is byte-identical to the vertex
 compile and whose single mechanics node is a :class:`CPMBackend`. The neutral
 type-pair ``adhesion`` is lowered to the CPM contact (J) matrix via Task-12's
 ``to_cpm_contact``, with an EXPLICIT ``type_ids`` map derived from the blueprint
@@ -14,7 +14,7 @@ from viva_multicell_blueprint.compile.base import INPUT_PORTS, OUTPUT_PORTS
 
 from ._shared import (
     _as_cell_nodes,
-    assemble,
+    _chemotaxis_fields,
     field_names,
     mechanics_seed,
     resolve_initial_state,
@@ -22,22 +22,6 @@ from ._shared import (
 )
 
 CPM_ADDR = "local:CPMBackend"
-
-
-def _cpm_fields(blueprint) -> list[dict]:
-    """Field entries for the CPM World: name + chemotaxis (type NAMES + strength).
-
-    Native field DYNAMICS are zeroed inside the backend (it only READS the shared
-    grid written via set_field); only the chemotaxis wiring is carried so CPM biases
-    its Metropolis flips off the authoritative shared field.
-    """
-    out = []
-    for f in blueprint.fields or []:
-        out.append({
-            "name": f["name"],
-            "chemotaxis": [dict(c) for c in (f.get("chemotaxis") or [])],
-        })
-    return out
 
 
 def cpm_mechanics_node(blueprint) -> dict:
@@ -48,7 +32,7 @@ def cpm_mechanics_node(blueprint) -> dict:
     backend_params = {
         "mcs_per_update": int(mm.get("mcs_per_update", 2)),
         "type_ids": type_ids,
-        "fields": _cpm_fields(blueprint),
+        "fields": _chemotaxis_fields(blueprint),
         # the Metropolis RNG follows the run seed, so replicate runs differ in
         # mechanics too (not only in rule draws)
         "potts": {"seed": mechanics_seed(blueprint)},
@@ -71,9 +55,3 @@ def cpm_mechanics_node(blueprint) -> dict:
         "inputs": {p: [p] for p in INPUT_PORTS},
         "outputs": {p: [p] for p in OUTPUT_PORTS},
     }
-
-
-def compile(blueprint, backend: str = "cpm", video_out=None) -> dict:
-    if backend != "cpm":
-        raise ValueError(f"to_cpm.compile only builds the cpm backend, got backend={backend!r}")
-    return assemble(blueprint, cpm_mechanics_node(blueprint), video_out=video_out, backend="cpm")

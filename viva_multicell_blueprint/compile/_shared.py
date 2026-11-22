@@ -472,6 +472,23 @@ def _wire_subcellular(state: dict, subcellular_nodes, merge_node) -> None:
     state["actuation_merge"] = m
 
 
+def _chemotaxis_fields(blueprint) -> list[dict]:
+    """Field entries for the CPM / center-based mechanics nodes: name + chemotaxis
+    (type NAMES + strength).
+
+    Native field DYNAMICS are never re-run in those backends (they only READ the
+    shared grid); only the chemotaxis wiring is carried so cells bias their motion
+    off the authoritative shared field. One lowering feeds every such paradigm.
+    """
+    out = []
+    for f in blueprint.fields or []:
+        out.append({
+            "name": f["name"],
+            "chemotaxis": [dict(c) for c in (f.get("chemotaxis") or [])],
+        })
+    return out
+
+
 def assemble(blueprint, mechanics_node: dict, video_out: "str | None" = None,
              backend: str = "cpm", subcellular_nodes=None, merge_node=None) -> dict:
     """Combine the shared mechanism with the ONE backend-specific mechanics node.

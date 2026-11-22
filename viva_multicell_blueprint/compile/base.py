@@ -10,6 +10,8 @@ keys); backends convert from the blueprint's int ids.
 """
 from __future__ import annotations
 
+import warnings
+
 from process_bigraph import Process
 
 INPUT_PORTS = {
@@ -110,6 +112,17 @@ class MechanicsBackend(Process):
         "domain": {"_type": "node", "_default": {}},
         "backend_params": {"_type": "node", "_default": {}},
     }
+
+    def warn_once(self, key, msg: str) -> None:
+        """Emit ``RuntimeWarning(msg)`` the first time ``key`` is seen on this instance.
+
+        ``initialize`` resets the seen-set (``self._warned = set()``) per instance.
+        """
+        seen = self.__dict__.setdefault("_warned", set())
+        if key in seen:
+            return
+        seen.add(key)
+        warnings.warn(msg, RuntimeWarning, stacklevel=3)
 
     def inputs(self):
         return dict(INPUT_PORTS)

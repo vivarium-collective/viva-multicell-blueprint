@@ -1,8 +1,8 @@
 """Compile a blueprint onto the vertex (vivarium-tyssue) mechanics backend (spec §5).
 
-``compile(blueprint, backend="vertex")`` returns a composite document whose shared
-mechanism (field/rules/ODE/immune) is byte-identical to the CPM compile and whose
-single mechanics node is a :class:`VertexBackend`. The neutral type-pair
+``vertex_mechanics_node`` builds the single mechanics node (assembled by
+:func:`..compile.compile`); the shared mechanism (field/rules/ODE/immune) is
+byte-identical to the CPM compile and the node is a :class:`VertexBackend`. The neutral type-pair
 ``adhesion`` is lowered to per-pair tyssue junction tension via Task-12's
 ``to_vertex_tension``; field chemotaxis is flattened to the per-field
 ``{field, type, strength}`` list the vertex backend turns into ActiveMigration
@@ -17,7 +17,7 @@ from __future__ import annotations
 from viva_multicell_blueprint.compile.adhesion import to_vertex_tension
 from viva_multicell_blueprint.compile.base import INPUT_PORTS, OUTPUT_PORTS, latent_pool_types
 
-from ._shared import _as_cell_nodes, assemble, mechanics_seed, resolve_initial_state
+from ._shared import _as_cell_nodes, mechanics_seed, resolve_initial_state
 
 VERTEX_ADDR = "local:VertexBackend"
 
@@ -137,9 +137,3 @@ def vertex_mechanics_node(blueprint) -> dict:
         "inputs": {p: [p] for p in INPUT_PORTS},
         "outputs": {p: [p] for p in OUTPUT_PORTS},
     }
-
-
-def compile(blueprint, backend: str = "vertex", video_out=None) -> dict:
-    if backend != "vertex":
-        raise ValueError(f"to_vertex.compile only builds the vertex backend, got backend={backend!r}")
-    return assemble(blueprint, vertex_mechanics_node(blueprint), video_out=video_out, backend="vertex")

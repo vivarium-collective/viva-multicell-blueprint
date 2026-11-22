@@ -1,7 +1,7 @@
 """Compile a blueprint onto the center-based (viva-munk) mechanics backend.
 
-``compile(blueprint, backend="munk")`` returns a process-bigraph composite document
-whose shared mechanism (field/rules/ODE/immune) is byte-identical to the CPM and
+``munk_mechanics_node`` builds the single mechanics node of the compiled composite
+(the document is assembled by :func:`..compile.compile`); the shared mechanism (field/rules/ODE/immune) is byte-identical to the CPM and
 vertex compiles and whose single mechanics node is a :class:`MunkBackend` -- the
 center-based paradigm (``pymunk`` circular bodies). As on the CPM side, field
 chemotaxis is carried as type-name + strength so the center-based cells bias their
@@ -14,24 +14,12 @@ from viva_multicell_blueprint.compile.base import INPUT_PORTS, OUTPUT_PORTS
 
 from ._shared import (
     _as_cell_nodes,
-    assemble,
+    _chemotaxis_fields,
     mechanics_seed,
     resolve_initial_state,
 )
 
 MUNK_ADDR = "local:MunkBackend"
-
-
-def _munk_fields(blueprint) -> list[dict]:
-    """Field entries for the center-based backend: name + chemotaxis (type NAMES +
-    strength), mirroring the CPM lowering so one blueprint feeds every paradigm."""
-    out = []
-    for f in blueprint.fields or []:
-        out.append({
-            "name": f["name"],
-            "chemotaxis": [dict(c) for c in (f.get("chemotaxis") or [])],
-        })
-    return out
 
 
 def munk_mechanics_node(blueprint) -> dict:
@@ -58,7 +46,7 @@ def munk_mechanics_node(blueprint) -> dict:
         "adhesion_velocity_scale": float(mm.get("adhesion_velocity_scale", 0.02)),
         "max_speed": float(mm.get("max_speed", 2.0)),
         "chemotaxis_gain": float(mm.get("chemotaxis_gain", 0.08)),
-        "fields": _munk_fields(blueprint),
+        "fields": _chemotaxis_fields(blueprint),
         "mechanics_seed": mechanics_seed(blueprint),
     }
 
@@ -75,9 +63,3 @@ def munk_mechanics_node(blueprint) -> dict:
         "inputs": {p: [p] for p in INPUT_PORTS},
         "outputs": {p: [p] for p in OUTPUT_PORTS},
     }
-
-
-def compile(blueprint, backend: str = "munk", video_out=None) -> dict:
-    if backend != "munk":
-        raise ValueError(f"to_munk.compile only builds the munk backend, got backend={backend!r}")
-    return assemble(blueprint, munk_mechanics_node(blueprint), video_out=video_out, backend="munk")

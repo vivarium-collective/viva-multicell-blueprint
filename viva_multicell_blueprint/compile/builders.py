@@ -15,22 +15,28 @@ from ._shared import (
     _rules_node,
     _video_node,
 )
+from .to_cpm import cpm_mechanics_node
+from .to_munk import munk_mechanics_node
+from .to_vertex import vertex_mechanics_node
 
 MERGE_ADDR = "local:CellActuationMergeStep"
 SUBCELLULAR_ADDR = "local:SubcellularProcess"
-_BACKENDS = ("cpm", "vertex", "munk")
+# The ONE backend registry: backend name -> its mechanics-node builder.
+MECHANICS_NODE_BUILDERS = {
+    "cpm": cpm_mechanics_node,
+    "vertex": vertex_mechanics_node,
+    "munk": munk_mechanics_node,
+}
 
 
 def build_mechanics(blueprint, backend: str) -> dict:
     """The backend-specific mechanics node (incl. adhesion lowering)."""
-    if backend == "cpm":
-        from .to_cpm import cpm_mechanics_node as fn
-    elif backend == "vertex":
-        from .to_vertex import vertex_mechanics_node as fn
-    elif backend == "munk":
-        from .to_munk import munk_mechanics_node as fn
-    else:
-        raise ValueError(f"unknown backend {backend!r}; expected one of {sorted(_BACKENDS)}")
+    try:
+        fn = MECHANICS_NODE_BUILDERS[backend]
+    except KeyError:
+        raise ValueError(
+            f"unknown backend {backend!r}; expected one of {sorted(MECHANICS_NODE_BUILDERS)}"
+        ) from None
     return fn(blueprint)
 
 

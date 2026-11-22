@@ -10,13 +10,9 @@ from __future__ import annotations
 
 import math
 
-from viva_multicell_blueprint.compile.base import (
-    GENERIC_LATENT,
-    MechanicsBackend,
-    latent_pool_types,
-    no_footprint,
-    sorted_cell_ids,
-)
+from viva_multicell_blueprint.compile.base import MechanicsBackend, no_footprint
+
+from ._common import event_cid, latent_config, mint_daughter_id, select_activations
 
 
 class FakeBackend(MechanicsBackend):
@@ -63,25 +59,14 @@ class FakeBackend(MechanicsBackend):
                 self._cells[str(cid)]["type"] = new_type
         # activations (Task 20): activate N latent cells per active type, deterministic.
         bp = self.config.get("backend_params") or {}
-        latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
-        generic = str(bp.get("latent_generic", GENERIC_LATENT))
-        consumed: set = set()
-        activations = inputs.get("activations") or {}
-        for active_type in sorted(activations):
-            count = int(activations.get(active_type, 0) or 0)
-            pool = latent_pool_types(active_type, latent_map, generic)
-            picked = 0
-            for cid in sorted_cell_ids(self._cells):
-                if picked >= count:
-                    break
-                c = self._cells[cid]
-                if cid in consumed or not c["alive"] or c["type"] not in pool:
-                    continue
-                c["type"] = active_type
-                consumed.add(cid)
-                picked += 1
+        latent_map, generic = latent_config(bp)
+        for cid, active_type in select_activations(
+                inputs.get("activations") or {}, self._cells,
+                lambda b: self._cells[b]["type"] if self._cells[b]["alive"] else None,
+                latent_map, generic):
+            self._cells[cid]["type"] = active_type
         for ev in inputs.get("deaths") or []:
-            cid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
+            cid = event_cid(ev)
             if cid in self._cells:
                 self._cells[cid]["alive"] = False
         # per-cell runtime actuators (input ports; NOT the init-time config keys).
@@ -97,16 +82,11 @@ class FakeBackend(MechanicsBackend):
         # divisions: mint a daughter beside a live mother; report via lineage.
         self._lineage = {}
         for ev in inputs.get("divisions") or []:
-            mid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
+            mid = event_cid(ev)
             m = self._cells.get(mid)
             if m is None or not m["alive"]:
                 continue
-            k = self._div_count.get(mid, 0) + 1
-            did = f"{mid}.{k}"
-            while did in self._cells:
-                k += 1
-                did = f"{mid}.{k}"
-            self._div_count[mid] = k
+            did = mint_daughter_id(self._cells, mid, self._div_count)
             half = m["size"] / 2.0
             m["size"] = half
             d = dict(m)

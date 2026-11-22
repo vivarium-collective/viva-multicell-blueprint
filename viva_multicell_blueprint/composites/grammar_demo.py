@@ -34,12 +34,9 @@ GRAMMAR_RULES_ADDR = "local:BlueprintGrammarProcess"
 # runs without a field source. 8-column PhysiCell CSV.
 #
 # NOTE: this demo intentionally uses only transform (fates) + necrosis (deaths),
-# not "cycle entry" (divisions). The grammar fully supports division, but the
-# installed viva_cpm CPMBackend has a PRE-EXISTING bug in its divide path
-# (``World.divide_cells(div_ids, True)`` passes a list where the Rust binding
-# expects a float ``threshold``) that any division — grammar or a stock ``divide``
-# rule — would trip. Keeping the demo division-free lets it run cleanly on CPM;
-# see the stage-2 PR note.
+# not "cycle entry" (divisions), to keep the rule set minimal. The grammar fully
+# supports division; the former CPMBackend divide-path bug (``divide_cells`` called
+# with a list + bool) is fixed -- see ``CPMBackend`` division handling.
 DEMO_RULES_CSV = """\
 # crowded epithelial-like cells transition to a mesenchymal-like state
 epithelial,pressure,increases,transform to mesenchymal,12.0,3.0,4,0
