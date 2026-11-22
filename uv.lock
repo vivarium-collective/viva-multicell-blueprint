@@ -483,6 +483,20 @@ wheels = [
 ]
 
 [[package]]
+name = "compose-api-client"
+version = "0.7.72"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "httpx" },
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/83/ff/c2bfb09aa2537c142fd775b53acc70892189c41d68d43404892fa6d5320a/compose_api_client-0.7.72.tar.gz", hash = "sha256:cfd495eb472502728f95dbba4cb47ecff33fee36fe4638d4c1f849109e12a26e", size = 193083, upload-time = "2026-10-29T02:42:39.735Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/be/a4/71968fa987f8624b799b22ac7e903bb94ac90bd2f0b7ddb21dadb186a50f/compose_api_client-0.7.72-py3-none-any.whl", hash = "sha256:0dd56f5d6d95389c6b9b8a7349ca47f3b950416b603b60a01f334c0e935cf4c0", size = 384441, upload-time = "2026-10-29T02:42:38.24Z" },
+]
+
+[[package]]
 name = "contourpy"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1198,6 +1212,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/da/34/28fff3ab31ccff1fd4f6c7c7b0ceb2b6968d8ea4950663eadcb5720591a0/lark-1.3.1.tar.gz", hash = "sha256:b426a7a6d6d53189d318f2b6236ab5d6429eaf09259f1ca33eb716eed10d2905", size = 382732, upload-time = "2025-10-27T18:25:56.653Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/82/3d/14ce75ef66813643812f3093ab17e46d3a206942ce7376d31ec2d36229e7/lark-1.3.1-py3-none-any.whl", hash = "sha256:c629b661023a014c37da873b4ff58a817398d12635d3bbb2c5a03be7fe5d1e12", size = 113151, upload-time = "2025-10-27T18:25:54.882Z" },
+]
+
+[[package]]
+name = "latex2mathml"
+version = "3.81.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/88/db/336c38300e44582752b95842b15a4be8fe656914cf5b02ad1bec53cebceb/latex2mathml-3.81.1.tar.gz", hash = "sha256:c95add0c0fcdecad2d70567e0643050d5ea1149fb2e98a5d5792fb1c8eea2ed5", size = 77475, upload-time = "2026-09-07T19:55:11.037Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/30/b8bcfb01a2514cb7554a048ed52883de276e66d757c3cc535a3c29eb9e98/latex2mathml-3.81.1-py3-none-any.whl", hash = "sha256:c337668441b71c819b6733905a8058ba9a9d767bae11a0c5fdacb3aff31361bd", size = 79159, upload-time = "2026-09-07T19:55:09.611Z" },
 ]
 
 [[package]]
@@ -3491,8 +3514,8 @@ dependencies = [
 
 [[package]]
 name = "viva-discovery-engine"
-version = "0.2.0"
-source = { git = "https://github.com/vivarium-collective/discovery-engine.git?tag=v0.2.0#c64577f4a09f0d38f596b09e405bcd1215c4f158" }
+version = "0.7.5"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bigraph-schema" },
     { name = "click" },
@@ -3511,11 +3534,15 @@ dependencies = [
     { name = "viva-emitters", extra = ["parquet"] },
     { name = "viva-workspace" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/63/30/be39dd50b58939154129f1652f5b6940b7216d26c6ba71abd2f5bc271512/viva_discovery_engine-0.7.5.tar.gz", hash = "sha256:7f3a11d91f45cd0ebe226f8ae84880f1e9fe2b51c0b33e2f8cf79ec4a6230819", size = 4055341, upload-time = "2026-11-21T17:35:36.388Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/39/2d/2b9c19605c2cbfce00039a46302d4ed7237e2340cc6c66b7dea1ddddfccc/viva_discovery_engine-0.7.5-py3-none-any.whl", hash = "sha256:0ce2275f5894a822cd4226491e699b408440de88355686afd8fdd71d0d3b0b7b", size = 656147, upload-time = "2026-11-21T17:35:34.821Z" },
+]
 
 [[package]]
 name = "viva-emitters"
-version = "0.4.3"
-source = { git = "https://github.com/vivarium-collective/viva-emitters.git#794058ea5c8d320d29da8c3d9d9b124d996d4dd3" }
+version = "0.4.5"
+source = { git = "https://github.com/vivarium-collective/viva-emitters.git#d89bbe78d8071f2ad5cb2bdda6d637905be5631a" }
 dependencies = [
     { name = "bigraph-schema" },
     { name = "numpy" },
@@ -3615,15 +3642,17 @@ dependencies = [
 
 [[package]]
 name = "vivarium-workbench"
-version = "0.4.1"
-source = { git = "https://github.com/vivarium-collective/vivarium-workbench.git?branch=main#026521cef1541f7e358f4362f3389d3299c4a63e" }
+version = "0.5.5"
+source = { git = "https://github.com/vivarium-collective/vivarium-workbench.git?branch=main#cd6258699f61674021b24a15e7d93cea4c5c5d0a" }
 dependencies = [
     { name = "bigraph-schema" },
     { name = "boto3" },
+    { name = "compose-api-client" },
     { name = "fastapi" },
     { name = "investigation-contracts" },
     { name = "jinja2" },
     { name = "jsonschema", extra = ["format-nongpl"] },
+    { name = "latex2mathml" },
     { name = "numpy" },
     { name = "process-bigraph" },
     { name = "psutil" },
