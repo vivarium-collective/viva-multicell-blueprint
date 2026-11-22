@@ -1,12 +1,14 @@
 schema_version: 4
 name: dose-response-crossparadigm
 created: "2026-10-27"
-status: in-progress
+status: completed
 phase: Evaluate
 simulation_status: ran
 implementation_status: complete
 evaluation_status: evaluated
-gate_status: partial
+gate_status: passed
+execution_status: completed
+verdict: supported
 design_status: drafted
 
 claim: >
@@ -27,10 +29,13 @@ experiment: >
 
 result: >
   Seeding 1 / 3 / 5 infected cells, final infected counts (N=120): CPM seed0 1/2/7,
-  CPM seed1 1/3/2, vertex seed0 1/3/7, vertex seed1 1/5/6 (re-run 2026-10-28 on the
-  revised, calibrated vertex substrate). The lowest-vs-highest
-  direction is STRICT in all four (backend, seed) cases (final_high > final_low), so
-  both backends agree on the direction. Intermediate monotonicity is NOT universal
+  CPM seed1 1/3/2, vertex seed0 1/3/7, vertex seed1 1/5/5, center-based seed0 1/2/6, seed1
+  1/3/6 (low/mid/high; real re-run on the calibrated vertex substrate; vertex seed1 high
+  is 5, earlier quoted as 6). The lowest-vs-highest
+  direction is STRICT in all six (backend, seed) cases (final_high > final_low), so
+  all three paradigms agree on the direction. Effect sizes are tiny (2-7 infected cells, n=2
+  seeds), the lowest dose always ends at 1 (the seeded cell, so no spread), and the high-dose
+  margin over the low dose is as small as 1 -> 2 (CPM seed1). Intermediate monotonicity is NOT universal
   (CPM seed1 is 1/3/2), so only the directional (low-vs-high) claim is made. CPM and
   vertex magnitudes are comparable and within the capstone's same-seed spread.
 
@@ -113,9 +118,10 @@ limitations:
 report:
   title: "Dose-response: both substrates agree on the strict direction"
   verdict: >
+    SUPPORTED as a NARROW DIRECTIONAL claim, weakly evidenced (n=2 seeds, final infected counts of 2-7 cells; the lowest dose always ends at 1 = the seeded cell). 
     Over initial viral loads seeding 1/3/5 infected cells, the highest dose ends with
     STRICTLY more infection than the lowest on all three paradigms and both seeds (CPM
-    1/2/7 & 1/3/2, vertex 1/3/7 & 1/5/6 at N=120; center-based added 2026-11-06 and
+    1/2/7 & 1/3/2, vertex 1/3/7 & 1/5/5, center-based 1/2/6 & 1/3/6 at N=120; center-based added 2026-11-06 and
     verified to satisfy the same strict low-vs-high direction by the behavior test),
     so all three substrates agree on the
     DIRECTION of the dose response. Intermediate-dose monotonicity is seed-dependent
@@ -138,10 +144,10 @@ findings:
     status: confirms
     statement: >
       Both substrates show a strictly higher final infection at the highest vs lowest
-      dose, across seeds {0,1} (CPM 1->7 & 1->2, vertex 1->7 & 1->6), agreeing on the
+      dose, across seeds {0,1} (CPM 1->7 & 1->2, vertex 1->7 & 1->5, center-based 1->6 & 1->6), agreeing on the
       direction while intermediate monotonicity is seed-dependent.
     evidence:
-      observed: "seed 1/3/5 -> final cpm 1/2/7 (s0), 1/3/2 (s1); vertex 1/3/7 (s0), 1/5/6 (s1); N=120"
+      observed: "seed 1/3/5 -> final cpm 1/2/7 (s0), 1/3/2 (s1); vertex 1/3/7 (s0), 1/5/5 (s1); munk 1/2/6 (s0), 1/3/6 (s1); N=120"
     explanation: "More seed virus raises the shared-field infection probability everywhere; the substrate sets only the noisy magnitude."
     next_action: "revisit magnitudes once the ODE V producer lands (Task 21)"
     provenance:

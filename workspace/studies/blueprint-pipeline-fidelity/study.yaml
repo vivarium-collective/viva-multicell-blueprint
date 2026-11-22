@@ -1,12 +1,14 @@
 schema_version: 4
 name: blueprint-pipeline-fidelity
 created: "2026-10-27"
-status: in-progress
+status: completed
 phase: Evaluate
 simulation_status: ran
 implementation_status: complete
 evaluation_status: evaluated
 gate_status: passed
+execution_status: completed
+verdict: supported
 design_status: drafted
 title: "One blueprint, one pipeline: contract and t0 fidelity"
 kind: methods
@@ -213,6 +215,7 @@ limitations:
 report:
   title: "One blueprint, one pipeline: a versioned contract, exact on CPM, one hexagon per cell on vertex"
   verdict: >
+    SUPPORTED (no caveats; every behavior_test passed on the real run). 
     The biological specification is stated once as a versioned, statically validated,
     backend-neutral artifact and compiled by the single `blueprint_pipeline`. The
     validator and the canonical/backend split are tested (worked examples validate and

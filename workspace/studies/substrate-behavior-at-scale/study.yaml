@@ -1,12 +1,14 @@
 schema_version: 4
 name: substrate-behavior-at-scale
 created: "2026-11-12"
-status: in-progress
+status: completed
 phase: Evaluate
 simulation_status: ran
 implementation_status: complete
 evaluation_status: evaluated
-gate_status: pending
+gate_status: passed
+execution_status: completed
+verdict: supported
 design_status: drafted
 title: "Substrate behavior at scale: distance-to-CPM, and how the vertex mechanics were matched"
 kind: comparison
@@ -35,10 +37,10 @@ experiment: >
 result: >
   N=60, 254 cells, seeds 0-2. Distances as mean [cross/null x]:
   per-cell displacement -- null 3.77, VERTEX 2.93 (0.8x: within seed noise of the CPM),
-  MUNK 8.52 (2.3x). MSD -- null 3.25, VERTEX 8.89 (2.7x: under-fluctuates), MUNK 75.4
-  (23x: over-mobile). neighbour-graph -- null 0.41, VERTEX 0.45 (1.1x), MUNK 0.48 (1.2x):
+  MUNK 9.96 (2.6x). MSD -- null 3.25, VERTEX 8.89 (2.7x: under-fluctuates), MUNK 124.1
+  (38x: over-mobile). neighbour-graph -- null 0.41, VERTEX 0.45 (1.1x), MUNK 0.46 (1.1x):
   both near the CPM's contact-churn. front-speed -- null 1.54, VERTEX 3.59 (2.3x), MUNK
-  7.37 (4.8x). sorting -- null 0.014, VERTEX 0.123 (8.5x: sorts differently -- its biggest
+  6.77 (4.4x). sorting -- null 0.014, VERTEX 0.123 (8.5x: sorts differently -- its biggest
   gap), MUNK 0.021 (1.4x: near CPM). Each substrate matches a DIFFERENT facet of the CPM.
   Mechanics matching (results/vertex_mechanics_calibration.json, 2026-11-05, 5 seeds x
   60 steps, validity 3 seeds x 400 steps): tension scale 1.683 gives vertex area 22.97
@@ -173,6 +175,7 @@ falsifiability: >
 report:
   title: "How far each substrate's movement/interaction pattern sits from the CPM (large Sego)"
   verdict: >
+    SUPPORTED (every behavior_test passed on the rerun; the claim is a set of reported distances, not a match). 
     Three-way behavior-metric comparison on the large Sego model (N=60, 254 cells,
     seeds 0-2). No substrate matches the CPM on every axis; each diverges on specific
     ones, giving concrete calibration targets. VERTEX is closest on per-cell trajectory
@@ -181,9 +184,16 @@ report:
     motility ceiling carried as the open
     question below) and SORTS cells differently
     (sorting 8.5x null -- its largest gap). CENTER-BASED (munk) now MOVES and interacts
-    (displacement 8.52, MSD 75.4 -- validating the munk fix; it was frozen before), with
-    contact topology (0.482) and sorting (0.021) CLOSE to the CPM, but is OVER-mobile
-    (MSD 23x null) and diverges most on infection-front speed (4.8x null) -- uncalibrated.
+    (displacement 9.96, MSD 124.1 -- validating the munk fix; it was frozen before), with
+    contact topology (0.458) and sorting (0.021) CLOSE to the CPM, but is OVER-mobile
+    (MSD 38x null) and diverges most on infection-front speed (4.4x null) -- uncalibrated.
+    Caveats: vertex displacement is at/below the null floor (indistinguishable from seed
+    noise); vertex is WORSE than munk on sorting (0.123 vs 0.021); the vertex calibration
+    leaves two targets unmatched (epithelial MSD 2.20 vs 9.54; area CV 0.038 vs 0.093) and
+    immune motility is capped for mesh validity. The munk numbers are not bit-reproducible
+    against the earlier stored run (displacement 8.52, MSD 75.4, front 7.37, neighbour 0.48)
+    because munk motility now uses a per-instance seeded RNG; vertex reproduces exactly and
+    the qualitative conclusions are unchanged.
   confidence: medium
   evidence_quality: preliminary
   objective: >
@@ -338,10 +348,10 @@ simulation_set:
     metrics:
       n_steps: 60
       n_cells: 254
-      displacement_null_vertex_munk: "3.77 / 2.93 / 8.52"
-      msd_null_vertex_munk: "3.25 / 8.89 / 75.4"
-      neighbour_graph_null_vertex_munk: "0.41 / 0.45 / 0.48"
-      front_speed_null_vertex_munk: "1.54 / 3.59 / 7.37"
+      displacement_null_vertex_munk: "3.77 / 2.93 / 9.96"
+      msd_null_vertex_munk: "3.25 / 8.89 / 124.1"
+      neighbour_graph_null_vertex_munk: "0.41 / 0.45 / 0.46"
+      front_speed_null_vertex_munk: "1.54 / 3.59 / 6.77"
       sorting_null_vertex_munk: "0.014 / 0.123 / 0.021"
       artifact: "results.json"
   - name: vertex-mechanics-calibration
@@ -395,9 +405,10 @@ findings:
       No substrate matches the CPM on every axis. Vertex matches per-cell trajectories
       (displacement 2.93, below the CPM-self null 3.77) and contact churn (0.445 vs 0.414)
       but under-fluctuates (MSD 2.7x null) and mis-sorts (8.5x null); center-based now moves
-      and interacts (displacement 8.52, MSD 75.4) with contact topology (0.482) and sorting
-      (0.021) close to the CPM, but is over-mobile (MSD 23x null) and diverges most on
-      infection-front speed (4.8x null).
+      and interacts (displacement 9.96, MSD 124.1) with contact topology (0.458) and sorting
+      (0.021) close to the CPM, but is over-mobile (MSD 38x null) and diverges most on
+      infection-front speed (4.4x null). Munk values are from the 2026-11 rerun (seeded
+      per-instance motility RNG; not bit-reproducible vs the earlier stored run).
     evidence:
       observed: "results.json: N=60, 254 cells, seeds 0-2; see result"
     explanation: "Same shared mechanism and blueprint on all three substrates; only the mechanics node differs."

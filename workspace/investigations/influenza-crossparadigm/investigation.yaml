@@ -22,8 +22,8 @@ hypothesis: >
   substrate samples the shared field at its own cell centroid and measures cell-cell
   contact through its own geometry. Divergence is a finding about the substrate, not a
   bug. Confirmed three-way: fate agreement is statistically EQUIVALENT across all three
-  paradigm pairs while exact-position agreement is not, and the center-based model, which
-  is not calibrated to the other two, is the most spatially divergent. A mechanics-
+  paradigm pairs while exact-position agreement is not for any pair (the spatial gaps
+  are +0.093 cpm-munk, +0.126 cpm-vertex, +0.252 vertex-munk). A mechanics-
   dominated positive control shows the test rejects when it should, and the subcellular
   layer grows and divides cells uniformly on every backend.
 
@@ -85,8 +85,8 @@ at_a_glance:
     role: >
       The comparison spine. Fate is EQUIVALENT for every substrate pair (cpm-vertex diff
       -0.0014, run-cluster CI [-0.0034, +0.0008] inside +/-0.05); exact position is not
-      (cpm-vertex +0.126 < cpm-munk +0.224 < vertex-munk +0.263), the center-based model
-      diverging most. The N=400 same-backend null table is retained, and a mechanics-
+      (cpm-munk +0.093 < cpm-vertex +0.126 < vertex-munk +0.252; no pair is equivalent).
+      The N=400 same-backend null table is retained, and a mechanics-
       dominated positive control REJECTS equivalence for every pair (cpm-vertex +0.325),
       so the test has power.
   - study: substrate-behavior-at-scale
@@ -106,8 +106,9 @@ at_a_glance:
     role: >
       The pluggable per-cell subcellular layer (a tellurium ODE bound to a cell type in the
       v2 blueprint) grows and divides cells on CPM, vertex and center-based through
-      `blueprint_pipeline`: cell counts cpm 4->8->16, vertex 4->8->16, munk 4->6->8->16.
-      Evidence is the e2e test run; no committed runs.db entry yet.
+      `blueprint_pipeline`: cell counts reach 8 within 12 ticks on all three (cpm 4->8; vertex 4->8, 13 on the
+      last tick; munk 4->5->8; none reaches 16 in that window). Wiring demonstration;
+      evidence is the pytest e2e run plus a direct driver; no committed runs.db entry yet.
 
 acceptance_criteria:
   - study: blueprint-pipeline-fidelity
@@ -180,8 +181,8 @@ executive:
     backend reproduces its t0 state (CPM exact; vertex one polygon per cell with a 1.6 um
     epithelial residual; 48/48 types). (2) Cell FATE is statistically equivalent across all
     three substrates (run-cluster CI [-0.0034, +0.0008] inside +/-0.05), while exact POSITION
-    is not for any pair; the gap orders cpm-vertex +0.126 < cpm-munk +0.224 < vertex-munk
-    +0.263, so the uncalibrated center-based model diverges most. A mechanics-dominated
+    is not for any pair; the gaps order cpm-munk +0.093 < cpm-vertex +0.126 < vertex-munk
+    +0.252 (cpm-munk's CI still does not fit inside +/-0.10). A mechanics-dominated
     positive control rejects equivalence for every pair, so the test has power. At N=400 the
     capstone fate metric falls within the same-backend seed spread, while infected-patch
     occupancy and location now sit outside it on the current vertex substrate (a candidate
