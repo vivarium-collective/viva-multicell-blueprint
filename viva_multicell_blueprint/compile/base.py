@@ -23,6 +23,12 @@ INPUT_PORTS = {
     # changes their type to the active type via the SAME fate mechanism -- no topology
     # insertion. Clamped to the available latent pool. Absent / no latent cells -> no-op.
     "activations": "map[integer]",
+    # per-cell RUNTIME actuators (subcellular layer). Distinct from the init-time
+    # config keys of the same name (config_schema ``adhesion`` / ``cell_types[].target_size``):
+    # pbg keeps config and ports in separate namespaces. Empty / absent -> no-op.
+    "target_size": "map[float]",      # cell_id -> target size (growth driver)
+    "motility": "map[float]",         # cell_id -> motility scale
+    "adhesion": "map[node]",          # cell_id -> float | {type -> float}
 }
 
 # How a LATENT pool is named. Activating ``M`` draws from cells whose current type is
@@ -75,6 +81,9 @@ OUTPUT_PORTS = {
     # gets an entry. ``compare.raster.frame_from_backend`` splits this into the
     # ``polygons`` / ``occupancy`` keys ``rasterize`` consumes.
     "footprints": "overwrite[map[node]]",
+    # daughter_id -> mother_id for divisions applied THIS step (empty most steps).
+    # The backend chooses daughter ids; they also appear in every map above.
+    "lineage": "overwrite[map[string]]",
 }
 
 

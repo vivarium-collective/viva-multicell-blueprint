@@ -32,8 +32,8 @@ which the engine honors.)
 
 Per step: apply ``fates`` (type relabel), ``activations`` (latent->active immune
 recruitment, exactly as CPM), ``deaths`` (drop the body, mark not-alive),
-``divisions`` (spawn a lineage daughter body adjacent to the mother -- no blueprint
-id, tracked by lineage, not folded into the t=0 cohort, as on the CPM/vertex side),
+``divisions`` (spawn a daughter adjacent to the mother as a full cohort citizen with id
+``<mother>.<k>`` and ``lineage[daughter]=mother``),
 then sample the shared field for chemotaxis, step the physics, and read bodies back.
 ``shared_surface_by_type`` is the pairwise contact between cohort cells: the chord
 length of the overlap lens of two circles (a center-based analog of the CPM contact
@@ -41,8 +41,10 @@ area / vertex junction length), grouped by the neighbour's type NAME.
 """
 from __future__ import annotations
 
+import copy
 import math
 
+import numpy as np
 from viva_munk import core_import
 from viva_munk.processes.multibody import PymunkProcess
 
@@ -118,9 +120,9 @@ class MunkBackend(MechanicsBackend):
         # Deterministic jitter: seed the engine's global RNG from the run's
         # mechanics seed so replicate runs differ in draws, not in determinism.
         seed = bp.get("mechanics_seed")
-        if seed is not None:
-            import random as _random
-            _random.seed(int(seed))
+        # Per-instance RNG (NOT the process-global ``random``): several MunkBackends in one
+        # process (all-engines run, sweeps) must not interleave/re-seed each other's draws.
+        self._rng = np.random.default_rng(int(seed) if seed is not None else None)
 
         cells = config.get("initial_state") or []
         self._all_ids = [str(c["id"]) for c in cells]
@@ -130,8 +132,12 @@ class MunkBackend(MechanicsBackend):
         self._cache = {}       # last-known emit for dead cells
         self.identity = {}     # blueprint id (str) -> munk id (str); 1:1 here
         self._agents = {}      # munk_id -> authoritative physics agent dict
-        self._daughter_types = {}  # munk_id -> type NAME for non-cohort daughters
         self._div_counter = 0
+        self._div_count = {}   # mother id -> daughters minted so far
+        self._lineage = {}     # this step's {daughter: mother}
+        self._cell_act = {}    # bid -> runtime per-cell {"motility", "adhesion"}
+        # velocity (um/s) injected per unit of per-cell motility each step.
+        self._motility_gain = float(bp.get("motility_gain", 0.5))
 
         # chamber walls sized from the domain extent (fallback: bounding box + margin).
         domain = config.get("domain") or {}
@@ -267,6 +273,7 @@ class MunkBackend(MechanicsBackend):
         fates = inputs.get("fates") or {}
         field_grid = inputs.get("field_grid") or {}
         divisions = inputs.get("divisions") or []
+        self._lineage = {}
         deaths = inputs.get("deaths") or []
         activations = inputs.get("activations") or {}
 
@@ -281,6 +288,9 @@ class MunkBackend(MechanicsBackend):
         #      each requested active type, deterministic id order, clamped to the pool.
         self._apply_activations(activations)
 
+        # (a3) per-cell actuation inputs (runtime values, never config).
+        self._apply_actuators(inputs)
+
         # (b) deaths: drop the body (it leaves the engine next sync) and mark not-alive.
         for ev in deaths:
             bid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
@@ -288,9 +298,8 @@ class MunkBackend(MechanicsBackend):
                 self._alive[bid] = False
                 self._agents.pop(bid, None)
 
-        # (c) divisions: spawn a lineage DAUGHTER body adjacent to the mother. The
-        #     daughter has no blueprint id (tracked by lineage, not in the t=0 cohort)
-        #     -- it participates in the physics (collisions) but is never emitted.
+        # (c) divisions: spawn a DAUGHTER adjacent to the mother. The daughter is a
+        #     full cohort citizen (id ``<mother>.<k>``) and ``lineage[daughter]=mother``.
         for ev in divisions:
             bid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
             self._spawn_daughter(bid)
@@ -304,6 +313,9 @@ class MunkBackend(MechanicsBackend):
         #      pull together, medium-preferring pairs ease apart (hard-core collisions
         #      still supply the short-range repulsion).
         self._apply_adhesion()
+
+        # (d2b) per-cell motility: a random kick scaled by each cell's motility.
+        self._apply_motility()
 
         # (d3) clamp every cell's speed before integrating: the stability guarantee so
         #      no injected drive or stiff collision can blow positions up.
@@ -346,10 +358,75 @@ class MunkBackend(MechanicsBackend):
         dx, dy = r * math.cos(ang), r * math.sin(ang)
         # nudge the mother one way, the daughter the other, so they do not coincide.
         mother["location"] = (mx - 0.5 * dx, my - 0.5 * dy)
-        did = f"{bid}:d{self._div_counter}"
-        daughter = self._circle_agent((mx + 0.5 * dx, my + 0.5 * dy), r, meta["size"])
-        self._agents[did] = daughter
-        self._daughter_types[did] = meta["type"]
+        k = self._div_count.get(bid, 0) + 1
+        did = f"{bid}.{k}"
+        while did in self._meta:
+            k += 1
+            did = f"{bid}.{k}"
+        self._div_count[bid] = k
+        self._agents[did] = self._circle_agent((mx + 0.5 * dx, my + 0.5 * dy), r, meta["size"])
+        self._meta[did] = dict(meta)
+        self._alive[did] = True
+        self.identity[did] = did
+        self._all_ids.append(did)
+        if bid in self._cell_act:
+            self._cell_act[did] = copy.deepcopy(self._cell_act[bid])
+        self._lineage[did] = bid
+
+    def _act(self, bid: str) -> dict:
+        return self._cell_act.setdefault(str(bid), {"motility": None, "adhesion": None})
+
+    def _apply_actuators(self, inputs) -> None:
+        """target_size -> target radius (disc area == size); motility -> per-cell
+        velocity kick; adhesion -> per-cell adhesivity override (a float, or a
+        ``{neighbour type: float}`` dict; unlisted partner types fall back to the
+        matrix). All three map faithfully per cell; ids that are unknown or dead
+        are ignored."""
+        for cid, v in (inputs.get("target_size") or {}).items():
+            bid = str(cid)
+            if bid in self._meta and self._alive.get(bid, False) and bid in self._agents:
+                size = float(v)
+                r = self._radius(size)
+                self._meta[bid]["size"] = size
+                self._meta[bid]["radius"] = r
+                self._agents[bid]["radius"] = r
+                self._agents[bid]["mass"] = max(size, 1.0)
+        for cid, v in (inputs.get("motility") or {}).items():
+            bid = str(cid)
+            if bid in self._meta and self._alive.get(bid, False):
+                self._act(bid)["motility"] = float(v)
+        for cid, v in (inputs.get("adhesion") or {}).items():
+            bid = str(cid)
+            if bid in self._meta and self._alive.get(bid, False) and v is not None:
+                self._act(bid)["adhesion"] = copy.deepcopy(v)
+
+    def _apply_motility(self) -> None:
+        for bid, st in self._cell_act.items():
+            m = st.get("motility")
+            agent = self._agents.get(bid)
+            if not m or agent is None:
+                continue
+            th = float(self._rng.uniform(0.0, 2.0 * math.pi))
+            vx, vy = agent["velocity"]
+            kick = float(m) * self._motility_gain
+            agent["velocity"] = (vx + kick * math.cos(th), vy + kick * math.sin(th))
+
+    def _pair_adhesivity(self, mi: str, mj: str) -> float:
+        """Matrix adhesivity for the pair, with per-cell overrides applied: each
+        side contributes its override (float, or dict entry for the partner's type)
+        else the matrix value; the pair uses their mean."""
+        ti, tj = self._type_of(mi), self._type_of(mj)
+        base = self._adhesivity_for(ti, tj)
+
+        def side(me, other_type):
+            adh = (self._cell_act.get(me) or {}).get("adhesion")
+            if adh is None:
+                return base
+            if isinstance(adh, dict):
+                return float(adh[other_type]) if other_type in adh else base
+            return float(adh)
+
+        return 0.5 * (side(mi, tj) + side(mj, ti))
 
     def _apply_activations(self, activations) -> None:
         """Activate latent cells into active immune types (Task 20) -- same contract
@@ -437,7 +514,9 @@ class MunkBackend(MechanicsBackend):
         longer-range attraction/sorting the matrix declares, so the cohort's contact
         graph evolves over the run instead of freezing. A no-op when no matrix is
         given (adhesivity empty)."""
-        if not self._adhesivity:
+        if not self._adhesivity and not any(
+            st.get("adhesion") is not None for st in self._cell_act.values()
+        ):
             return
         items = []
         for mid, agent in self._agents.items():
@@ -446,10 +525,10 @@ class MunkBackend(MechanicsBackend):
                           self._type_of(mid)))
         n = len(items)
         for i in range(n):
-            _mi, ai, xi, yi, ri, ti = items[i]
+            mi, ai, xi, yi, ri, _ti = items[i]
             for j in range(i + 1, n):
-                _mj, aj, xj, yj, rj, tj = items[j]
-                a = self._adhesivity_for(ti, tj)
+                mj, aj, xj, yj, rj, _tj = items[j]
+                a = self._pair_adhesivity(mi, mj)
                 if a == 0.0:
                     continue
                 dx, dy = xj - xi, yj - yi
@@ -509,7 +588,7 @@ class MunkBackend(MechanicsBackend):
     def _type_of(self, mid: str) -> str:
         if mid in self._meta:
             return self._meta[mid]["type"]
-        return self._daughter_types.get(mid, "")
+        return ""
 
     # -- read-back ----------------------------------------------------------- #
     def _emit(self):
@@ -517,8 +596,7 @@ class MunkBackend(MechanicsBackend):
             {}, {}, {}, {}, {}, {}, {},
         )
 
-        # live cohort geometry (daughters excluded from the emitted cohort, as on
-        # the CPM/vertex side) for the pairwise contact scan.
+        # live cohort geometry (daughters are cohort citizens) for the contact scan.
         live = {}
         for bid in self._all_ids:
             if self._alive.get(bid, False) and bid in self._agents:
@@ -569,6 +647,7 @@ class MunkBackend(MechanicsBackend):
             "neighbors": neighbors,
             "alive": alive,
             "footprints": footprints,
+            "lineage": dict(self._lineage),
         }
 
     def _contact_length(self, cx, cy, r, ox, oy, orr):

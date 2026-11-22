@@ -66,14 +66,15 @@ def test_vertex_emits_port_shape():
     cells = _grid_cells()
     b = _make(cells)
     assert isinstance(b, MechanicsBackend)
-    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths", "activations"}
+    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths", "activations",
+                              "target_size", "motility", "adhesion"}
     assert set(b.outputs()) == set(OUTPUT_PORTS)
 
     out = b.update({}, 1.0)
     assert set(out) == set(OUTPUT_PORTS)
     ids = {str(c["id"]) for c in cells}
     # every blueprint cell is present in every output map
-    for port in OUTPUT_PORTS:
+    for port in (p for p in OUTPUT_PORTS if p != "lineage"):  # lineage is per-event, not per-cell
         assert set(out[port]) == ids
     # positions are 2D, sizes are positive face areas
     assert all(len(p) == 2 for p in out["positions"].values())
@@ -121,7 +122,7 @@ def test_coincident_centroids_get_separate_polygons():
     assert len(set(b.identity.values())) == 5
     out = b.update({}, 1.0)
     ids = {str(c["id"]) for c in cells}
-    for port in OUTPUT_PORTS:
+    for port in (p for p in OUTPUT_PORTS if p != "lineage"):  # lineage is per-event, not per-cell
         assert set(out[port]) == ids
     assert all(out["alive"].values())
     assert "2" in out["neighbors"]["1"]

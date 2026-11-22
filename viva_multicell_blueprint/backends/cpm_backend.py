@@ -23,12 +23,22 @@ emit the port. ``shared_surface_by_type`` is the contact-area readback regrouped
 from integer type tags into blueprint type NAMES (medium / tag 0 excluded, as the
 vertex backend excludes a junction on the free tissue border). Deaths remove the cell
 (``remove_cells``) and mark it not-alive; divisions split it (``divide_cells``) --
-the daughter has no blueprint id, so, as on the vertex side, it is tracked by
-lineage and not folded into the t=0 cohort. Lineage events arrive shaped
+the daughter is given a fresh blueprint id (``<mother>.<k>``), joins the emitted
+cohort the step it is born, and is reported in the ``lineage`` map
+(``daughter -> mother``) for that step only. Lineage events arrive shaped
 ``{"cell_id": <id>}`` (a bare id is also accepted).
+
+Per-cell actuation ports (read from ``inputs`` each step, never from config; an
+absent/empty map leaves the init-time value): ``target_size`` -> ``set_target_volume``
+(native, per cell). ``adhesion`` (float | {type -> float}) -> ``set_contact`` on the
+cell's TYPE pair(s) -- viva-cpm's contact matrix is per type pair, so cells of one type
+share the last (id-ordered) value written. ``motility`` has NO per-cell viva-cpm knob
+(temperature is global and fixed at finalize), so it is recorded and a RuntimeWarning
+is raised once; it does not alter dynamics.
 """
 from __future__ import annotations
 
+import copy
 import math
 import warnings
 
@@ -94,6 +104,15 @@ class CPMBackend(MechanicsBackend):
                 "type": str(c["type"]),
             }
             self._alive[bid] = True
+
+        # runtime actuator state (per blueprint id); daughters get a deep copy.
+        self._cell_state = {bid: {"motility": 1.0, "adhesion": None, "target": None}
+                            for bid in self._all_ids}
+        self._div_count = {}
+        self._lineage = {}
+        self._warned_motility = False
+        self._warned_adhesion = False
+        self._warned_daughter = False
 
         spec, self._field_idx, self._cpm_id = self._build_spec(config, cells, bp)
         self._world = load_world(spec)
@@ -312,6 +331,7 @@ class CPMBackend(MechanicsBackend):
         divisions = inputs.get("divisions") or []
         deaths = inputs.get("deaths") or []
         activations = inputs.get("activations") or {}
+        self._lineage = {}
 
         # (a) fates: hard cell-type switches (port values are type NAMES).
         for cid, new_type in fates.items():
@@ -335,6 +355,9 @@ class CPMBackend(MechanicsBackend):
                 self._world.remove_cells([cpm])
                 self._alive[bid] = False
 
+        # (b2) per-cell runtime actuators (input ports; NOT the init-time config).
+        self._apply_actuators(inputs)
+
         # (c) divisions: viva-cpm mitosis is VOLUME-THRESHOLD based. The binding is
         #     ``World.divide_cells(threshold: float, reset_target: float)`` -- it splits
         #     EVERY non-medium cell with volume >= ``threshold`` (the mother keeps its id;
@@ -349,6 +372,9 @@ class CPMBackend(MechanicsBackend):
         #     volume, any non-requested cell at least as large also divides; at the
         #     near-uniform cell volumes here divisions are rare and daughters are never
         #     cohort-scored, so this is an accepted substrate limitation, not a fate effect.
+        #     Daughters are identified from a lattice snapshot (each new cpm id's voxels
+        #     were owned by its mother pre-split), given a fresh blueprint id and added
+        #     to the cohort + ``lineage`` (see ``_register_daughters``).
         #     (The previous ``divide_cells(div_ids, True)`` call passed a list + bool and
         #     raised TypeError against this signature on every division -- a latent bug,
         #     since no shipped study fires a CPM division.)
@@ -364,7 +390,10 @@ class CPMBackend(MechanicsBackend):
                 req_sizes = [float(self._cell_meta[self._cpm_to_bid[c]]["size"])
                              for c in div_cpm if c in self._cpm_to_bid]
                 reset_target = float(min(req_sizes)) if req_sizes else threshold
+                n_before = self._world.n_cells()
+                pre = np.asarray(self._world.snapshot()).copy()
                 self._world.divide_cells(threshold, reset_target)
+                self._register_daughters(n_before, pre)
 
         # (d) write the AUTHORITATIVE shared field into the engine (native
         #     dynamics zeroed -> step() reads it, never re-diffuses it).
@@ -379,6 +408,102 @@ class CPMBackend(MechanicsBackend):
         # (e) advance the Metropolis flips.
         self._world.step(self._mcs)
         return self._emit()
+
+    def _apply_actuators(self, inputs) -> None:
+        """target_size / adhesion / motility input maps (see module docstring)."""
+        for cid, v in (inputs.get("target_size") or {}).items():
+            bid = str(cid)
+            cpm = self._cpm_id.get(bid)
+            if cpm is not None and self._alive.get(bid, False):
+                self._cell_state[bid]["target"] = float(v)
+                self._world.set_target_volume(cpm, float(v))
+        if inputs.get("adhesion") and not self._warned_adhesion:
+            self._warned_adhesion = True
+            warnings.warn(
+                "CPMBackend: adhesion is applied per TYPE PAIR (viva-cpm's contact matrix "
+                "is global, last write wins), not per cell; same-type cells with differing "
+                "adhesion values collapse to one value, and dict keys naming undeclared "
+                "types are discarded.",
+                RuntimeWarning, stacklevel=2,
+            )
+        for cid in sorted_cell_ids((inputs.get("adhesion") or {}).keys()):
+            adh = inputs["adhesion"][cid] if cid in inputs["adhesion"] else None
+            bid = str(cid)
+            if bid not in self._cell_state or not self._alive.get(bid, False) or adh is None:
+                continue
+            self._cell_state[bid]["adhesion"] = copy.deepcopy(adh)
+            tag = self._tag(self._cell_meta[bid]["type"])
+            if isinstance(adh, dict):
+                for other, j in adh.items():
+                    if str(other) in self._type_ids:
+                        self._world.set_contact(tag, self._tag(other), float(j))
+            else:
+                self._world.set_contact(tag, tag, float(adh))
+        for cid, v in (inputs.get("motility") or {}).items():
+            bid = str(cid)
+            if bid not in self._cell_state:
+                continue
+            self._cell_state[bid]["motility"] = float(v)
+            if not self._warned_motility:
+                self._warned_motility = True
+                warnings.warn(
+                    "CPMBackend: viva-cpm has no per-cell temperature/motility knob "
+                    "(temperature is global, fixed at finalize); the motility input is "
+                    "recorded but does not alter CPM dynamics.",
+                    RuntimeWarning, stacklevel=2,
+                )
+
+    def _mint_id(self, mother: str) -> str:
+        k = self._div_count.get(mother, 0) + 1
+        did = f"{mother}.{k}"
+        while did in self._cpm_id:
+            k += 1
+            did = f"{mother}.{k}"
+        self._div_count[mother] = k
+        return did
+
+    def _register_daughters(self, n_before: int, pre) -> None:
+        """Give every cpm cell created by ``divide_cells`` a blueprint id, add it to
+        the cohort, and record ``lineage[daughter] = mother``. New cpm ids are
+        ``n_before+1 ..``; the mother is whoever owned the daughter's voxels in the
+        pre-split snapshot."""
+        post = np.asarray(self._world.snapshot())
+        types = list(self._world.cell_types())
+        for new in range(n_before + 1, self._world.n_cells() + 1):
+            # BEST-EFFORT attribution: the mother is the majority owner (bincount argmax) of
+            # the daughter's voxels in the pre-split snapshot. Under heavy simultaneous splits
+            # a daughter can be mis-attributed; unattributable ones are warn-guarded + dropped.
+            owned = pre[post == new]
+            owned = owned[owned > 0]
+            mcpm = int(np.bincount(owned.astype(int)).argmax()) if owned.size else None
+            mother = self._cpm_to_bid.get(mcpm) if mcpm is not None else None
+            if mother is None:
+                if not self._warned_daughter:
+                    self._warned_daughter = True
+                    warnings.warn(
+                        f"CPMBackend: viva-cpm created daughter cell {new} whose mother "
+                        f"could not be attributed; it has no blueprint id and is absent "
+                        f"from the emitted maps and lineage.",
+                        RuntimeWarning, stacklevel=2,
+                    )
+                continue
+            did = self._mint_id(mother)
+            self._cpm_id[did] = new
+            self._cpm_to_bid[new] = did
+            self.identity[did] = new
+            self._all_ids.append(did)
+            self._alive[did] = True
+            meta = dict(self._cell_meta[mother])
+            meta["pos"] = list(meta["pos"])
+            if new < len(types):
+                meta["type"] = self._type_name.get(int(types[new]), meta["type"])
+            self._cell_meta[did] = meta
+            self._cell_state[did] = copy.deepcopy(self._cell_state[mother])
+            tgt = self._cell_state[mother]["target"]
+            if tgt is not None:  # runtime target_size survives the division reset
+                self._world.set_target_volume(new, tgt)
+                self._world.set_target_volume(self._cpm_id[mother], tgt)
+            self._lineage[did] = mother
 
     def _apply_activations(self, activations) -> None:
         """Activate latent cells into active immune types (Task 20). For each
@@ -483,6 +608,7 @@ class CPMBackend(MechanicsBackend):
             "neighbors": neighbors,
             "alive": alive,
             "footprints": footprints,
+            "lineage": dict(self._lineage),
         }
 
     def _occupancy(self) -> dict:

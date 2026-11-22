@@ -67,7 +67,7 @@ def _opposite_positions(edge_df) -> np.ndarray:
 
 def junction_tension(sheet, manager, tensions=None, default_tension=0.0,
                      boundary_factor=2.0, sigma=0.0, tau=1.0, dt=1.0, seed=0,
-                     type_column="cell_type"):
+                     type_column="cell_type", cell_tension=None):
     """Set every half-edge's ``line_tension`` = adhesion share + fluctuation share.
 
     * adhesion share (``adhesion_tension`` column): ``tensions[pair_key(a, b)]`` for
@@ -94,6 +94,9 @@ def junction_tension(sheet, manager, tensions=None, default_tension=0.0,
         float(tensions.get(pair_key(a, b), default_tension)) for a, b in zip(own, other)
     ])
     adhesion = np.where(opp < 0, boundary_factor * adhesion, adhesion)
+    if cell_tension:
+        adhesion = _apply_cell_tension(sheet, edge_df, opp, own, other, adhesion,
+                                       cell_tension, boundary_factor)
 
     if "stochastic_tension" not in edge_df.columns:
         edge_df["stochastic_tension"] = 0.0
@@ -112,6 +115,49 @@ def junction_tension(sheet, manager, tensions=None, default_tension=0.0,
     edge_df["adhesion_tension"] = adhesion
     # tension can fluctuate but never invert into a pulling (negative) junction
     edge_df["line_tension"] = np.maximum(adhesion + x, 0.0)
+
+
+def _apply_cell_tension(sheet, edge_df, opp, own, other, adhesion, cell_tension,
+                        boundary_factor):
+    """Per-cell runtime adhesion override of the pair-table tension.
+
+    ``cell_tension`` maps a face ``unique_id`` to a scalar (every junction of that
+    cell) or ``{neighbour_type: tension}``. A junction with an override on one side
+    takes it; with overrides on BOTH sides it takes their mean (a physical junction
+    has one tension). The number of junctions whose two overrides differ is left on
+    ``sheet._adhesion_conflicts`` (and the count of bordered neighbour types a dict
+    override does not list, which fall back to the pair table, on
+    ``sheet._adhesion_unlisted``) so the backend can report those limitations.
+    """
+    uid = sheet.face_df["unique_id"] if "unique_id" in sheet.face_df.columns else None
+    if uid is None:
+        return adhesion
+    face = edge_df["face"].to_numpy()
+    uid_of = uid.reindex(face).to_numpy()
+    out = adhesion.copy()
+    conflicts = unlisted = 0
+    for i in range(len(face)):
+        vals = []
+        j = int(opp[i])
+        for k, nb_type in ((i, other[i]), (j, own[i]) if j >= 0 else (None, None)):
+            if k is None:
+                continue
+            spec = cell_tension.get(int(uid_of[k]))
+            if spec is None:
+                continue
+            v = spec.get(str(nb_type)) if isinstance(spec, dict) else spec
+            if v is not None:
+                vals.append(float(v))
+            else:
+                unlisted += 1   # dict override has no entry for a type it borders
+        if not vals:
+            continue
+        if len(vals) == 2 and vals[0] != vals[1]:
+            conflicts += 1
+        out[i] = float(np.mean(vals)) * (boundary_factor if j < 0 else 1.0)
+    sheet._adhesion_conflicts = conflicts
+    sheet._adhesion_unlisted = unlisted
+    return out
 
 
 def overlay_fields(sheet, manager, values=None):
@@ -285,8 +331,16 @@ def death_behaviors(uids_dead) -> list:
     }]
 
 
-def division_behaviors(uids, geom: str) -> list:
-    return [{"func": "split_cells", "geom": geom, "cell_uids": [int(u)]} for u in uids]
+def division_behaviors(uids, geom: str, prefered_area: dict | None = None) -> list:
+    """``split_cells`` per mother; ``prefered_area[uid]`` (a runtime target size)
+    replaces split_cells' default reset area of 1.0 for both halves."""
+    out = []
+    for u in uids:
+        b = {"func": "split_cells", "geom": geom, "cell_uids": [int(u)]}
+        if prefered_area and int(u) in prefered_area:
+            b["prefered_area"] = float(prefered_area[int(u)])
+        out.append(b)
+    return out
 
 
 def confinement_behavior(bounds) -> list:
@@ -295,8 +349,11 @@ def confinement_behavior(bounds) -> list:
     return [{"func": "confine", "lo": list(bounds[0]), "hi": list(bounds[1])}]
 
 
-def junction_tension_behavior(tensions, default_tension, sigma, tau, dt, seed) -> list:
+def junction_tension_behavior(tensions, default_tension, sigma, tau, dt, seed,
+                              cell_tension=None) -> list:
+    extra = {"cell_tension": dict(cell_tension)} if cell_tension else {}
     return [{
+        **extra,
         "func": "junction_tension",
         "tensions": dict(tensions),
         "default_tension": float(default_tension),

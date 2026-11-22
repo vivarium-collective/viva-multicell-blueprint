@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 
 from .schema import validate
+from .v2 import _SECTIONS, normalize_to_flat
 
 
 _REQUIRED = ("domain", "cell_types", "initial_state")
@@ -24,6 +25,7 @@ class Blueprint:
     immune: list | dict = field(default_factory=list)
     systemic_ode: dict | None = None
     mechanics_mapping: dict = field(default_factory=dict)
+    subcellular: dict = field(default_factory=dict)
 
     def canonical_state(self) -> dict:
         """The backend-neutral, immutable biological blueprint (BP-01).
@@ -37,7 +39,12 @@ class Blueprint:
 
     @classmethod
     def from_dict(cls, doc: dict) -> "Blueprint":
-        errs = validate(doc)
+        flat = normalize_to_flat(doc)
+        # A sectioned v2 doc is also checked against the v2 section layout.
+        is_v2 = any(section in doc for section in _SECTIONS)
+        errs = validate(doc) if is_v2 else []
+        doc = flat
+        errs = errs + validate(doc)
         if errs:
             raise ValueError("invalid blueprint: " + "; ".join(errs))
         unknown = sorted(set(doc) - set(cls.__dataclass_fields__))
@@ -51,7 +58,7 @@ class Blueprint:
 
     @classmethod
     def load(cls, path) -> "Blueprint":
-        return cls.from_dict(yaml.safe_load(Path(path).read_text()))
+        return cls.from_dict(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
 
     def dump(self, path) -> None:
         Path(path).write_text(yaml.safe_dump(self.to_dict(), sort_keys=False))

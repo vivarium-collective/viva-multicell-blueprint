@@ -7,6 +7,8 @@ re-exports it for convenience. :mod:`.grammar_demo` adds the stage-2
 rules slot).
 """
 from .sego import sego_crossparadigm, sego_crossparadigm_large
+from .pipeline import blueprint_pipeline
 from .grammar_demo import grammar_rules_demo
 
-__all__ = ["sego_crossparadigm", "sego_crossparadigm_large", "grammar_rules_demo"]
+__all__ = ["sego_crossparadigm", "sego_crossparadigm_large", "grammar_rules_demo",
+           "blueprint_pipeline"]

@@ -28,7 +28,11 @@ class FakeBackend(MechanicsBackend):
                 "pos": [float(v) for v in c["centroid"]],
                 "size": float(c.get("size", 1.0)),
                 "alive": True,
+                "motility": 1.0,
+                "adhesion": None,
             }
+        self._div_count = {}
+        self._lineage = {}
 
     def _emit(self):
         radius = float((self.config.get("backend_params") or {}).get("neighbor_radius", 1.5))
@@ -50,6 +54,7 @@ class FakeBackend(MechanicsBackend):
             "neighbors": neighbors,
             "alive": {i: c["alive"] for i, c in self._cells.items()},
             "footprints": {i: no_footprint() for i in self._cells},
+            "lineage": dict(self._lineage),
         }
 
     def update(self, inputs, interval):
@@ -79,4 +84,33 @@ class FakeBackend(MechanicsBackend):
             cid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
             if cid in self._cells:
                 self._cells[cid]["alive"] = False
+        # per-cell runtime actuators (input ports; NOT the init-time config keys).
+        for cid, v in (inputs.get("target_size") or {}).items():
+            if str(cid) in self._cells:
+                self._cells[str(cid)]["size"] = float(v)
+        for cid, v in (inputs.get("motility") or {}).items():
+            if str(cid) in self._cells:
+                self._cells[str(cid)]["motility"] = float(v)
+        for cid, v in (inputs.get("adhesion") or {}).items():
+            if str(cid) in self._cells:
+                self._cells[str(cid)]["adhesion"] = v
+        # divisions: mint a daughter beside a live mother; report via lineage.
+        self._lineage = {}
+        for ev in inputs.get("divisions") or []:
+            mid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
+            m = self._cells.get(mid)
+            if m is None or not m["alive"]:
+                continue
+            k = self._div_count.get(mid, 0) + 1
+            did = f"{mid}.{k}"
+            while did in self._cells:
+                k += 1
+                did = f"{mid}.{k}"
+            self._div_count[mid] = k
+            half = m["size"] / 2.0
+            m["size"] = half
+            d = dict(m)
+            d["pos"] = [m["pos"][0] + 0.1] + list(m["pos"][1:])
+            self._cells[did] = d
+            self._lineage[did] = mid
         return self._emit()

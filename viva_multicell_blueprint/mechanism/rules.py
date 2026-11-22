@@ -40,6 +40,7 @@ from collections import defaultdict
 import numpy as np
 from process_bigraph import Process
 
+from viva_multicell_blueprint.mechanism.fields import sample_at_centroid
 from viva_multicell_blueprint.mechanism.rate_expr import CellContext, evaluate, parse
 
 _FATE_KINDS = {"transition", "allee", "recovery", "kill"}
@@ -84,12 +85,11 @@ class RulesProcess(Process):
         # so overwrite replaces the store whole -- a bare map[..] apply would both
         # drop keys on the empty t=0 store AND leave stale prior-step fates behind.
         return {"fates": "overwrite[map[string]]", "scalar": "overwrite[map[map[float]]]",
-                "divisions": "list[node]", "deaths": "list[node]"}
+                "divisions": "overwrite[list[node]]", "deaths": "overwrite[list[node]]"}
 
     @staticmethod
     def _exposure(grid, pos):
-        idx = tuple(int(min(max(round(float(v)), 0), n - 1)) for v, n in zip(pos, grid.shape))
-        return float(grid[idx])
+        return sample_at_centroid(grid, pos)
 
     def update(self, inputs, interval=1):
         positions = inputs.get("positions") or {}

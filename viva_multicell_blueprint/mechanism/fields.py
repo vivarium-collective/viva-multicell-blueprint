@@ -51,6 +51,13 @@ def _diffuse_step(conc: np.ndarray, d: float, decay: float, dt: float) -> np.nda
 # --------------------------------------------------------------------------
 
 
+def sample_at_centroid(grid, pos) -> float:
+    """Field value at a cell centroid: nearest site (rounded index, clamped to the grid)."""
+    grid = np.asarray(grid)
+    idx = tuple(int(min(max(round(float(v)), 0), n - 1)) for v, n in zip(pos, grid.shape))
+    return float(grid[idx])
+
+
 class FieldProcess(Process):
     """Reaction-diffusion fields on a common grid.
 

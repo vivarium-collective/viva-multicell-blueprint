@@ -47,7 +47,9 @@ EventManager applies them to the live epithelium before each integration step.
 """
 from __future__ import annotations
 
+import copy
 import tempfile
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -141,6 +143,15 @@ class VertexBackend(MechanicsBackend):
         # Immune-recruitment-as-activation (Task 20): latent pool resolution.
         self._latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
         self._latent_generic = str(bp.get("latent_generic", GENERIC_LATENT))
+
+        # runtime per-cell actuators (input ports, NOT the init-time config keys):
+        # bid -> {"target": float|None, "motility": float|None, "adhesion": scalar|dict|None}
+        self._cell_act: dict[str, dict] = {}
+        self._tension_scale = float(bp.get("tension_scale", 1.0))
+        self._div_count: dict[str, int] = {}
+        self._lineage: dict[str, str] = {}
+        self._warned_adhesion_conflict = False
+        self._warned_daughter = False
 
         self._t = 0.0
         self._alive: dict[str, bool] = {}
@@ -404,7 +415,97 @@ class VertexBackend(MechanicsBackend):
                 picked += 1
         return out
 
+    def _act(self, bid) -> dict:
+        return self._cell_act.setdefault(bid, {"target": None, "motility": None, "adhesion": None})
+
+    def _apply_actuators(self, inputs) -> None:
+        """Runtime per-cell ``target_size`` / ``motility`` / ``adhesion`` maps.
+
+        All three map faithfully per cell onto tyssue: target_size -> the face's
+        ``prefered_area``; motility -> that cell's active-migration force magnitude;
+        adhesion -> per-cell junction line tension (scalar, or ``{neighbour_type:
+        value}``), scaled by ``backend_params.tension_scale``. Unknown / dead ids
+        are ignored. See also ``_adhesion_overrides`` for the one limitation."""
+        fd = self._solver.eptm.face_df
+        for cid, v in (inputs.get("target_size") or {}).items():
+            bid = str(cid)
+            if bid in self._uid and self._alive.get(bid, False):
+                self._act(bid)["target"] = float(v)
+        for bid, st in self._cell_act.items():
+            lab = self._face_label(self._uid[bid]) if st["target"] is not None else None
+            if lab is not None and self._alive.get(bid, False):
+                fd.loc[lab, "prefered_area"] = st["target"]
+        for cid, v in (inputs.get("motility") or {}).items():
+            bid = str(cid)
+            if bid in self._uid and self._alive.get(bid, False):
+                self._act(bid)["motility"] = float(v)
+        for cid, v in (inputs.get("adhesion") or {}).items():
+            bid = str(cid)
+            if bid in self._uid and self._alive.get(bid, False) and v is not None:
+                self._act(bid)["adhesion"] = copy.deepcopy(v)
+
+    def _adhesion_overrides(self) -> dict:
+        """face unique_id -> scalar | {type: tension} for live cells with a runtime
+        adhesion. A junction between two cells with DIFFERENT overrides is one
+        physical edge with one tension: it takes their mean (reported once)."""
+        out = {}
+        for bid, st in self._cell_act.items():
+            adh = st["adhesion"]
+            if adh is None or not self._alive.get(bid, False):
+                continue
+            k = self._tension_scale
+            out[self._uid[bid]] = ({str(t): k * float(x) for t, x in adh.items()}
+                                   if isinstance(adh, dict) else k * float(adh))
+        return out
+
+    def _register_daughters(self) -> None:
+        """Give every face born by ``split_cells`` this step a blueprint id (stable:
+        ``<mother>.<k>``, collision-guarded), copy its mother's per-cell state, and
+        record ``lineage[daughter] = mother``."""
+        fd = self._solver.eptm.face_df
+        if "mother_uid" not in fd.columns:
+            if len(fd) > len(self._uid) and not self._warned_daughter:
+                self._warned_daughter = True
+                warnings.warn(
+                    "VertexBackend: tyssue produced new face(s) but the mesh has no "
+                    "`mother_uid` column, so daughters cannot be attributed; they are "
+                    "absent from the emitted maps and lineage.",
+                    RuntimeWarning, stacklevel=2)
+            return
+        known = set(self._uid.values())
+        new = [(int(u), int(m)) for u, m in zip(fd["unique_id"], fd["mother_uid"])
+               if int(u) not in known and int(m) >= 0]
+        for uid, muid in sorted(new):
+            mother = self._uid_to_bid.get(muid)
+            if mother is None:
+                if not self._warned_daughter:
+                    self._warned_daughter = True
+                    warnings.warn(
+                        f"VertexBackend: daughter face {uid} has an unregistered mother "
+                        f"({muid}); it is absent from the emitted maps and lineage.",
+                        RuntimeWarning, stacklevel=2)
+                continue
+            k = self._div_count.get(mother, 0) + 1
+            did = f"{mother}.{k}"
+            while did in self._uid:
+                k += 1
+                did = f"{mother}.{k}"
+            self._div_count[mother] = k
+            self._uid[did] = uid
+            self._uid_to_bid[uid] = did
+            self.identity[did] = uid
+            self._all_ids.append(did)
+            self._alive[did] = True
+            self._layer_of[did] = self._layer_of[mother]
+            self._group_of[did] = self._group_of[mother]
+            meta = copy.deepcopy(self._cell_meta[mother])
+            self._cell_meta[did] = meta
+            if mother in self._cell_act:
+                self._cell_act[did] = copy.deepcopy(self._cell_act[mother])
+            self._lineage[did] = mother
+
     def update(self, inputs, interval):
+        self._lineage = {}
         fates = inputs.get("fates") or {}
         field_grid = inputs.get("field_grid") or {}
         divisions = inputs.get("divisions") or []
@@ -421,6 +522,7 @@ class VertexBackend(MechanicsBackend):
                 self._alive[cid] = False
                 dead_uids.append(uid)
         live = [u for b, u in self._uid.items() if self._alive.get(b, True)]
+        self._apply_actuators(inputs)
 
         behaviors = []
         behaviors += coupling.fate_behaviors(fates, self._uid)
@@ -428,7 +530,9 @@ class VertexBackend(MechanicsBackend):
         behaviors += coupling.field_overlay_behaviors(fd, field_grid)
         random_force = {}
         for group, walker in self._motility.items():
-            force_of = {u: self._motility_force[group] for u in live
+            force_of = {u: self._cell_act.get(self._uid_to_bid[u], {}).get("motility")
+                        if self._cell_act.get(self._uid_to_bid[u], {}).get("motility") is not None
+                        else self._motility_force[group] for u in live
                         if self._group_of[self._uid_to_bid[u]] == group}
             random_force.update(walker.step(force_of, float(interval)))
         behaviors += coupling.migration_behaviors(
@@ -441,7 +545,11 @@ class VertexBackend(MechanicsBackend):
             cid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
             if self._uid.get(cid) is not None:
                 div_uids.append(self._uid[cid])
-        behaviors += coupling.division_behaviors(div_uids, self._geom)
+        # a runtime target_size survives split_cells' reset of the area to 1.0
+        runtime_area = {self._uid[b]: st["target"] for b, st in self._cell_act.items()
+                        if st["target"] is not None and b in self._uid}
+        behaviors += coupling.division_behaviors(div_uids, self._geom, runtime_area)
+        adhesion = self._adhesion_overrides()
 
         # Integrate the coupled step in `substeps` solver updates so no vertex moves
         # more than a fraction of the T1 threshold per update -- otherwise a short
@@ -450,13 +558,14 @@ class VertexBackend(MechanicsBackend):
         # topology can change in every update) and domain confinement go in with
         # each one. Forces and directors persist on the mesh between updates.
         dt = float(interval) / self._substeps
+        conflict = unlisted = 0   # accumulated over ALL substeps
         for k in range(self._substeps):
             if len(self._solver.eptm.edge_df) == 0:
                 break   # the tissue collapsed (every junction gone): nothing left to integrate
             step = list(behaviors) if k == 0 else []
             step += coupling.junction_tension_behavior(
                 self._tensions, self._default_tension, self._sigma, self._tau,
-                dt, int(self._rng.integers(2 ** 31 - 1)))
+                dt, int(self._rng.integers(2 ** 31 - 1)), cell_tension=adhesion)
             step += coupling.confinement_behavior(self._bounds)
             try:
                 self._solver.update({"behaviors": step, "global_time": float(self._t)}, dt)
@@ -468,6 +577,22 @@ class VertexBackend(MechanicsBackend):
                     raise
                 break
             self._t += dt
+            if adhesion:
+                conflict += int(getattr(self._solver.eptm, "_adhesion_conflicts", 0))
+                unlisted += int(getattr(self._solver.eptm, "_adhesion_unlisted", 0))
+        self._register_daughters()
+        if adhesion and (conflict or unlisted) and not self._warned_adhesion_conflict:
+            self._warned_adhesion_conflict = True
+            msg = []
+            if conflict:
+                msg.append("a shared junction between two cells with different adhesion "
+                           "has ONE tension; it takes their mean")
+            if unlisted:
+                msg.append("a per-type adhesion dict that omits a neighbour type (incl. "
+                           "'medium') it borders is not applied there; unlisted types fall "
+                           "back to the pair-table tension")
+            warnings.warn("VertexBackend adhesion: " + "; ".join(msg) + ".",
+                          RuntimeWarning, stacklevel=2)
         return self._emit()
 
     # -- read-back ----------------------------------------------------------- #
@@ -552,6 +677,7 @@ class VertexBackend(MechanicsBackend):
             "neighbors": neighbors,
             "alive": alive,
             "footprints": footprints,
+            "lineage": dict(self._lineage),
         }
 
     def _face_polygons(self, labels) -> dict:
