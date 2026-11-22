@@ -1,1 +1,1 @@
-{"investigation": "influenza-crossparadigm", "findings": []}
+{"investigation": "influenza-crossparadigm", "findings": [{"investigation": "influenza-crossparadigm", "study": "substrate-behavior-at-scale", "check": "study_claim_empty", "level": "warning", "field_path": "claim", "message": "study has produced evidence (findings recorded / a decided gate) but its one-line `claim:` is empty \u2014 the investigation-graph 'Finds:' headline renders blank, so a reader can't see what the study concluded. Author the claim (the one-line result)."}]}

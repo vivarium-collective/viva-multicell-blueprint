@@ -17,13 +17,13 @@ if _os.environ.get("PYTHONUTF8") != "1":
     _os.execv(_sys.executable, [_sys.executable, *_sys.argv])
 
 
-# # Influenza cross-paradigm — one Sego 2022 blueprint, three mechanical substrates
+# # Blueprint to pipeline to three substrates: one backend-neutral blueprint, run faithfully on CPM, vertex and center-based, with a pluggable subcellular layer
 #
 # _Investigation `influenza-crossparadigm` — coder reproduction notebook._
 #
-# **Question.** Can ONE backend-neutral blueprint express the whole Sego 2022 influenza model (ViralInfectionVTM) and run it faithfully on three different mechanical substrates — a Cellular Potts model (viva-cpm), a vertex model (vivarium-tyssue), and a center-based model (viva-munk) — and where do the substrates agree vs diverge when the shared mechanism is driven live?
+# **Question.** Can ONE versioned, backend-neutral blueprint be translated by a single pipeline (`blueprint_pipeline`) and run faithfully on three different mechanical substrates -- a Cellular Potts model (viva-cpm), a vertex model (vivarium-tyssue) and a center-based model (viva-munk) -- including a pluggable per-cell subcellular layer (a tellurium ODE that grows and divides cells); and where do the substrates agree vs diverge when the shared mechanism is driven live? The Sego 2022 influenza model (ViralInfectionVTM) is the worked example for the comparison; a v2 subcellular growth/division blueprint is the worked example for the subcellular layer.
 #
-# The capstone cross-paradigm demonstration: one backend-neutral Sego 2022 influenza blueprint, compiled and run on both a Cellular Potts and a vertex substrate, with a full three-family comparison and three interactive figures.
+# A demonstration that one backend-neutral blueprint, compiled by the single `blueprint_pipeline`, runs the Sego 2022 influenza model and a per-cell subcellular ODE model on a Cellular Potts, a vertex and a center-based substrate, with a full comparison and interactive figures.
 #
 # ---
 #
@@ -39,6 +39,7 @@ if _os.environ.get("PYTHONUTF8") != "1":
 #
 # - **Cellular Potts (CPM / viva-cpm)**
 # - **Vertex model (tyssue / vivatyssue)**
+# - **Center-based model (viva-munk)**
 # - **Framing**
 
 """Setup — environment & helpers (runs automatically; open only to inspect).
@@ -250,210 +251,42 @@ def _render_one(address, config, runs_db, study_yaml, overrides=None):
         return _p.read_text(encoding='utf-8', errors='replace')
     return f'<p style="color:#6b7280">unsupported figure type: {address}</p>'
 
-# ## Study: `adhesion-calibration`
+# ## Study: One blueprint, one pipeline: contract and t0 fidelity (`blueprint-pipeline-fidelity`)
 #
-# **Question.** Are the two substrates' mechanics defined and parameterized so that they are mechanically comparable -- per cell type and per type pair -- and which vertex parameters are fixed by the CPM, which must be calibrated, and which cannot be?
+# **Question.** Can one versioned, backend-neutral blueprint be compiled by `blueprint_pipeline` and materialized faithfully on CPM, vertex and center-based?
 #
-# **Purpose.** CPM contact energy J (per neighbour bond) and vertex junction tension Lambda (per unit length) both penalize interface; the area constraint lambda_V (V - V_T)^2 and the area elasticity K/2 (A - A0)^2 are the same energy up to K = 2 lambda_V; the CPM temperature T drives membrane fluctuations and cell wandering that the deterministic vertex model must get from active (motility) forces. Tension contracts cells against their area elasticity, so the tension scale sets the relaxed area.
+# **Purpose.** A canonical schema + a split that routes backend/run parameters to CompileOptions keeps the biological state immutable across backends, and a static validator turns each semantic invariant into a checked diagnostic. CPM then materializes each blueprint cell 1:1 at its centroid with target_volume = size; the vertex backend assigns cells 1:1 to a regular hexagonal lattice of the target area (alternating optimal assignment with rigid recentring) and attaches the latent immune cells at the tissue-margin site nearest their centroid; the center-based backend places one area-matched disc per cell.
 #
-# **Claim.** RE-CALIBRATED 2026-11-05 for the in-sheet immune vertex substrate (immune cells are half-size polygons in the sheet; reconnect p_4 = 1, T1 at 0.2 x side). Tension scale 1.683 (area 22.97 vs CPM 22.98). Both motilities are fold-free CAPS: epithelium 26.6 (MSD 2.2 vs CPM 9.5 um^2; fit 81), in-sheet immune 56.1 (displacement 4.6 vs 9.4 um; fit 214). Tension noise 5 (area CV 0.038 vs 0.093; 10 and 20 fold). Chemotaxis unchanged (scale 3.54, saturation 105). At kappa = 8 the small sheet now collapses completely (area 0). Earlier calibration (2026-10-28, overlay immune layer):   REVISED per the 2026-10-28 vertex-mechanics review. Both substrates' mechanics are now DEFINED term by term (docs/mechanics.md). Every vertex parameter is either energy-matched to its CPM counterpart (area stiffness K = 2 lambda_volume, per cell type), lowered per type PAIR from the blueprint adhesion table (Lambda_ab = kappa * J_ab, ratios fixed by J), or CALIBRATED to measured CPM behaviour on the Sego initial state, under a hard mesh-validity constraint (no folded faces). With per-pair junction tension actually applied and auto_reconnect ON, the tension scale IS identifiable from mean cell area: kappa = 1.74 gives area 22.8 vs CPM 23.0. Immune random-walk displacement (9.4 vs 9.4 um) and the saturating chemotactic drift curve are matched. NOT matched: epithelial wandering. The CPM-matching motility folds the vertex mesh, so it is capped at the largest fold-free value and the vertex epithelium wanders about 5x less (MSD 2.0 vs 9.5 um^2), though it does exchange neighbours (T1s). Area dispersion is not matched either (CV 0.033 vs 0.093), and the kappa that fits the small isolated sheet differs (~4).
+# **Claim.** ONE versioned, backend-neutral blueprint is compiled by the single `blueprint_pipeline` composite and materialized faithfully on the CPM, vertex and center-based backends. Design/Build half: the blueprint is a first-class artifact with a versioned schema, a canonical/backend split (backend and run parameters live in CompileOptions, never in the biological state) and a static validator with structured diagnostics. Simulate/ Evaluate half: the t0 state each backend actually emits matches the blueprint: 48/48 cell types, CPM centroid RMS 0.000 um, and a vertex sheet of 48 hexagons (36 epithelial + 12 immune attached at the tissue margin) with epithelial centroid RMS 1.60 um (max 2.44 um) and immune attachment RMS 4.11 um (max 5.60 um).
 
 # ### Parameters
 #
 # | simulation | composite | steps | params |
 # | --- | --- | --- | --- |
-# | `neutral-mechanics-sheet` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=cpm, blueprint=workspace/blueprints/mechanics_sheet.yaml |
+# | `sego-t0-fidelity` | `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline` | 0 | backend=cpm, blueprint=workspace/blueprints/influenza_sego2022.yaml |
 
 # ### The model & its parameters
 #
 # Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
 
-# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm`**
+# **The model — `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline`**
 #
-# Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node.
+# Backend-neutral blueprint compiled onto a mechanics backend (cpm|vertex|munk): fields/rules/ODE/immune mechanism, plus an optional per-cell subcellular layer arbitrated into the mechanics inputs by the actuation merge.
 
 # === Parameters — edit any value, then re-run from the Run cell below ===
 # Each entry is the composite's current default; the comment explains it.
-ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm = {
-    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
-    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (Blueprint Studio sends inline YAML)
-    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
+ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = {
+    'backend'  : 'cpm',   # mechanics substrate: 'cpm', 'vertex', or 'munk'
+    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # a path to a YAML file, inline YAML text, or a dict (v1 flat or v2 sectioned)
+    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html
 }
 
 # ### Run
 #
 # _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
 
-# === Study: adhesion-calibration ===
-STUDY = 'adhesion-calibration'
-STUDY_DIR = REPO / 'workspace/studies' / STUDY
-STUDY_YAML = str(STUDY_DIR / "study.yaml")
-RUNS_DB = str(STUDY_DIR / "runs.db")
-
-# This study has no *recorded* runs yet. RERUN builds its declared
-# composite(s) live and runs them; a composite whose module processes
-# are not implemented yet reports the error instead of crashing.
-STEPS_neutral_mechanics_sheet = 100
-INTERVAL_neutral_mechanics_sheet = 1.0
-
-if RERUN:
-    from process_bigraph import Composite
-    try:
-        with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
-            _comp.run(STEPS_neutral_mechanics_sheet)
-        print('ran', 'neutral-mechanics-sheet', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_neutral_mechanics_sheet, 'steps')
-    except Exception as _e:
-        print(f"neutral-mechanics-sheet not runnable yet: {type(_e).__name__}: {_e}")
-else:
-    print("RERUN=False — not re-simulating.")
-
-# ### Visualizations
-#
-# _Results are shown by the figures below, produced by the run above._
-
-# **Vertex mechanics calibration**
-
-def _save_viz(study, slug, html):
-    d = REPO / 'reports/notebooks/figures' / study
-    d.mkdir(parents=True, exist_ok=True)
-    out = d / (slug + '.html')
-    out.write_text(html, encoding='utf-8')
-    print('  wrote', out)
-
-
-# Vertex mechanics calibration
-_save_viz('adhesion-calibration', 'Vertex_mechanics_calibration', _render_one('html:mechanics-calibration.html', {'title': 'Vertex knobs fitted to CPM area, wandering and chemotactic drift'}, RUNS_DB, STUDY_YAML))
-
-# **J ↔ tension sweep**
-
-# J ↔ tension sweep
-_save_viz('adhesion-calibration', 'J_tension_sweep', _render_one('html:adhesion-sweep.html', {'title': 'Cell-shape statistics across the vertex tension sweep vs CPM'}, RUNS_DB, STUDY_YAML))
-
-# **Neutral sheet playback — CPM vs vertex vs center-based**
-
-# Neutral sheet playback — CPM vs vertex vs center-based
-_save_viz('adhesion-calibration', 'Neutral_sheet_playback_CPM_vs_vertex_vs_center-based', _render_one('html:neutral-sheet-playback.html', {'title': 'Mechanics-only sheet relaxation, all three paradigms (center-based not yet calibrated)'}, RUNS_DB, STUDY_YAML))
-
-# ### Acceptance criteria
-#
-# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
-#
-# | test | measures | passes if |
-# | --- | --- | --- |
-# | cpm-sheet-holds-size25-target _(primary)_ | kind=stat field=mean_cell_area phase=final | op in_range lo 12 hi 40 field mean_cell_area |
-# | vertex-sheet-comparable _(primary)_ | kind=ratio field=mean_cell_area versus=cpm | op in_range lo 0.4 hi 2.5 field area_ratio |
-# | tension-identifiable-from-area _(secondary)_ | kind=monotone field=mean_cell_area over=tension_scale | op strictly_decreasing note area(0.5) > area(2) > area(4); CPM area in between |
-# | j-tension-mapping-monotone _(secondary)_ | kind=monotone field=line_tension versus=['strength', 'scale'] | op strictly_increasing note tension(scale2) > tension(scale1); tension(strength25) > tension(strength5) |
-
-# ## Study: BP-01 — the blueprint as a versioned, backend-neutral artifact (`bp-01-blueprint-schema`)
-#
-# **Question.** Can the biological blueprint be specified as a versioned, backend-neutral, statically-validated artifact, independent of CPM/vertex implementations?
-#
-# **Purpose.** A canonical schema + a split that routes backend/run parameters to CompileOptions makes the biological state immutable across backends; a static validator turns each semantic invariant into a checked diagnostic.
-#
-# **Claim.** Stage 1 / BP-01 of the review program. The canonical blueprint is now a VERSIONED, backend-neutral artifact with a checked contract and a static validator -- the first of the three claims (blueprint fidelity) made a first-class, tested object rather than an implicit input. Specifically: (a) a `blueprint_version` field + versioned JSON schema; (b) a canonical/backend split (CompileOptions) so backend/run parameters (tension_scale, rules_seed) are kept OUT of the canonical biological state and recorded separately; (c) a static validator (`validate_blueprint` + `multicell-blueprint validate`) that reports structured diagnostics (errors AND contract warnings), not a success badge; (d) three hand-authored worked examples that validate and compile identically to BOTH backends.
-
-# ### Parameters
-#
-# | simulation | composite | steps | params |
-# | --- | --- | --- | --- |
-# | `canonical-blueprint` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=cpm, blueprint=workspace/blueprints/influenza_sego2022.yaml |
-
-# ### The model & its parameters
-#
-# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
-
-# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm`**
-#
-# Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node.
-
-# === Parameters — edit any value, then re-run from the Run cell below ===
-# Each entry is the composite's current default; the comment explains it.
-ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm = {
-    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
-    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (Blueprint Studio sends inline YAML)
-    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
-}
-
-# ### Run
-#
-# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
-
-# === Study: bp-01-blueprint-schema ===
-STUDY = 'bp-01-blueprint-schema'
-STUDY_DIR = REPO / 'workspace/studies' / STUDY
-STUDY_YAML = str(STUDY_DIR / "study.yaml")
-RUNS_DB = str(STUDY_DIR / "runs.db")
-
-# This study has no *recorded* runs yet. RERUN builds its declared
-# composite(s) live and runs them; a composite whose module processes
-# are not implemented yet reports the error instead of crashing.
-STEPS_canonical_blueprint = 100
-INTERVAL_canonical_blueprint = 1.0
-
-if RERUN:
-    from process_bigraph import Composite
-    try:
-        with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
-            _comp.run(STEPS_canonical_blueprint)
-        print('ran', 'canonical-blueprint', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_canonical_blueprint, 'steps')
-    except Exception as _e:
-        print(f"canonical-blueprint not runnable yet: {type(_e).__name__}: {_e}")
-else:
-    print("RERUN=False — not re-simulating.")
-
-# ### Acceptance criteria
-#
-# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
-#
-# | test | measures | passes if |
-# | --- | --- | --- |
-# | same-canonical-blueprint-both-backends _(primary)_ | kind=contract field=canonical_state | op both_backends_accept note tests/test_blueprint_canonical.py::test_same_canonical_blueprint_compiles_to_both_backends |
-# | backend-run-params-not-canonical _(primary)_ | kind=contract field=canonical_violations | op separated_and_flagged note tests/test_blueprint_canonical.py::test_backend_run_params_are_not_canonical |
-# | validator-structured-diagnostics _(primary)_ | kind=contract field=validate_blueprint | op diagnostics_shape note tests/test_blueprint_canonical.py::test_validator_structured_diagnostics_and_violation_warning |
-
-# ## Study: `initial-state-fidelity`
-#
-# **Question.** Do both substrates faithfully reproduce the blueprint's initial centroids, sizes and types, with one vertex polygon per blueprint cell?
-#
-# **Purpose.** CPM materializes each blueprint cell 1:1 at its centroid with target_volume = size. The vertex backend places the epithelial cells on a regular hexagonal lattice of the target area by an optimal 1:1 assignment (alternating with rigid recentring on the blueprint cloud). Vertex models relax well from near-hexagonal tilings; a square tiling puts every vertex at a degenerate 4-way junction. Immune cells become overlay islands at their exact centroids, and the shared fields are sampled onto the faces each step instead of being represented by polygons.
-#
-# **Claim.** REVISED 2026-11-05: the vertex t0 is now ONE sheet of 48 hexagons (36 epithelial + 12 latent immune), the immune cells attached at the tissue margin site nearest their centroid instead of sitting as overlay islands on it. Epithelial centroid residual unchanged (rms 1.60, max 2.44 um); the immune cells move up to one cell diameter onto the margin (rms 4.11, max 5.60 um), closing the CPM's medium gap. All 48 cells present, types exact. Earlier reading (2026-10-28):   REVISED per the 2026-10-28 vertex-mechanics review. Both backends reproduce the blueprint's t=0 state (every cell's centroid, size and type), with every vertex polygon corresponding to exactly ONE Sego cell. The CPM side is EXACT (centroid residual 0). The vertex epithelium is a regular HEXAGONAL sheet at the target area (36 hexagons, area 25.0 each) mapped 1:1 onto the blueprint cells (sub-cell residual: RMS 1.60 um, max 2.44 um). The 12 immune cells are overlay islands exactly on their centroids, and the fields are overlaid on the tissue rather than meshed: no guard-ring or medium polygons remain.
-
-# ### Parameters
-#
-# | simulation | composite | steps | params |
-# | --- | --- | --- | --- |
-# | `sego-t0-fidelity` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=cpm, blueprint=workspace/blueprints/influenza_sego2022.yaml |
-
-# ### The model & its parameters
-#
-# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
-
-# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm`**
-#
-# Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node.
-
-# === Parameters — edit any value, then re-run from the Run cell below ===
-# Each entry is the composite's current default; the comment explains it.
-ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm = {
-    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
-    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (Blueprint Studio sends inline YAML)
-    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
-}
-
-# ### Run
-#
-# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
-
-# === Study: initial-state-fidelity ===
-STUDY = 'initial-state-fidelity'
+# === Study: blueprint-pipeline-fidelity ===
+STUDY = 'blueprint-pipeline-fidelity'
 STUDY_DIR = REPO / 'workspace/studies' / STUDY
 STUDY_YAML = str(STUDY_DIR / "study.yaml")
 RUNS_DB = str(STUDY_DIR / "runs.db")
@@ -468,11 +301,11 @@ if RERUN:
     from process_bigraph import Composite
     try:
         with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
+            _ov = ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline if 'ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = materialize_composite('viva_multicell_blueprint.composites.pipeline.blueprint_pipeline', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline['state']}, core=core)
             _comp.run(STEPS_sego_t0_fidelity)
-        print('ran', 'sego-t0-fidelity', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_sego_t0_fidelity, 'steps')
+        print('ran', 'sego-t0-fidelity', f'(viva_multicell_blueprint.composites.pipeline.blueprint_pipeline) for', STEPS_sego_t0_fidelity, 'steps')
     except Exception as _e:
         print(f"sego-t0-fidelity not runnable yet: {type(_e).__name__}: {_e}")
 else:
@@ -484,13 +317,21 @@ else:
 
 # **t0 centroid residuals**
 
+def _save_viz(study, slug, html):
+    d = REPO / 'reports/notebooks/figures' / study
+    d.mkdir(parents=True, exist_ok=True)
+    out = d / (slug + '.html')
+    out.write_text(html, encoding='utf-8')
+    print('  wrote', out)
+
+
 # t0 centroid residuals
-_save_viz('initial-state-fidelity', 't0_centroid_residuals', _render_one('html:t0-residuals.html', {'title': 'Per-cell t0 centroid residual, CPM vs vertex'}, RUNS_DB, STUDY_YAML))
+_save_viz('blueprint-pipeline-fidelity', 't0_centroid_residuals', _render_one('html:t0-residuals.html', {'title': 'Per-cell t0 centroid residual per backend'}, RUNS_DB, STUDY_YAML))
 
 # **t0 side-by-side**
 
 # t0 side-by-side
-_save_viz('initial-state-fidelity', 't0_side-by-side', _render_one('html:t0-side-by-side.html', {'title': 'Initial state: CPM | vertex'}, RUNS_DB, STUDY_YAML))
+_save_viz('blueprint-pipeline-fidelity', 't0_side-by-side', _render_one('html:t0-side-by-side.html', {'title': 'Initial state: CPM | vertex | center-based'}, RUNS_DB, STUDY_YAML))
 
 # ### Acceptance criteria
 #
@@ -498,47 +339,50 @@ _save_viz('initial-state-fidelity', 't0_side-by-side', _render_one('html:t0-side
 #
 # | test | measures | passes if |
 # | --- | --- | --- |
+# | same-canonical-blueprint-all-backends _(primary)_ | kind=contract field=canonical_state | op both_backends_accept note tests/test_blueprint_canonical.py::test_same_canonical_blueprint_compiles_to_both_backends |
+# | backend-run-params-not-canonical _(primary)_ | kind=contract field=canonical_violations | op separated_and_flagged note tests/test_blueprint_canonical.py::test_backend_run_params_are_not_canonical |
+# | validator-structured-diagnostics _(primary)_ | kind=contract field=validate_blueprint | op diagnostics_shape note tests/test_blueprint_canonical.py::test_validator_structured_diagnostics_and_violation_warning |
 # | cpm-exact-t0 _(primary)_ | kind=residual field=centroid_residual backend=cpm | op lt value 1e-06 field centroid_rms |
-# | vertex-clean-identity _(primary)_ | kind=residual field=centroid_residual backend=vertex | op lt value 2.0 field centroid_rms note fraction_clean == 1.0; n_guard_faces == 0 |
-# | vertex-one-hexagonal-sheet _(primary)_ | kind=topology field=vertex_residual_report | op eq value 36 field n_sheet note all sheet faces 6-sided, area 25, one component; n_overlay == 12 |
+# | vertex-clean-identity _(primary)_ | kind=residual field=centroid_residual backend=vertex | op lt value 2.0 field sheet_centroid_rms note fraction_clean == 1.0; n_guard_faces == 0 |
+# | vertex-one-hexagonal-sheet _(primary)_ | kind=topology field=vertex_residual_report | op eq value 48 field n_sheet note n_overlay == 0; n_attached_immune == 12; immune_attach_max < 6 um |
 # | all-types-match _(primary)_ | kind=count field=type_match | op eq value 48 field n_type_match |
 
-# ## Study: `flu-lung-crossparadigm`
+# ## Study: Cross-paradigm equivalence: fate yes, exact position no, and the test has power (`cross-paradigm-equivalence`)
 #
-# **Question.** Does one backend-neutral blueprint reproduce the Sego 2022 influenza model on two different mechanical substrates, and -- judged against same-backend seed noise -- do the substrates diverge?
+# **Question.** Under replication, are CPM, vertex and center-based EQUIVALENT (not merely "not-distinguishable") when one blueprint is run through `blueprint_pipeline` -- on cell fate, on exact spatial position, or both -- and does the test correctly reject when mechanics dominates?
 #
-# **Purpose.** The epithelial rates, four reaction-diffusion fields, Price-2015 systemic ODE (fed live by CellCountStep) and latent-pool immune recruitment are compiled identically onto both backends; only the single mechanics node differs (CPM Metropolis flips vs tyssue vertex relaxation). If the substrate mattered beyond noise, the cross-backend metrics would fall OUTSIDE the same-backend seed spread.
+# **Purpose.** The epithelial rates, four reaction-diffusion fields, Price-2015 systemic ODE (fed live by CellCountStep) and latent-pool immune recruitment are compiled identically onto every backend; only the single mechanics node differs (CPM Metropolis flips, vertex tyssue relaxation, center-based hard-disc relaxation). Fate is driven by the shared mechanism, so it should be backend-neutral; exact position is set by each backend's own mechanics and should drift apart. If the substrate mattered beyond noise, cross-backend metrics would fall OUTSIDE the same-backend seed spread; in the mechanics-only control nothing shared forces agreement, so the test must reject.
 #
-# **Claim.** REVISED 2026-11-05 (reviewer feedback: vertex CD8/NK floated free of the tissue): vertex immune cells are now SMALLER POLYGONS IN THE EPITHELIAL SHEET, attached at the tissue margin and moving along it by neighbour exchange, as the CPM immune pool wets the epithelial edge; reconnect resolves merged rosettes faster (p_4 = 1, T1 at 0.2 x side); motilities re-calibrated under the no-fold cap. On this substrate FATE still falls inside the same-backend seed spread (cross 0.948 vs 0.926-0.960), but infected-patch OCCUPANCY (IoU 0.053, below both baselines 0.100 / 0.299) and LOCATION (centroid distance 5.7 vs 3.3 um) now separate the backends -- a candidate substrate signal, not yet causally attributed. Earlier reading (2026-10-28, overlay immune layer) kept for provenance: The ONE backend-neutral Sego 2022 influenza blueprint compiles to BOTH the CPM (viva-cpm) and vertex (vivarium-tyssue) substrates and runs the Sego model WITH NAMED DEVIATIONS (V/L/C/F producers absent, latent-pool recruitment approximation) end-to-end on each. RE-RUN 2026-10-28 on the REVISED vertex substrate: a hexagonal one-polygon-per-cell sheet, immune overlay, auto_reconnect, per-pair tension, domain walls, and CPM-calibrated motility under a no-fold constraint. Vertex cells now move within the tissue and exchange neighbours, though the epithelium wanders ~5x less than on the CPM. Replicate runs are now also stochastic in their MECHANICS, so the same-backend null control includes mechanical noise. Against that null, cell FATE, infected-patch OCCUPANCY and patch LOCATION all fall inside the same-backend seed spread (fail to reject). The one candidate substrate signal left: the vertex I-count leaves the narrow CPM 3-seed envelope for ~45% of steps by N=400.
+# **Claim.** Run through `blueprint_pipeline` on CPM, vertex and center-based (viva-munk), the ONE Sego 2022 blueprint gives backend-neutral cell FATE and backend-specific exact POSITION, and the equivalence test is powerful enough to tell them apart. FATE agreement is statistically EQUIVALENT for every backend pair within a pre-declared +/-0.05 margin (run-cluster 90% CI [-0.0034, +0.0008] for cpm-vertex). Exact-position agreement is NOT equivalent for any pair at +/-0.10, and it orders by how different the geometries are: cpm-munk +0.093 < cpm-vertex +0.126 < vertex-munk +0.252 (the cpm-munk point estimate sits below the 0.10 margin but its CI [0.034, 0.159] does not fit inside +/-0.10, so equivalence still cannot be claimed). A mechanics-dominated positive-control arm REJECTS equivalence for every pair with the same test (cpm-vertex Delta +0.325), so a "pass" on fate is informative. Judged against the same-backend seed null, the N=400 capstone fate metric fails to reject a substrate difference, while infected-patch occupancy IoU and patch location now sit outside both same-backend baselines for the current vertex substrate: a candidate substrate signal, not causally attributed.
 
 # ### Parameters
 #
 # | simulation | composite | steps | params |
 # | --- | --- | --- | --- |
-# | `sego-influenza-crossparadigm` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=cpm, blueprint=workspace/blueprints/influenza_sego2022.yaml |
+# | `sego-equivalence-grid` | `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline` | 0 | backend=cpm, blueprint=workspace/blueprints/influenza_sego2022.yaml |
 
 # ### The model & its parameters
 #
 # Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
 
-# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm`**
+# **The model — `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline`**
 #
-# Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node.
+# Backend-neutral blueprint compiled onto a mechanics backend (cpm|vertex|munk): fields/rules/ODE/immune mechanism, plus an optional per-cell subcellular layer arbitrated into the mechanics inputs by the actuation merge.
 
 # === Parameters — edit any value, then re-run from the Run cell below ===
 # Each entry is the composite's current default; the comment explains it.
-ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm = {
-    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
-    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (Blueprint Studio sends inline YAML)
-    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
+ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = {
+    'backend'  : 'cpm',   # mechanics substrate: 'cpm', 'vertex', or 'munk'
+    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # a path to a YAML file, inline YAML text, or a dict (v1 flat or v2 sectioned)
+    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html
 }
 
 # ### Run
 #
 # _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
 
-# === Study: flu-lung-crossparadigm ===
-STUDY = 'flu-lung-crossparadigm'
+# === Study: cross-paradigm-equivalence ===
+STUDY = 'cross-paradigm-equivalence'
 STUDY_DIR = REPO / 'workspace/studies' / STUDY
 STUDY_YAML = str(STUDY_DIR / "study.yaml")
 RUNS_DB = str(STUDY_DIR / "runs.db")
@@ -546,20 +390,20 @@ RUNS_DB = str(STUDY_DIR / "runs.db")
 # This study has no *recorded* runs yet. RERUN builds its declared
 # composite(s) live and runs them; a composite whose module processes
 # are not implemented yet reports the error instead of crashing.
-STEPS_sego_influenza_crossparadigm = 100
-INTERVAL_sego_influenza_crossparadigm = 1.0
+STEPS_sego_equivalence_grid = 100
+INTERVAL_sego_equivalence_grid = 1.0
 
 if RERUN:
     from process_bigraph import Composite
     try:
         with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
-            _comp.run(STEPS_sego_influenza_crossparadigm)
-        print('ran', 'sego-influenza-crossparadigm', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_sego_influenza_crossparadigm, 'steps')
+            _ov = ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline if 'ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = materialize_composite('viva_multicell_blueprint.composites.pipeline.blueprint_pipeline', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline['state']}, core=core)
+            _comp.run(STEPS_sego_equivalence_grid)
+        print('ran', 'sego-equivalence-grid', f'(viva_multicell_blueprint.composites.pipeline.blueprint_pipeline) for', STEPS_sego_equivalence_grid, 'steps')
     except Exception as _e:
-        print(f"sego-influenza-crossparadigm not runnable yet: {type(_e).__name__}: {_e}")
+        print(f"sego-equivalence-grid not runnable yet: {type(_e).__name__}: {_e}")
 else:
     print("RERUN=False — not re-simulating.")
 
@@ -567,20 +411,40 @@ else:
 #
 # _Results are shown by the figures below, produced by the run above._
 
-# **Spatial playback — CPM vs vertex**
+# **Fate equivalence (TOST)**
 
-# Spatial playback — CPM vs vertex
-_save_viz('flu-lung-crossparadigm', 'Spatial_playback_CPM_vs_vertex', _render_one('html:spatial-playback.html', {'title': 'Spatial playback: CPM | vertex'}, RUNS_DB, STUDY_YAML))
+# Fate equivalence (TOST)
+_save_viz('cross-paradigm-equivalence', 'Fate_equivalence_TOST', _render_one('html:equivalence-fate.html', {'title': 'Cross- vs same-backend fate agreement with the equivalence margin'}, RUNS_DB, STUDY_YAML))
 
-# **Dynamics overlay — CPM vs vertex (I-count band)**
+# **Spatial (exact-position) equivalence (TOST)**
 
-# Dynamics overlay — CPM vs vertex (I-count band)
-_save_viz('flu-lung-crossparadigm', 'Dynamics_overlay_CPM_vs_vertex_I-count_band', _render_one('html:dynamics-overlay.html', {'title': 'Dynamics vs the CPM stochastic-envelope band'}, RUNS_DB, STUDY_YAML))
+# Spatial (exact-position) equivalence (TOST)
+_save_viz('cross-paradigm-equivalence', 'Spatial_exact-position_equivalence_TOST', _render_one('html:equivalence-spatial.html', {'title': 'Cross- vs same-backend exact-position agreement'}, RUNS_DB, STUDY_YAML))
+
+# **Spatial playback -- CPM vs vertex vs center-based**
+
+# Spatial playback -- CPM vs vertex vs center-based
+_save_viz('cross-paradigm-equivalence', 'Spatial_playback_--_CPM_vs_vertex_vs_center-based', _render_one('html:spatial-playback.html', {'title': 'Spatial playback: CPM | vertex | center-based'}, RUNS_DB, STUDY_YAML))
+
+# **Dynamics overlay (I-count band)**
+
+# Dynamics overlay (I-count band)
+_save_viz('cross-paradigm-equivalence', 'Dynamics_overlay_I-count_band', _render_one('html:dynamics-overlay.html', {'title': 'Dynamics vs the CPM stochastic-envelope band'}, RUNS_DB, STUDY_YAML))
 
 # **Divergence map**
 
 # Divergence map
-_save_viz('flu-lung-crossparadigm', 'Divergence_map', _render_one('html:divergence.html', {'title': 'Per-cell agreement + spatial map (vs same-backend baseline)'}, RUNS_DB, STUDY_YAML))
+_save_viz('cross-paradigm-equivalence', 'Divergence_map', _render_one('html:divergence.html', {'title': 'Per-cell agreement + spatial map (vs same-backend baseline)'}, RUNS_DB, STUDY_YAML))
+
+# **Positive control -- spatial equivalence REJECTED**
+
+# Positive control -- spatial equivalence REJECTED
+_save_viz('cross-paradigm-equivalence', 'Positive_control_--_spatial_equivalence_REJECTED', _render_one('html:counterfactual-equivalence-spatial.html', {'title': 'Mechanics-dominated regime: cross- vs same-backend spatial agreement'}, RUNS_DB, STUDY_YAML))
+
+# **Positive control -- mechanics-dominated playback**
+
+# Positive control -- mechanics-dominated playback
+_save_viz('cross-paradigm-equivalence', 'Positive_control_--_mechanics-dominated_playback', _render_one('html:counterfactual-spatial-playback.html', {'title': 'Divergent sorting: CPM voxel | vertex polygon | center-based'}, RUNS_DB, STUDY_YAML))
 
 # ### Acceptance criteria
 #
@@ -588,11 +452,118 @@ _save_viz('flu-lung-crossparadigm', 'Divergence_map', _render_one('html:divergen
 #
 # | test | measures | passes if |
 # | --- | --- | --- |
+# | fate-equivalent-tost _(primary)_ | kind=equivalence field=fate_agreement margin=0.05 | op tost_equivalent note 90% CI of (same-cross) inside +/-0.05 |
+# | spatial-equivalence-rejected-in-mechanics-regime _(primary)_ | kind=equivalence field=spatial_agreement margin=0.1 | op tost_not_equivalent note cross spatial agreement << same; diff > margin |
 # | both-backends-run-end-to-end _(primary)_ | kind=count field=frames when=end-of-run | op eq value 151 field n_frames_at_N150 |
 # | fate-agreement-within-seed-baseline _(primary)_ | kind=delta field=fate_agreement compare_to=same_backend_cpm_seed_baseline | op gte value -0.05 field cross_minus_baseline |
 # | spatial-not-representation-confounded _(primary)_ | kind=ratio field=final_mean_area versus=cpm | op in_range lo 0.6 hi 1.6 field area_ratio |
+# | spatial-gap-is-dynamic-not-offset _(secondary)_ | kind=comparison field=spatial_agreement low=0.0 high=1.0 | op strictly_greater note cross spatial(t0) > cross spatial(final) |
 # | vertex-within-cpm-envelope _(secondary)_ | kind=fraction field=inband | op gte value 0.8 field vertex_inband_fraction |
 # | three-figures-render-under-cap _(secondary)_ | kind=size field=figure_html_bytes | op lt value 2500000 field figure_html_bytes |
+
+# ## Study: Substrate behavior at scale: distance-to-CPM, and how the vertex mechanics were matched (`substrate-behavior-at-scale`)
+#
+# **Question.** On the LARGE Sego 2022 blueprint (120x120, ~225-cell epithelium), how far does each mechanical substrate's emergent MOVEMENT and INTERACTION pattern sit from the CPM reference, measured by the cross-paradigm behavior metrics (per-cell displacement, MSD, neighbour-graph churn, infection-front speed, cell sorting)? Each metric is a DISTANCE from the CPM; the same-backend seed-to-seed distance is the null floor a match must approach.
+#
+# **Purpose.** All three backends run the SAME shared mechanism (fields, rules, immune ODE) on the SAME large blueprint; only the mechanics node differs. Differences in the behavior metrics are therefore attributable to the substrate (CPM Metropolis lattice vs vertex confluent polygons vs center-based discs), not the biology.
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `sego-large` | `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline` | 0 | backend=cpm, blueprint=workspace/blueprints/influenza_sego2022_large.yaml |
+# | `neutral-mechanics-sheet` | `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline` | 0 | backend=cpm, blueprint=workspace/blueprints/mechanics_sheet.yaml |
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline`**
+#
+# Backend-neutral blueprint compiled onto a mechanics backend (cpm|vertex|munk): fields/rules/ODE/immune mechanism, plus an optional per-cell subcellular layer arbitrated into the mechanics inputs by the actuation merge.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = {
+    'backend'  : 'cpm',   # mechanics substrate: 'cpm', 'vertex', or 'munk'
+    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # a path to a YAML file, inline YAML text, or a dict (v1 flat or v2 sectioned)
+    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: substrate-behavior-at-scale ===
+STUDY = 'substrate-behavior-at-scale'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# This study has no *recorded* runs yet. RERUN builds its declared
+# composite(s) live and runs them; a composite whose module processes
+# are not implemented yet reports the error instead of crashing.
+STEPS_sego_large = 100
+INTERVAL_sego_large = 1.0
+STEPS_neutral_mechanics_sheet = 100
+INTERVAL_neutral_mechanics_sheet = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline if 'ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = materialize_composite('viva_multicell_blueprint.composites.pipeline.blueprint_pipeline', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline['state']}, core=core)
+            _comp.run(STEPS_sego_large)
+        print('ran', 'sego-large', f'(viva_multicell_blueprint.composites.pipeline.blueprint_pipeline) for', STEPS_sego_large, 'steps')
+    except Exception as _e:
+        print(f"sego-large not runnable yet: {type(_e).__name__}: {_e}")
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline if 'ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = materialize_composite('viva_multicell_blueprint.composites.pipeline.blueprint_pipeline', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline['state']}, core=core)
+            _comp.run(STEPS_neutral_mechanics_sheet)
+        print('ran', 'neutral-mechanics-sheet', f'(viva_multicell_blueprint.composites.pipeline.blueprint_pipeline) for', STEPS_neutral_mechanics_sheet, 'steps')
+    except Exception as _e:
+        print(f"neutral-mechanics-sheet not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **Spatial playback — CPM on the large Sego tissue**
+
+# Spatial playback — CPM on the large Sego tissue
+_save_viz('substrate-behavior-at-scale', 'Spatial_playback_CPM_on_the_large_Sego_tissue', _render_one('html:spatial-playback-cpm-large.html', {'title': 'Large Sego 2022 — CPM reference playback (120x120, ~225-cell epithelium)'}, RUNS_DB, STUDY_YAML))
+
+# **Vertex mechanics calibration**
+
+# Vertex mechanics calibration
+_save_viz('substrate-behavior-at-scale', 'Vertex_mechanics_calibration', _render_one('html:mechanics-calibration.html', {'title': 'Vertex knobs fitted to CPM area, wandering and chemotactic drift'}, RUNS_DB, STUDY_YAML))
+
+# **J ↔ tension sweep**
+
+# J ↔ tension sweep
+_save_viz('substrate-behavior-at-scale', 'J_tension_sweep', _render_one('html:adhesion-sweep.html', {'title': 'Cell-shape statistics across the vertex tension sweep vs CPM'}, RUNS_DB, STUDY_YAML))
+
+# **Neutral sheet playback — CPM vs vertex vs center-based**
+
+# Neutral sheet playback — CPM vs vertex vs center-based
+_save_viz('substrate-behavior-at-scale', 'Neutral_sheet_playback_CPM_vs_vertex_vs_center-based', _render_one('html:neutral-sheet-playback.html', {'title': 'Mechanics-only sheet relaxation, all three paradigms (center-based not calibrated)'}, RUNS_DB, STUDY_YAML))
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | munk-moves-and-interacts _(primary)_ | kind=distance field=per_cell_displacement_distance backend=munk | op gt value 0.5 note munk displacement distance >> 0 (was ~0 when frozen) |
+# | vertex-closest-to-cpm _(primary)_ | kind=comparison field=msd_distance | op lt note vertex_vs_cpm < munk_vs_cpm on displacement and MSD |
+# | distances-above-null-floor _(primary)_ | kind=null_control field=all_metrics | op reported note cross vs null floor reported per metric |
 
 # ## Study: `dose-response-crossparadigm`
 #
@@ -606,22 +577,22 @@ _save_viz('flu-lung-crossparadigm', 'Divergence_map', _render_one('html:divergen
 #
 # | simulation | composite | steps | params |
 # | --- | --- | --- | --- |
-# | `sego-dose-sweep` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=cpm, blueprint=workspace/blueprints/influenza_sego2022.yaml |
+# | `sego-dose-sweep` | `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline` | 0 | backend=cpm, blueprint=workspace/blueprints/influenza_sego2022.yaml |
 
 # ### The model & its parameters
 #
 # Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
 
-# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm`**
+# **The model — `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline`**
 #
-# Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node.
+# Backend-neutral blueprint compiled onto a mechanics backend (cpm|vertex|munk): fields/rules/ODE/immune mechanism, plus an optional per-cell subcellular layer arbitrated into the mechanics inputs by the actuation merge.
 
 # === Parameters — edit any value, then re-run from the Run cell below ===
 # Each entry is the composite's current default; the comment explains it.
-ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm = {
-    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
-    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (Blueprint Studio sends inline YAML)
-    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
+ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = {
+    'backend'  : 'cpm',   # mechanics substrate: 'cpm', 'vertex', or 'munk'
+    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # a path to a YAML file, inline YAML text, or a dict (v1 flat or v2 sectioned)
+    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html
 }
 
 # ### Run
@@ -644,11 +615,11 @@ if RERUN:
     from process_bigraph import Composite
     try:
         with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
+            _ov = ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline if 'ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = materialize_composite('viva_multicell_blueprint.composites.pipeline.blueprint_pipeline', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline['state']}, core=core)
             _comp.run(STEPS_sego_dose_sweep)
-        print('ran', 'sego-dose-sweep', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_sego_dose_sweep, 'steps')
+        print('ran', 'sego-dose-sweep', f'(viva_multicell_blueprint.composites.pipeline.blueprint_pipeline) for', STEPS_sego_dose_sweep, 'steps')
     except Exception as _e:
         print(f"sego-dose-sweep not runnable yet: {type(_e).__name__}: {_e}")
 else:
@@ -672,42 +643,42 @@ _save_viz('dose-response-crossparadigm', 'Dose_response_initial_load_final_infec
 # | strict-direction-both-backends-and-seeds _(primary)_ | kind=comparison field=final_infected_count low=0.03 high=0.15 | op strictly_greater note final(0.15) > final(0.03) for cpm/vertex/munk x seeds {0,1} |
 # | higher-dose-seeds-more-cells _(primary)_ | kind=comparison field=seed_infected low=0.03 high=0.15 | op strictly_greater value 5 > 1 |
 
-# ## Study: Backend equivalence (TOST) (`crossparadigm-equivalence`)
+# ## Study: Subcellular ODE layer: cells grow and divide on every backend (`subcellular-layer-grow-divide`)
 #
-# **Question.** Are CPM and vertex EQUIVALENT (not merely "not-distinguishable") under replication -- and on which outcome: cell fate, exact spatial position, or both?
+# **Question.** Does the pluggable per-cell subcellular (tellurium ODE) layer grow AND divide cells uniformly across cpm, vertex and munk through `blueprint_pipeline`?
 #
-# **Purpose.** Fate is driven by the SHARED field/rule/ODE mechanism (identical across backends), so cell-fate outcomes should be backend-neutral. Exact cell position is set by each backend's own mechanics (CPM lattice Metropolis vs vertex tension relaxation), which differ, so positions may drift apart even when fate agrees.
+# **Purpose.** The blueprint's `subcellular` section is compiled into a per-cell ODE step that is independent of the mechanics backend: it reads fields at each centroid, advances S, and writes target_size and division requests to shared stores. Each backend implements the same actuation contract (a target_size change, and a division event mapped onto the backend's own division primitive), so the same blueprint should grow and divide cells on all three substrates. Differences are expected only in how a backend realizes the division event (e.g. CPM has no per-id split).
 #
-# **Claim.** RE-RUN 2026-11-05 on the in-sheet immune vertex substrate (immune cells are smaller polygons attached to the tissue margin; faster reconnect; re-calibrated motility). Verdicts unchanged: FATE equivalent (Delta -0.0014, cluster CI [-0.0034, +0.0008] inside +/-0.05); exact POSITION not equivalent (same 0.674, cross 0.547, Delta +0.126, cluster CI [+0.070, +0.181] vs +/-0.10). Diagnostic split: the gap is not only the immune margin attachment (t0 offset up to 5.6 um) -- the epithelium alone is also not equivalent (same 0.738, cross 0.622, Delta +0.116); immune-only Delta +0.156. Earlier reading (2026-10-28) kept for provenance: SCOPED to Claim 3 (scientific equivalence) -- NOT blueprint fidelity, NOT biological validity. RE-RUN 2026-10-28 on the revised vertex substrate (hexagonal sheet, immune overlay, auto_reconnect, per-pair tension, CPM-calibrated motility) with mechanics-stochastic replicates. On cell FATE the substrates remain equivalent under the dependence-aware run-cluster bootstrap: Delta(same-cross) -0.0014, 90% CI [-0.0034, +0.0008], inside +/-0.05 (margin not yet biologically justified). On exact POSITION they are still NOT equivalent, but the gap shrank about 7-fold: cross 0.472 vs same-backend 0.608 (Delta +0.135, cluster CI [+0.071, +0.210] vs margin +/-0.10). The previous spatial gap (cross 0.083 vs same 1.000) mostly reflected a degenerate null. Replicates differed only in rule draws, so same-backend positions were identical by construction, and the vertex cells barely moved.
+# **Claim.** The pluggable per-cell subcellular layer (a tellurium ODE bound to a cell type in the v2 blueprint) grows AND divides cells uniformly across CPM, vertex and center-based through the single `blueprint_pipeline`. In the demo blueprint a nutrient field sampled at each cell's centroid drives a per-cell growth ODE; the ODE species S actuates target_size (cells grow) and crossing the divide threshold triggers division with a lineage entry on every backend. Cell-count progressions in the 12-step e2e run: CPM 4 -> 8 -> 16, vertex 4 -> 8 -> 16, center-based 4 -> 6 -> 8 -> 16. This is a demonstration of the wiring (blueprint -> pipeline -> per-cell ODE -> backend actuation), not a biological result.
 
 # ### Parameters
 #
 # | simulation | composite | steps | params |
 # | --- | --- | --- | --- |
-# | `sego-equivalence-grid` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=cpm, blueprint=workspace/blueprints/influenza_sego2022.yaml |
+# | `subcellular-ode-demo` | `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline` | 0 | backend=cpm, blueprint=workspace/blueprints/subcellular_ode_demo.yaml |
 
 # ### The model & its parameters
 #
 # Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
 
-# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm`**
+# **The model — `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline`**
 #
-# Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node.
+# Backend-neutral blueprint compiled onto a mechanics backend (cpm|vertex|munk): fields/rules/ODE/immune mechanism, plus an optional per-cell subcellular layer arbitrated into the mechanics inputs by the actuation merge.
 
 # === Parameters — edit any value, then re-run from the Run cell below ===
 # Each entry is the composite's current default; the comment explains it.
-ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm = {
-    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
-    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (Blueprint Studio sends inline YAML)
-    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
+ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = {
+    'backend'  : 'cpm',   # mechanics substrate: 'cpm', 'vertex', or 'munk'
+    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # a path to a YAML file, inline YAML text, or a dict (v1 flat or v2 sectioned)
+    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html
 }
 
 # ### Run
 #
 # _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
 
-# === Study: crossparadigm-equivalence ===
-STUDY = 'crossparadigm-equivalence'
+# === Study: subcellular-layer-grow-divide ===
+STUDY = 'subcellular-layer-grow-divide'
 STUDY_DIR = REPO / 'workspace/studies' / STUDY
 STUDY_YAML = str(STUDY_DIR / "study.yaml")
 RUNS_DB = str(STUDY_DIR / "runs.db")
@@ -715,273 +686,20 @@ RUNS_DB = str(STUDY_DIR / "runs.db")
 # This study has no *recorded* runs yet. RERUN builds its declared
 # composite(s) live and runs them; a composite whose module processes
 # are not implemented yet reports the error instead of crashing.
-STEPS_sego_equivalence_grid = 100
-INTERVAL_sego_equivalence_grid = 1.0
+STEPS_subcellular_ode_demo = 100
+INTERVAL_subcellular_ode_demo = 1.0
 
 if RERUN:
     from process_bigraph import Composite
     try:
         with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
-            _comp.run(STEPS_sego_equivalence_grid)
-        print('ran', 'sego-equivalence-grid', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_sego_equivalence_grid, 'steps')
+            _ov = ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline if 'ov_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline = materialize_composite('viva_multicell_blueprint.composites.pipeline.blueprint_pipeline', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_pipeline_blueprint_pipeline['state']}, core=core)
+            _comp.run(STEPS_subcellular_ode_demo)
+        print('ran', 'subcellular-ode-demo', f'(viva_multicell_blueprint.composites.pipeline.blueprint_pipeline) for', STEPS_subcellular_ode_demo, 'steps')
     except Exception as _e:
-        print(f"sego-equivalence-grid not runnable yet: {type(_e).__name__}: {_e}")
-else:
-    print("RERUN=False — not re-simulating.")
-
-# ### Visualizations
-#
-# _Results are shown by the figures below, produced by the run above._
-
-# **Fate equivalence (TOST)**
-
-# Fate equivalence (TOST)
-_save_viz('crossparadigm-equivalence', 'Fate_equivalence_TOST', _render_one('html:equivalence-fate.html', {'title': 'Cross- vs same-backend fate agreement with the equivalence margin'}, RUNS_DB, STUDY_YAML))
-
-# **Spatial (exact-position) equivalence (TOST)**
-
-# Spatial (exact-position) equivalence (TOST)
-_save_viz('crossparadigm-equivalence', 'Spatial_exact-position_equivalence_TOST', _render_one('html:equivalence-spatial.html', {'title': 'Cross- vs same-backend exact-position agreement'}, RUNS_DB, STUDY_YAML))
-
-# ### Acceptance criteria
-#
-# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
-#
-# | test | measures | passes if |
-# | --- | --- | --- |
-# | fate-equivalent-tost _(primary)_ | kind=equivalence field=fate_agreement margin=0.05 | op tost_equivalent note 90% CI of (same-cross) inside +/-0.05 |
-# | spatial-gap-is-dynamic-not-offset _(secondary)_ | kind=comparison field=spatial_agreement low=0.0 high=1.0 | op strictly_greater note cross spatial(t0) > cross spatial(final) |
-
-# ## Study: Mechanics-dominated counterfactual (positive control) (`substrate-divergence-counterfactual`)
-#
-# **Question.** When MECHANICS (not the shared mechanism) drives the outcome, does the equivalence test correctly REJECT -- i.e. does it have the power to detect a real substrate difference?
-#
-# **Purpose.** CPM moves cells by Metropolis acceptance of lattice copies (chemotaxis as an energy bias); the vertex fork moves them by the ActiveMigration director sampled from the field gradient. Under a strong gradient these displace cells by different amounts, and CPM's Potts neighbour-swapping sorts differentially- adhesive cells in a way the vertex topology resists -- so the spatial outcome genuinely depends on the substrate.
-#
-# **Claim.** RE-RUN 2026-11-05 (reviewer: "auto-reconnect isn't working here"). Reconnect WAS on; it is now also faster (merged 4-way vertices detach at p_4 = 1 per unit time instead of 0.1, T1 at 0.2 x side), and the playback's vertex panel counts neighbour exchanges frame by frame. In this regime the vertex run still makes only 3 exchanges in 80 steps (vs 74 in the Sego run): with 15 A cells (nearly all on the border) and a one-row B stripe, nothing shrinks a junction to the T1 threshold, so the vertex clusters keep their topology while the CPM blobs flow -- the substrate difference this control is built to expose, not a disabled reconnect. Equivalence is still REJECTED (same 0.775, cross 0.450, Delta +0.325 vs +/-0.10). Earlier reading (2026-10-28): In a MECHANICS-DOMINATED regime (strong differential adhesion + a strong chemoattractant gradient, no shared rules/ODE), the spatial equivalence test still REJECTS equivalence after the 2026-10-28 vertex revision. Cross-backend spatial agreement is 0.417 vs same-backend 0.775 (diff +0.358 > margin 0.10), now with mechanics-stochastic replicates, so the same-backend baseline is a genuine stochastic null rather than 1.0 by construction. It remains the POSITIVE CONTROL: the same test that finds the Sego model fate-equivalent detects a substrate difference here. REVISED MECHANISM: the earlier attribution (vertex A cells climbing the gradient to y~17.9 while CPM stays at ~10.7) was an artifact of the old uncalibrated vertex chemotaxis. With chemotactic drift calibrated to the CPM (saturating), neither substrate moves A far (CPM mean y 11.0 -> 11.0, vertex 10.7 -> 10.1). The divergence is now positional / sorting dynamics, not migration direction, and is not yet causally isolated.
-
-# ### Parameters
-#
-# | simulation | composite | steps | params |
-# | --- | --- | --- | --- |
-# | `mechanics-divergence` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=cpm, blueprint=workspace/blueprints/mechanics_divergence.yaml |
-
-# ### The model & its parameters
-#
-# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
-
-# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm`**
-#
-# Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node.
-
-# === Parameters — edit any value, then re-run from the Run cell below ===
-# Each entry is the composite's current default; the comment explains it.
-ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm = {
-    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
-    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (Blueprint Studio sends inline YAML)
-    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
-}
-
-# ### Run
-#
-# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
-
-# === Study: substrate-divergence-counterfactual ===
-STUDY = 'substrate-divergence-counterfactual'
-STUDY_DIR = REPO / 'workspace/studies' / STUDY
-STUDY_YAML = str(STUDY_DIR / "study.yaml")
-RUNS_DB = str(STUDY_DIR / "runs.db")
-
-# This study has no *recorded* runs yet. RERUN builds its declared
-# composite(s) live and runs them; a composite whose module processes
-# are not implemented yet reports the error instead of crashing.
-STEPS_mechanics_divergence = 100
-INTERVAL_mechanics_divergence = 1.0
-
-if RERUN:
-    from process_bigraph import Composite
-    try:
-        with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
-            _comp.run(STEPS_mechanics_divergence)
-        print('ran', 'mechanics-divergence', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_mechanics_divergence, 'steps')
-    except Exception as _e:
-        print(f"mechanics-divergence not runnable yet: {type(_e).__name__}: {_e}")
-else:
-    print("RERUN=False — not re-simulating.")
-
-# ### Visualizations
-#
-# _Results are shown by the figures below, produced by the run above._
-
-# **Spatial equivalence — REJECTED (TOST)**
-
-# Spatial equivalence — REJECTED (TOST)
-_save_viz('substrate-divergence-counterfactual', 'Spatial_equivalence_REJECTED_TOST', _render_one('html:equivalence-spatial.html', {'title': 'Cross- vs same-backend spatial agreement in the divergent regime'}, RUNS_DB, STUDY_YAML))
-
-# **Mechanics-dominated playback — CPM vs vertex**
-
-# Mechanics-dominated playback — CPM vs vertex
-_save_viz('substrate-divergence-counterfactual', 'Mechanics-dominated_playback_CPM_vs_vertex', _render_one('html:spatial-playback.html', {'title': 'Divergent migration/sorting: CPM voxel | vertex polygon'}, RUNS_DB, STUDY_YAML))
-
-# ### Acceptance criteria
-#
-# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
-#
-# | test | measures | passes if |
-# | --- | --- | --- |
-# | spatial-equivalence-rejected _(primary)_ | kind=equivalence field=spatial_agreement margin=0.1 | op tost_not_equivalent note cross spatial agreement << same; diff > margin |
-# | migration-direction-differs _(primary)_ | kind=comparison field=typeA_mean_y_change low=-40.0 high=40.0 | op lt value 3.0 field abs_typeA_mean_y_change note both backends |
-
-# ## Study: Three substrates on the large Sego model (behavior-metric distances) (`large-crossparadigm-comparison`)
-#
-# **Question.** On the LARGE Sego 2022 blueprint (120x120, ~225-cell epithelium), how far does each mechanical substrate's emergent MOVEMENT and INTERACTION pattern sit from the CPM reference, measured by the cross-paradigm behavior metrics (per-cell displacement, MSD, neighbour-graph churn, infection-front speed, cell sorting)? Each metric is a DISTANCE from the CPM; the same-backend seed-to-seed distance is the null floor a match must approach.
-#
-# **Purpose.** All three backends run the SAME shared mechanism (fields, rules, immune ODE) on the SAME large blueprint; only the mechanics node differs. Differences in the behavior metrics are therefore attributable to the substrate (CPM Metropolis lattice vs vertex confluent polygons vs center-based discs), not the biology.
-
-# ### Parameters
-#
-# | simulation | composite | steps | params |
-# | --- | --- | --- | --- |
-# | `sego-large` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm_large` | 0 | backend=cpm |
-
-# ### The model & its parameters
-#
-# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
-
-# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm_large`**
-#
-# Scaled-up Sego 2022 influenza preset: a biology-preserving ~2.4x linear scale-up of 'sego_crossparadigm' (120x120 patch, 15x15 ~225-cell epithelial block) -- a bigger tissue, the SAME field/rules/ODE/recruitment mechanism. A heavier starting point to run from in the Blueprint Studio.
-
-# === Parameters — edit any value, then re-run from the Run cell below ===
-# Each entry is the composite's current default; the comment explains it.
-ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large = {
-    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
-    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022_large.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (defaults to the scaled-up Sego preset)
-    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
-}
-
-# ### Run
-#
-# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
-
-# === Study: large-crossparadigm-comparison ===
-STUDY = 'large-crossparadigm-comparison'
-STUDY_DIR = REPO / 'workspace/studies' / STUDY
-STUDY_YAML = str(STUDY_DIR / "study.yaml")
-RUNS_DB = str(STUDY_DIR / "runs.db")
-
-# This study has no *recorded* runs yet. RERUN builds its declared
-# composite(s) live and runs them; a composite whose module processes
-# are not implemented yet reports the error instead of crashing.
-STEPS_sego_large = 100
-INTERVAL_sego_large = 1.0
-
-if RERUN:
-    from process_bigraph import Composite
-    try:
-        with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm_large', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm_large['state']}, core=core)
-            _comp.run(STEPS_sego_large)
-        print('ran', 'sego-large', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm_large) for', STEPS_sego_large, 'steps')
-    except Exception as _e:
-        print(f"sego-large not runnable yet: {type(_e).__name__}: {_e}")
-else:
-    print("RERUN=False — not re-simulating.")
-
-# ### Visualizations
-#
-# _Results are shown by the figures below, produced by the run above._
-
-# **Spatial playback — CPM on the large Sego tissue**
-
-# Spatial playback — CPM on the large Sego tissue
-_save_viz('large-crossparadigm-comparison', 'Spatial_playback_CPM_on_the_large_Sego_tissue', _render_one('html:spatial-playback-cpm-large.html', {'title': 'Large Sego 2022 — CPM reference playback (120x120, ~225-cell epithelium)'}, RUNS_DB, STUDY_YAML))
-
-# ### Acceptance criteria
-#
-# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
-#
-# | test | measures | passes if |
-# | --- | --- | --- |
-# | munk-moves-and-interacts _(primary)_ | kind=distance field=per_cell_displacement_distance backend=munk | op gt value 0.5 note munk displacement distance >> 0 (was ~0 when frozen) |
-# | vertex-closest-to-cpm _(primary)_ | kind=comparison field=msd_distance | op lt note vertex_vs_cpm < munk_vs_cpm on displacement and MSD |
-# | distances-above-null-floor _(primary)_ | kind=null_control field=all_metrics | op reported note cross vs null floor reported per metric |
-
-# ## Study: Vertex → CPM fluctuation match (`vertex-cpm-fluctuation-match`)
-#
-# **Question.** Can the vertex (tyssue) backend reproduce the CPM's emergent interaction pattern on the large Sego 2022 blueprint — its per-cell motility, boundary fluctuation and neighbour-exchange statistics — WITHOUT folding the mesh? Today the honest CPM-matching motility/noise values invert short junctions and self-intersect the polygons, so they were capped, leaving the vertex epithelium ~5x less mobile and far more ordered than the CPM. This study asks whether a mesh-safe mechanism closes that gap under a quantitative distance-to-CPM target.
-#
-# **Purpose.** CPM advances a stochastically-roughened voxel interface by Metropolis boundary flips at temperature; the vertex fork advances a confluent, gap-free polygon tiling by grad-E displacement plus discrete T1/T2/T3 neighbour swaps. The CPM's per-voxel fluctuation has no direct vertex analog — it is approximated by OU junction-tension noise plus an active-Brownian random walk, both of which fold the mesh at CPM-matching amplitude and were therefore capped (adhesion-calibration).
-
-# ### Parameters
-#
-# | simulation | composite | steps | params |
-# | --- | --- | --- | --- |
-# | `cpm-reference` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=cpm |
-# | `vertex-shipped` | `viva_multicell_blueprint.composites.sego.sego_crossparadigm` | 0 | backend=vertex |
-
-# ### The model & its parameters
-#
-# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
-
-# **The model — `viva_multicell_blueprint.composites.sego.sego_crossparadigm`**
-#
-# Sego 2022 influenza blueprint compiled onto a mechanics backend (cpm|vertex|munk): the shared field/rules/ODE/recruitment mechanism plus the one backend-specific mechanics node.
-
-# === Parameters — edit any value, then re-run from the Run cell below ===
-# Each entry is the composite's current default; the comment explains it.
-ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm = {
-    'backend'  : 'cpm',   # mechanics substrate: 'cpm' (Cellular Potts), 'vertex' (tyssue), or 'munk' (center-based pymunk)
-    'blueprint': '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/influenza_sego2022.yaml',   # backend-neutral blueprint: a path to a YAML file, inline YAML text, or a dict (Blueprint Studio sends inline YAML)
-    'video_out': '',   # if set, record a spatial-playback video to reports/assets/_studio_runs/<video_out>.html (Blueprint Studio)
-}
-
-# ### Run
-#
-# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
-
-# === Study: vertex-cpm-fluctuation-match ===
-STUDY = 'vertex-cpm-fluctuation-match'
-STUDY_DIR = REPO / 'workspace/studies' / STUDY
-STUDY_YAML = str(STUDY_DIR / "study.yaml")
-RUNS_DB = str(STUDY_DIR / "runs.db")
-
-# This study has no *recorded* runs yet. RERUN builds its declared
-# composite(s) live and runs them; a composite whose module processes
-# are not implemented yet reports the error instead of crashing.
-STEPS_cpm_reference = 100
-INTERVAL_cpm_reference = 1.0
-STEPS_vertex_shipped = 100
-INTERVAL_vertex_shipped = 1.0
-
-if RERUN:
-    from process_bigraph import Composite
-    try:
-        with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
-            _comp.run(STEPS_cpm_reference)
-        print('ran', 'cpm-reference', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_cpm_reference, 'steps')
-    except Exception as _e:
-        print(f"cpm-reference not runnable yet: {type(_e).__name__}: {_e}")
-    try:
-        with quiet():  # keep per-step stdout out of the notebook
-            _ov = ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm if 'ov_viva_multicell_blueprint_composites_sego_sego_crossparadigm' in dir() else None  # edits from the panel cell, if any
-            spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm = materialize_composite('viva_multicell_blueprint.composites.sego.sego_crossparadigm', _ov)
-            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_sego_sego_crossparadigm['state']}, core=core)
-            _comp.run(STEPS_vertex_shipped)
-        print('ran', 'vertex-shipped', f'(viva_multicell_blueprint.composites.sego.sego_crossparadigm) for', STEPS_vertex_shipped, 'steps')
-    except Exception as _e:
-        print(f"vertex-shipped not runnable yet: {type(_e).__name__}: {_e}")
+        print(f"subcellular-ode-demo not runnable yet: {type(_e).__name__}: {_e}")
 else:
     print("RERUN=False — not re-simulating.")
 
@@ -991,17 +709,17 @@ else:
 #
 # | test | measures | passes if |
 # | --- | --- | --- |
-# | epithelial-motility-matches-cpm _(primary)_ | kind=distance field=epithelial_msd reference=cpm-reference | op within_fraction value 0.3 note |MSD_vertex - MSD_cpm| / MSD_cpm <= 0.30 |
-# | boundary-fluctuation-matches-cpm _(primary)_ | kind=distance field=area_cv reference=cpm-reference | op within_fraction value 0.3 |
-# | interaction-pattern-distance-drops _(primary)_ | kind=distance field=neighbour_graph_churn reference=cpm-reference | op lt_baseline note candidate distance < vertex-shipped distance |
-# | mesh-stays-valid _(gate)_ | kind=invariant field=mesh_valid | op all_true note mesh validity holds every step |
+# | ode-drives-growth _(primary)_ | kind=comparison field=sub_scalar_S_and_sizes | op changes_and_grows note tests/test_subcellular_demo_e2e.py::test_ode_drives_growth[cpm|vertex|munk] |
+# | ode-drives-division _(primary)_ | kind=count field=cell_count | op gt value 4 field max_cell_count note tests/test_subcellular_demo_e2e.py::test_ode_drives_division[cpm|vertex|munk]; lineage non-empty |
+# | one-threshold-crossing-one-division _(primary)_ | kind=count field=cell_count when=tick-7 | op eq value 8 field cell_count note tests/test_subcellular_demo_e2e.py::test_one_threshold_crossing_one_division[cpm|vertex|munk] |
 
 # ## Open decisions
-# - STAGE 1 (BP-01): formalize a versioned blueprint schema + canonical IR, separate from backend geometric init (units, coord frame, boundaries, tessellation-independent IDs, footprints, fields, contacts, latent states, seeds, init order, mechanism bindings, provenance, allowable loss).
-# - STAGE 2 (BP-02/BP-04, extend initial-state-fidelity): prove blueprint fidelity beyond centroids/IDs — area, footprint, contact, adjacency, boundary, topology, round-trip, with explicit error measures and loss reports.
-# - STAGE 3 (BP-07): adhesion-calibration now calibrates the vertex tension scale, immune motility and chemotaxis to CPM observables under a no-fold constraint (2026-10-28). Open: the vertex epithelium cannot reach CPM fluidity without folding (MSD 2.0 vs 9.5 um^2) -- needs a fold-aware topology handler or a softer epithelium; area dispersion unmatched; tension scale geometry-dependent (1.74 vs ~4); one cell size.
-# - STAGE 4 (BP-05): V/L/C/F inputs have no producer and immune recruitment is a latent-pool approximation — build a producer/consumer ledger, implement or clearly designate deviations, and ablate frozen inputs.
-# - STAGE 4 (BP-06): the ±0.05 fate-equivalence margin is NOT yet biologically justified; the dependence-aware reanalysis is done (cluster bootstrap) but power under biologically meaningful perturbations is not established.
-# - STAGE 4 (BP-08): biological fidelity to Sego 2022 is NOT validated — digitize figure/table/parameter anchors and compare predictive intervals on held-out data; no biology inferred from cross-backend agreement.
+# - STAGE 1 (BP-01): formalize a versioned blueprint schema + canonical IR, separate from backend geometric init (units, coord frame, boundaries, tessellation-independent IDs, footprints, fields, contacts, latent states, seeds, init order, mechanism bindings, provenance, allowable loss). The versioned schema, canonical/backend split and static validator exist; the remaining fields are open.
+# - STAGE 2 (BP-02/BP-04, extend blueprint-pipeline-fidelity): prove blueprint fidelity beyond centroids/IDs -- area, footprint, contact, adjacency, boundary, topology, round-trip, with explicit error measures and loss reports.
+# - STAGE 3 (BP-07, substrate-behavior-at-scale): the vertex tension scale, immune motility and chemotaxis are calibrated to CPM observables under a no-fold constraint. Open: the vertex epithelium cannot reach CPM fluidity without folding (MSD ~2.2 vs 9.5 um^2) -- push knobs under a mesh-validity gate, add a T1-safe fluctuation term, or accept the residual (VCF-01); area dispersion unmatched; tension scale geometry-dependent (1.74 vs ~4); one cell size.
+# - STAGE 4 (BP-05): V/L/C/F inputs have no producer and immune recruitment is a latent-pool approximation -- build a producer/consumer ledger, implement or clearly designate deviations, and ablate frozen inputs.
+# - STAGE 4 (BP-06): the +/-0.05 fate-equivalence margin is NOT yet biologically justified; the dependence-aware reanalysis is done (cluster bootstrap) but power under biologically meaningful perturbations is not established.
+# - STAGE 4 (BP-08): biological fidelity to Sego 2022 is NOT validated -- digitize figure/table/parameter anchors and compare predictive intervals on held-out data; no biology inferred from cross-backend agreement.
 # - STAGE 4 (dose-response redefine): separate virion inoculum from seeded infected fraction; 6-10 graded doses x replicate seeds; it is currently directional-only, NOT a dose-response curve.
-# - STAGE 5 (BP-09): compile a SECOND independent tissue blueprint through the same schema with no influenza-specific adaptations — the decisive generality test.
+# - SUBCELLULAR LAYER: commit a run (runs.db) with a figure for subcellular-layer-grow-divide and test lineage / size-distribution equivalence across backends over several seeds; give viva-cpm a per-id split or document its divide-all-over-threshold semantics.
+# - STAGE 5 (BP-09): compile a SECOND independent tissue blueprint through the same schema with no influenza-specific adaptations -- the decisive generality test.
