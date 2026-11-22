@@ -1,17 +1,6 @@
-# Sego et al. 2022 influenza (ViralInfectionVTM) as ONE backend-neutral blueprint.
-# Template expressiveness acceptance test (spec sections 7, 9): the whole model is
-# DATA here -- every epithelial rate is a rate_expr rule, every field a `fields`
-# entry, the immune recruitment + Price-2015 ODE are components. Compiles to the CPM
-# and vertex backends unchanged.
-#
-# PROVENANCE: every number is from viva-cpm
-#   viva_cpm_studies/influenza/params.yaml @ b952eec2   ("Sego 2022 params.yaml @ b952eec2")
-# which transcribes the CC3D source / Sego 2022 Tables 3-4. Nothing is invented; items the
-# source does not give as a single constant are listed under PENDING at the end.
-#
-# UNITS: 1 grid unit = 1 CC3D lattice site (2 um in the source) and 1 step = 1 MCS (60 s).
-# `*_um` keys are therefore in lattice sites; all D / decay / rates are the source's
-# lattice^2/MCS and per-MCS values (params.yaml *_lat2_per_mcs / *_per_mcs).
+# Sego et al. 2022 influenza (ViralInfectionVTM) as ONE backend-neutral blueprint: the whole model is data.
+# Provenance: transcribed from viva-cpm viva_cpm_studies/influenza/params.yaml (Sego 2022 Tables 3-4); see PENDING at the end for gaps.
+# Units: 1 grid unit = 1 CC3D lattice site (2 um); 1 step = 1 MCS (60 s); `*_um` keys are in lattice sites.
 # Tractable scale: a 50x50-site patch with a 6x6 block of epithelium.
 
 blueprint_version: "1.0"   # BP-01 canonical schema version

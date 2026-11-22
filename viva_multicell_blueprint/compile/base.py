@@ -1,6 +1,6 @@
 """The MechanicsBackend contract (spec section 6) -- the single seam between the
 shared mechanism (fields, rules, immune, ODE) and the mechanical substrates
-(CPM, vertex).
+(CPM, vertex, center-based munk).
 
 Design choice: a process-bigraph ``Process`` subclass, matching how
 ``viva_cpm`` / ``vivarium_tyssue`` declare processes (``config_schema``,
@@ -9,6 +9,8 @@ be wired into a composite unchanged. Cell ids are strings on the ports (map
 keys); backends convert from the blueprint's int ids.
 """
 from __future__ import annotations
+
+import warnings
 
 from process_bigraph import Process
 
@@ -110,6 +112,17 @@ class MechanicsBackend(Process):
         "domain": {"_type": "node", "_default": {}},
         "backend_params": {"_type": "node", "_default": {}},
     }
+
+    def warn_once(self, key, msg: str) -> None:
+        """Emit ``RuntimeWarning(msg)`` the first time ``key`` is seen on this instance.
+
+        ``initialize`` resets the seen-set (``self._warned = set()``) per instance.
+        """
+        seen = self.__dict__.setdefault("_warned", set())
+        if key in seen:
+            return
+        seen.add(key)
+        warnings.warn(msg, RuntimeWarning, stacklevel=3)
 
     def inputs(self):
         return dict(INPUT_PORTS)

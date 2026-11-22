@@ -85,6 +85,7 @@ class TestLinearModule:
 from viva_multicell_blueprint.mechanism.subcellular_modules.tellurium_module import (  # noqa: E402
     TelluriumModule)
 
+# NOTE: "test_linear" is a dependency-free reference module (the default; used by tests).
 MODULES = {"test_linear": TestLinearModule, "tellurium": TelluriumModule}
 
 

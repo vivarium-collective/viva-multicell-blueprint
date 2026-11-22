@@ -19,7 +19,7 @@ What is faithful vs. calibrated: the J mapping is exact; the tension mapping
 is only the *principled monotone* one (interfacial tension rises with contact
 energy). ``J`` (energy per contact unit) and ``Lambda`` (energy per edge
 length) have different units and geometry, so ``scale`` is NOT pinned here;
-the ``adhesion-calibration`` study (spec §9.1) fits it so mechanics-only
+the ``substrate-behavior-at-scale`` study (spec §9.1) fits it so mechanics-only
 sheets match in cell-shape statistics on both backends.
 
 Pairs are unordered: a reversed duplicate is merged if equal, else ValueError.

@@ -4,7 +4,9 @@ The concrete backend classes are re-exported here so the workspace core's
 registration walk (``core.build_core`` -> ``register_workspace_processes``, which
 imports each top-level module/subpackage and inspects its namespace) discovers
 them and registers ``local:CPMBackend`` / ``local:VertexBackend`` /
-``local:MunkBackend`` / ``local:FakeBackend``.
+``local:MunkBackend``.
+``FakeBackend`` (test scaffolding) is deliberately NOT re-exported here, so it is
+not registered in the production Registry; tests import it from ``.fake_backend``.
 Compiled composites address the backends by that ``local:<name>`` form, so without
 these exports the backends live in un-walked submodules and the composite fails to
 build with "no link found at address".
@@ -12,8 +14,7 @@ build with "no link found at address".
 from __future__ import annotations
 
 from viva_multicell_blueprint.backends.cpm_backend import CPMBackend
-from viva_multicell_blueprint.backends.fake_backend import FakeBackend
 from viva_multicell_blueprint.backends.munk_backend import MunkBackend
 from viva_multicell_blueprint.backends.vertex_backend import VertexBackend
 
-__all__ = ["CPMBackend", "VertexBackend", "MunkBackend", "FakeBackend"]
+__all__ = ["CPMBackend", "VertexBackend", "MunkBackend"]

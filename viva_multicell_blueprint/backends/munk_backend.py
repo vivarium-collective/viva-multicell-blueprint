@@ -48,12 +48,14 @@ import numpy as np
 from viva_munk import core_import
 from viva_munk.processes.multibody import PymunkProcess
 
-from viva_multicell_blueprint.compile.base import (
-    GENERIC_LATENT,
-    MechanicsBackend,
-    latent_pool_types,
-    no_footprint,
-    sorted_cell_ids,
+from viva_multicell_blueprint.compile.base import MechanicsBackend
+
+from ._common import (
+    dead_entry,
+    event_cid,
+    latent_config,
+    mint_daughter_id,
+    select_activations,
 )
 
 _FOOTPRINT_SEGMENTS = 16  # polygon points approximating a cell's circular outline
@@ -79,9 +81,8 @@ class MunkBackend(MechanicsBackend):
 
         # Immune-recruitment-as-activation (Task 20): which latent pool each active
         # immune type draws from -- identical semantics to CPMBackend.
-        self._latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
-        self._latent_generic = str(bp.get("latent_generic", GENERIC_LATENT))
-        self._warned_activation_types: set = set()
+        self._latent_map, self._latent_generic = latent_config(bp)
+        self._warned: set = set()
 
         # touching tolerance (um): two cells whose circles come within this gap are
         # neighbours even without hard overlap (center-based cells seldom interpenetrate).
@@ -293,7 +294,7 @@ class MunkBackend(MechanicsBackend):
 
         # (b) deaths: drop the body (it leaves the engine next sync) and mark not-alive.
         for ev in deaths:
-            bid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
+            bid = event_cid(ev)
             if bid in self._agents and self._alive.get(bid, False):
                 self._alive[bid] = False
                 self._agents.pop(bid, None)
@@ -301,7 +302,7 @@ class MunkBackend(MechanicsBackend):
         # (c) divisions: spawn a DAUGHTER adjacent to the mother. The daughter is a
         #     full cohort citizen (id ``<mother>.<k>``) and ``lineage[daughter]=mother``.
         for ev in divisions:
-            bid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
+            bid = event_cid(ev)
             self._spawn_daughter(bid)
 
         # (d) chemotaxis off the AUTHORITATIVE shared field: inject a per-cell velocity
@@ -358,12 +359,7 @@ class MunkBackend(MechanicsBackend):
         dx, dy = r * math.cos(ang), r * math.sin(ang)
         # nudge the mother one way, the daughter the other, so they do not coincide.
         mother["location"] = (mx - 0.5 * dx, my - 0.5 * dy)
-        k = self._div_count.get(bid, 0) + 1
-        did = f"{bid}.{k}"
-        while did in self._meta:
-            k += 1
-            did = f"{bid}.{k}"
-        self._div_count[bid] = k
+        did = mint_daughter_id(self._meta, bid, self._div_count)
         self._agents[did] = self._circle_agent((mx + 0.5 * dx, my + 0.5 * dy), r, meta["size"])
         self._meta[did] = dict(meta)
         self._alive[did] = True
@@ -435,44 +431,30 @@ class MunkBackend(MechanicsBackend):
         id order) and relabel them. Clamped to the pool; a cell is consumed once."""
         if not activations:
             return
-        import warnings
-
         declared = {self._meta[b]["type"] for b in self._all_ids}
         declared |= set(self._latent_map)
-        consumed: set = set()
 
         def current_name(bid):
             if not self._alive.get(bid, False):
                 return None
             return self._meta.get(bid, {}).get("type")
 
-        for active_type in sorted(activations):
-            count = int(activations.get(active_type, 0) or 0)
-            if count <= 0:
-                continue
-            pool = latent_pool_types(active_type, self._latent_map, self._latent_generic)
+        def skip(active_type, pool):
             # an active type that is nowhere declared/derivable is a config bug: WARN once.
-            if active_type not in declared and not any(
-                current_name(b) in pool for b in self._all_ids
-            ):
-                if active_type not in self._warned_activation_types:
-                    self._warned_activation_types.add(active_type)
-                    warnings.warn(
-                        f"MunkBackend: activation requested for unknown active type "
-                        f"{active_type!r} (no latent cells in its pool) -- no cells "
-                        f"activated.",
-                        RuntimeWarning, stacklevel=2,
-                    )
-                continue
-            picked = 0
-            for bid in sorted_cell_ids(self._all_ids):
-                if picked >= count:
-                    break
-                if bid in consumed or current_name(bid) not in pool:
-                    continue
-                self._meta[bid]["type"] = active_type
-                consumed.add(bid)
-                picked += 1
+            if active_type in declared or any(current_name(b) in pool for b in self._all_ids):
+                return False
+            self.warn_once(
+                ("activation", active_type),
+                f"MunkBackend: activation requested for unknown active type "
+                f"{active_type!r} (no latent cells in its pool) -- no cells "
+                f"activated.",
+            )
+            return True
+
+        for bid, active_type in select_activations(
+                activations, self._all_ids, current_name,
+                self._latent_map, self._latent_generic, skip):
+            self._meta[bid]["type"] = active_type
 
     def _apply_chemotaxis(self, field_grid) -> None:
         """Inject a per-cell velocity up the local gradient of each shared field,
@@ -605,15 +587,11 @@ class MunkBackend(MechanicsBackend):
 
         for bid in self._all_ids:
             if bid not in live:
-                cached = self._cache.get(bid) or {}
-                meta = self._meta.get(bid, {})
-                positions[bid] = list(cached.get("pos", [0.0, 0.0]))
-                sizes[bid] = float(cached.get("size", 0.0))
-                out_types[bid] = cached.get("type", meta.get("type", ""))
-                alive[bid] = False
-                neighbors[bid] = []
-                shared[bid] = {}
-                footprints[bid] = no_footprint()
+                cached = self._cache.get(bid) or {"type": self._meta.get(bid, {}).get("type", "")}
+                d = dead_entry(cached)
+                positions[bid], sizes[bid], out_types[bid] = d["pos"], d["size"], d["type"]
+                alive[bid], neighbors[bid] = d["alive"], d["neighbors"]
+                shared[bid], footprints[bid] = d["shared"], d["footprint"]
                 continue
 
             cx, cy, r = live[bid]

@@ -1,13 +1,13 @@
 """Per-study summary figures (spec §10) for the three non-capstone studies.
 
-The capstone (``flu-lung-crossparadigm``) uses the cross-paradigm trio
+The capstone (``cross-paradigm-equivalence``) uses the cross-paradigm trio
 (:func:`spatial_playback`, :func:`dynamics_overlay`, :func:`divergence`). These
 builders cover the other three studies' headline results:
 
-* :func:`adhesion_sweep`  -- J<->tension calibration (adhesion-calibration)
-* :func:`mechanics_calibration` -- vertex knobs fitted to CPM behaviour (adhesion-calibration)
+* :func:`adhesion_sweep`  -- J<->tension calibration (substrate-behavior-at-scale)
+* :func:`mechanics_calibration` -- vertex knobs fitted to CPM behaviour (substrate-behavior-at-scale)
 * :func:`dose_response`   -- initial-load dose response (dose-response-crossparadigm)
-* :func:`t0_fidelity`     -- t0 centroid residuals (initial-state-fidelity)
+* :func:`t0_fidelity`     -- t0 centroid residuals (blueprint-pipeline-fidelity)
 
 Each takes already-computed arrays (not runs), so it is pure and cheaply tested;
 ``scripts/render_study_figures.py`` does the simulation and feeds these.

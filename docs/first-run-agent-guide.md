@@ -1,14 +1,11 @@
-# multicell-blueprint + vivarium-workbench — first-run agent guide
+# multicell-blueprint — setup runbook (first-run agent guide)
 
-> **You are a coding agent (Claude Code / Cursor / …). A first-time user handed
-> you this file to get them onto the `multicell-blueprint` + vivarium-workbench
-> stack.** Your job: take them from zero to a *running* workbench with one of
-> this workspace's composites open in the loom viewer, then orient them and
-> offer next steps. Execute the **runbook** below gate-by-gate — run the
-> commands yourself where the environment allows, verify each gate's success
-> condition, and tell the user what you confirmed. After it's running, use the
-> reference sections (authoring, contributing, troubleshooting) as their goals
-> require.
+> **This is the single canonical setup runbook** (a human can follow it too).
+> If you are a coding agent (Claude Code / Cursor / ...), take the user from zero
+> to a *running* workbench with `blueprint_pipeline` open in the loom viewer,
+> then orient them via [`NEXT_STEPS.md`](../NEXT_STEPS.md). Execute the gates
+> below in order, run the commands yourself where the environment allows, verify
+> each gate's success condition, and tell the user what you confirmed.
 >
 > **Operating rules:**
 > - Run project code through the workspace venv (`.venv/bin/…`) — **never** a
@@ -28,8 +25,10 @@
   **typed, independently-wireable processes** you *compose* into whatever
   architecture a question needs. The Python package lives under
   `viva_multicell_blueprint/` (`core.py` exposes `build_core()`); research state lives
-  under `workspace/` — **composites** (wirings), **investigations** (a research
-  question), and **studies** (the simulations that answer it).
+  under `workspace/` — **blueprints** (backend-neutral model YAML), **investigations**
+  (a research question) and **studies** (the simulations that answer it). The one
+  composite, `blueprint_pipeline`, compiles a blueprint onto a CPM, vertex or
+  center-based backend.
 
 - **[vivarium-workbench](https://github.com/vivarium-collective/vivarium-workbench)** —
   a local web UI over any process-bigraph workspace. Browse the process/type
@@ -39,7 +38,7 @@
   trail.
 
 - **[viva-superpowers](https://github.com/vivarium-collective/viva-superpowers)** —
-  a Claude Code plugin whose `/viva-*` skills drive the workbench's HTTP API so
+  a Claude Code plugin whose `/viva:*` skills drive the workbench's HTTP API so
   an agent can author and run the workspace conversationally (add composites,
   studies, investigations; run sims; regenerate reports). This is *the* intended
   way an agent adds content (§6).
@@ -89,13 +88,13 @@ Tell the user the URL.
 
 ## 4. Open a composite in the viewer
 
-In the running dashboard, go to **Composites** and open one of *this
-workspace's* composites (the list is generated in the README's *Composites*
-table and shown on the dashboard's Composites page). It renders as an
+In the running dashboard, go to **Composites** and open `blueprint_pipeline` (the
+Studio entrypoint; `sego_crossparadigm` and `sego_crossparadigm_large` are presets
+of it). It renders as an
 interactive **bigraph-loom** graph — nodes are processes/stores, edges are typed
 port wirings.
 
-**Gate:** a composite's wiring graph renders in the loom viewer. This is the
+**Gate:** the composite's wiring graph renders in the loom viewer. This is the
 "it's running" milestone — confirm it to the user.
 
 ## 5. Orient
@@ -112,7 +111,7 @@ Point the user at the four things the dashboard exposes:
 
 ## 6. Authoring (the intended path)
 
-Add content through the `/viva-*` skills rather than hand-editing files — they
+Add content through the `/viva:*` skills rather than hand-editing files — they
 drive the workbench API and keep the workspace valid:
 
 - `/viva:study <slug>` — start a study (spec with `phase: Design|Build|Simulate|Evaluate|Decide`).

@@ -40,19 +40,20 @@ from __future__ import annotations
 
 import copy
 import math
-import warnings
 
 import numpy as np
 
 from viva_cpm.schema import load_world
 
 from viva_multicell_blueprint.compile.adhesion import to_cpm_contact
-from viva_multicell_blueprint.compile.base import (
-    GENERIC_LATENT,
-    MechanicsBackend,
-    latent_pool_types,
-    no_footprint,
-    sorted_cell_ids,
+from viva_multicell_blueprint.compile.base import MechanicsBackend, sorted_cell_ids
+
+from ._common import (
+    dead_entry,
+    event_cid,
+    latent_config,
+    mint_daughter_id,
+    select_activations,
 )
 
 MEDIUM = "medium"
@@ -80,9 +81,8 @@ class CPMBackend(MechanicsBackend):
 
         # Immune-recruitment-as-activation (Task 20): which latent pool each active
         # immune type draws from. Explicit per-type map + generic latent name.
-        self._latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
-        self._latent_generic = str(bp.get("latent_generic", GENERIC_LATENT))
-        self._warned_activation_types: set = set()
+        self._latent_map, self._latent_generic = latent_config(bp)
+        self._warned: set = set()
 
         cells = config.get("initial_state") or []
         self._all_ids = [str(c["id"]) for c in cells]
@@ -110,9 +110,6 @@ class CPMBackend(MechanicsBackend):
                             for bid in self._all_ids}
         self._div_count = {}
         self._lineage = {}
-        self._warned_motility = False
-        self._warned_adhesion = False
-        self._warned_daughter = False
 
         spec, self._field_idx, self._cpm_id = self._build_spec(config, cells, bp)
         self._world = load_world(spec)
@@ -349,7 +346,7 @@ class CPMBackend(MechanicsBackend):
 
         # (b) deaths: remove the cell from the lattice, mark it not-alive.
         for ev in deaths:
-            bid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
+            bid = event_cid(ev)
             cpm = self._cpm_id.get(bid)
             if cpm is not None and self._alive.get(bid, False):
                 self._world.remove_cells([cpm])
@@ -378,7 +375,7 @@ class CPMBackend(MechanicsBackend):
         #     (The previous ``divide_cells(div_ids, True)`` call passed a list + bool and
         #     raised TypeError against this signature on every division -- a latent bug,
         #     since no shipped study fires a CPM division.)
-        div_cpm = [self._cpm_id.get(str(ev["cell_id"] if isinstance(ev, dict) else ev))
+        div_cpm = [self._cpm_id.get(event_cid(ev))
                    for ev in divisions]
         div_cpm = [c for c in div_cpm
                    if c is not None and self._alive.get(self._cpm_to_bid.get(c, ""), False)]
@@ -417,14 +414,13 @@ class CPMBackend(MechanicsBackend):
             if cpm is not None and self._alive.get(bid, False):
                 self._cell_state[bid]["target"] = float(v)
                 self._world.set_target_volume(cpm, float(v))
-        if inputs.get("adhesion") and not self._warned_adhesion:
-            self._warned_adhesion = True
-            warnings.warn(
+        if inputs.get("adhesion"):
+            self.warn_once(
+                "adhesion",
                 "CPMBackend: adhesion is applied per TYPE PAIR (viva-cpm's contact matrix "
                 "is global, last write wins), not per cell; same-type cells with differing "
                 "adhesion values collapse to one value, and dict keys naming undeclared "
                 "types are discarded.",
-                RuntimeWarning, stacklevel=2,
             )
         for cid in sorted_cell_ids((inputs.get("adhesion") or {}).keys()):
             adh = inputs["adhesion"][cid] if cid in inputs["adhesion"] else None
@@ -444,23 +440,12 @@ class CPMBackend(MechanicsBackend):
             if bid not in self._cell_state:
                 continue
             self._cell_state[bid]["motility"] = float(v)
-            if not self._warned_motility:
-                self._warned_motility = True
-                warnings.warn(
-                    "CPMBackend: viva-cpm has no per-cell temperature/motility knob "
-                    "(temperature is global, fixed at finalize); the motility input is "
-                    "recorded but does not alter CPM dynamics.",
-                    RuntimeWarning, stacklevel=2,
-                )
-
-    def _mint_id(self, mother: str) -> str:
-        k = self._div_count.get(mother, 0) + 1
-        did = f"{mother}.{k}"
-        while did in self._cpm_id:
-            k += 1
-            did = f"{mother}.{k}"
-        self._div_count[mother] = k
-        return did
+            self.warn_once(
+                "motility",
+                "CPMBackend: viva-cpm has no per-cell temperature/motility knob "
+                "(temperature is global, fixed at finalize); the motility input is "
+                "recorded but does not alter CPM dynamics.",
+            )
 
     def _register_daughters(self, n_before: int, pre) -> None:
         """Give every cpm cell created by ``divide_cells`` a blueprint id, add it to
@@ -478,16 +463,14 @@ class CPMBackend(MechanicsBackend):
             mcpm = int(np.bincount(owned.astype(int)).argmax()) if owned.size else None
             mother = self._cpm_to_bid.get(mcpm) if mcpm is not None else None
             if mother is None:
-                if not self._warned_daughter:
-                    self._warned_daughter = True
-                    warnings.warn(
-                        f"CPMBackend: viva-cpm created daughter cell {new} whose mother "
-                        f"could not be attributed; it has no blueprint id and is absent "
-                        f"from the emitted maps and lineage.",
-                        RuntimeWarning, stacklevel=2,
-                    )
+                self.warn_once(
+                    "daughter",
+                    f"CPMBackend: viva-cpm created daughter cell {new} whose mother "
+                    f"could not be attributed; it has no blueprint id and is absent "
+                    f"from the emitted maps and lineage.",
+                )
                 continue
-            did = self._mint_id(mother)
+            did = mint_daughter_id(self._cpm_id, mother, self._div_count)
             self._cpm_id[did] = new
             self._cpm_to_bid[new] = did
             self.identity[did] = new
@@ -514,7 +497,6 @@ class CPMBackend(MechanicsBackend):
         if not activations:
             return
         types_now = list(self._world.cell_types())
-        consumed: set = set()
 
         def current_name(bid):
             cpm = self._cpm_id.get(bid)
@@ -522,36 +504,27 @@ class CPMBackend(MechanicsBackend):
                 return None
             return self._type_name.get(int(types_now[cpm]), None)
 
-        for active_type in sorted(activations):
-            count = int(activations.get(active_type, 0) or 0)
-            if count <= 0:
+        def skip(active_type, pool):
+            if active_type in self._type_ids:
+                return False
+            # Fail LOUD(ish), not silent: an undeclared active type would make
+            # recruitment a silent no-op (the Task-20 silent-failure trap).
+            self.warn_once(
+                ("activation", active_type),
+                f"CPMBackend: activation requested for unknown active type "
+                f"{active_type!r} (not in cell_types/type_ids) -- no cells "
+                f"activated. Declare it in the blueprint cell_types.",
+            )
+            return True
+
+        for bid, active_type in select_activations(
+                activations, self._all_ids, current_name,
+                self._latent_map, self._latent_generic, skip):
+            cpm = self._cpm_id.get(bid)
+            if cpm is None:
                 continue
-            if active_type not in self._type_ids:
-                # Fail LOUD(ish), not silent: an undeclared active type would make
-                # recruitment a silent no-op (the Task-20 silent-failure trap).
-                if active_type not in self._warned_activation_types:
-                    self._warned_activation_types.add(active_type)
-                    warnings.warn(
-                        f"CPMBackend: activation requested for unknown active type "
-                        f"{active_type!r} (not in cell_types/type_ids) -- no cells "
-                        f"activated. Declare it in the blueprint cell_types.",
-                        RuntimeWarning, stacklevel=2,
-                    )
-                continue
-            pool = latent_pool_types(active_type, self._latent_map, self._latent_generic)
-            picked = 0
-            for bid in sorted_cell_ids(self._all_ids):
-                if picked >= count:
-                    break
-                if bid in consumed or current_name(bid) not in pool:
-                    continue
-                cpm = self._cpm_id.get(bid)
-                if cpm is None:
-                    continue
-                self._world.set_cell_type(cpm, self._tag(active_type))
-                self._cell_meta[bid]["type"] = active_type
-                consumed.add(bid)
-                picked += 1
+            self._world.set_cell_type(cpm, self._tag(active_type))
+            self._cell_meta[bid]["type"] = active_type
 
     # -- read-back ----------------------------------------------------------- #
     def _emit(self):
@@ -570,14 +543,10 @@ class CPMBackend(MechanicsBackend):
                 and cpm < len(volumes) and volumes[cpm] > 0
             if not is_alive:
                 # dead / removed: emit last-known (or seeded) placeholder, not-alive.
-                cached = self._cache.get(bid) or self._cell_meta.get(bid, {})
-                positions[bid] = list(cached.get("pos", [0.0, 0.0]))
-                sizes[bid] = float(cached.get("size", 0.0))
-                out_types[bid] = cached.get("type", "")
-                alive[bid] = False
-                neighbors[bid] = []
-                shared[bid] = {}
-                footprints[bid] = no_footprint()
+                d = dead_entry(self._cache.get(bid) or self._cell_meta.get(bid, {}))
+                positions[bid], sizes[bid], out_types[bid] = d["pos"], d["size"], d["type"]
+                alive[bid], neighbors[bid] = d["alive"], d["neighbors"]
+                shared[bid], footprints[bid] = d["shared"], d["footprint"]
                 continue
             footprints[bid] = {"kind": "occupancy", "xy": occ.get(cpm, [])}
             com = coms[cpm]

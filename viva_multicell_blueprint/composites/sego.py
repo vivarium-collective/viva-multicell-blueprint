@@ -2,11 +2,11 @@
 mechanics backend, exposed to the dashboard's Composite Explorer and used as the
 baseline composite of the ``influenza-crossparadigm`` studies.
 
-One generator, parameterized by ``backend`` (``cpm``|``vertex``) and the
+One generator, parameterized by ``backend`` (``cpm``|``vertex``|``munk``) and the
 ``blueprint`` path, so the same runnable artifact serves the full flu-lung study
-and the mechanics-only adhesion-calibration sheet. It simply ``compile()``s the
-backend-neutral blueprint -- the single source of truth -- so the Explorer shows
-the real shared mechanism + the one backend-specific mechanics node.
+and the mechanics-only substrate-behavior-at-scale sheet. Both generators here are thin
+aliases of the canonical ``blueprint_pipeline`` (``composites/pipeline.py``), which
+``compile()``s the backend-neutral blueprint -- the single source of truth.
 
 ``sego_crossparadigm_large`` is a thin preset wrapper over the same generator whose
 ``blueprint`` defaults to a biology-preserving ~2.4x scale-up (a bigger tissue, the
@@ -26,7 +26,6 @@ from pathlib import Path
 from process_bigraph.composite_generator import composite_generator
 
 from ..blueprint.model import Blueprint
-from ..compile import compile as _compile
 from ..core import register_workspace_processes
 
 # __file__ is <pkg>/composites/sego.py, so the repo root (which holds
@@ -83,8 +82,11 @@ def _load_blueprint(blueprint):
 )
 def sego_crossparadigm(core=None, backend: str = "cpm", blueprint: str | None = None,
                        video_out: str = "") -> dict:
-    bp = _load_blueprint(blueprint)
-    return _compile(bp, backend=backend, video_out=(video_out or None))   # {"state": {...}} envelope
+    """Back-compat alias of the canonical :func:`.pipeline.blueprint_pipeline`
+    (the identical document when the blueprint has no subcellular layer)."""
+    from .pipeline import blueprint_pipeline
+    return blueprint_pipeline(core=core, backend=backend, blueprint=blueprint,
+                              video_out=video_out)
 
 
 @composite_generator(
@@ -111,10 +113,10 @@ def sego_crossparadigm(core=None, backend: str = "cpm", blueprint: str | None = 
 )
 def sego_crossparadigm_large(core=None, backend: str = "cpm", blueprint: str | None = None,
                              video_out: str = "") -> dict:
-    """Thin preset wrapper over :func:`sego_crossparadigm`: identical generator, but
-    its ``blueprint`` defaults to the larger scaled-up Sego blueprint so it surfaces
-    as its own startable simulation in the Studio catalog. DRY -- no mechanism is
-    duplicated; only the default starting geometry differs."""
-    return sego_crossparadigm(core=core, backend=backend,
+    """Thin preset alias of :func:`.pipeline.blueprint_pipeline`: its ``blueprint``
+    defaults to the larger scaled-up Sego blueprint so it surfaces as its own
+    startable simulation in the Studio catalog. Only the default geometry differs."""
+    from .pipeline import blueprint_pipeline
+    return blueprint_pipeline(core=core, backend=backend,
                               blueprint=(blueprint if blueprint is not None else str(_SEGO_LARGE)),
                               video_out=video_out)

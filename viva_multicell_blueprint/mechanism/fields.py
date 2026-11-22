@@ -1,11 +1,11 @@
 """FieldProcess: the single authoritative reaction-diffusion field engine.
 
-Both mechanical backends (CPM, vertex) read this engine's ``field_grid``; no
+All mechanical backends (CPM, vertex, munk) read this engine's ``field_grid``; no
 second diffusion engine exists. Fields live on a fixed Eulerian grid; secretion
 and uptake are applied at cell CENTROIDS by cell type; the field gradient is
 exposed for chemotaxis via ``field_gradient_at``.
 
-The numerical routines below (``_diffuse_step``, ``_check_stability``) are vendored from viva-cpm and kept faithful.
+The numerical routines below (``_diffuse_step``, ``_check_stability``) are vendored from viva-cpm and kept faithful (see the note below).
 """
 from __future__ import annotations
 
@@ -13,18 +13,11 @@ import numpy as np
 from process_bigraph import Process
 
 # --------------------------------------------------------------------------
-# Vendored from viva-cpm viva_cpm_studies/influenza/fields.py @ commit b952eec2 — pure field math, kept verbatim for cross-paradigm fidelity.
-#
-# Stability rule and the dt/substeps convention are verbatim from that file's
-# per-field ``assert dt * diffusion * 2 * 2 < 1.0`` / ``assert substeps * dt ==
-# 1.0`` (generalised from ndim=2 to ndim). ``_diffuse_step`` is the numpy transcription of the engine routine
-# it drives (crates/cpm-core/src/field.rs ``Field::diffuse_step``, which the
-# python file only configures): explicit forward Euler on the face-neighbour
-# Laplacian, ``c += dt * (D * sum_j(c_j - c_i) - decay * c_i)``, clamped >= 0,
-# no-flux walls (missing neighbours contribute nothing). Secretion is added as
-# ``rate * dt`` exactly ONCE per MCS, AFTER the diffusion substeps (engine
-# quirk). Boundary: only no-flux is implemented; boundary='periodic' raises
-# NotImplementedError (fail loud rather than silently treat as no-flux).
+# Vendored from viva-cpm (influenza/fields.py): pure field math, kept faithful for cross-paradigm fidelity.
+# Semantics: explicit forward Euler on the face-neighbour Laplacian,
+# ``c += dt * (D * sum_j(c_j - c_i) - decay * c_i)``, clamped >= 0, no-flux walls.
+# Secretion adds ``rate * dt`` once per MCS after the diffusion substeps. Only
+# no-flux is implemented; boundary='periodic' raises NotImplementedError.
 # --------------------------------------------------------------------------
 
 

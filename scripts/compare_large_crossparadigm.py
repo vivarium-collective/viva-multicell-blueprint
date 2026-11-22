@@ -7,7 +7,7 @@ substrates (CPM reference, vertex, center-based/munk) across >=3 rules-seeds, an
 reports each behavior metric as a cross-backend DISTANCE FROM THE CPM next to the
 same-backend (seed-to-seed) NULL floor. A small cross/null ratio means that
 substrate reproduces the CPM's movement / interaction pattern; a large one means it
-diverges. This is the `large-crossparadigm-comparison` study's canonical run (not in
+diverges. This is the `substrate-behavior-at-scale` study's canonical run (not in
 CI -- the large tissue is slow).
 
     .venv/bin/python scripts/compare_large_crossparadigm.py [N] [--json out.json]

@@ -1,0 +1,210 @@
+{
+  "study": "cross-paradigm-equivalence",
+  "arm": "counterfactual-positive-control",
+  "n_steps": 80,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "backends": [
+    "cpm",
+    "vertex",
+    "munk"
+  ],
+  "spatial": {
+    "margin": 0.1,
+    "pairs": {
+      "cpm-vertex": {
+        "a": "cpm",
+        "b": "vertex",
+        "same": [
+          0.45,
+          0.6,
+          0.6,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "cross": [
+          0.55,
+          0.55,
+          0.5,
+          0.4,
+          0.5,
+          0.45,
+          0.45,
+          0.3,
+          0.35
+        ],
+        "tost": {
+          "equivalent": false,
+          "diff": 0.32500000000000007,
+          "margin": 0.1,
+          "se": 0.10704360482220941,
+          "df": 5.792799693603984,
+          "ci_low": 0.11565492127406396,
+          "ci_high": 0.5343450787259362,
+          "p_lower": 0.003953200920322995,
+          "p_upper": 0.9590410928288858,
+          "p_tost": 0.9590410928288858,
+          "n_same": 6,
+          "n_cross": 9,
+          "mean_same": 0.775,
+          "mean_cross": 0.44999999999999996,
+          "alpha": 0.05
+        },
+        "cluster": {
+          "diff": 0.32500000000000007,
+          "ci_low": 0.11666666666666659,
+          "ci_high": 0.5408333333333303,
+          "n_boot": 3952,
+          "alpha": 0.05,
+          "n_cpm_runs": 3,
+          "n_vertex_runs": 3,
+          "n_vtx_runs": 3,
+          "method": "run-cluster percentile bootstrap"
+        }
+      },
+      "cpm-munk": {
+        "a": "cpm",
+        "b": "munk",
+        "same": [
+          0.45,
+          0.6,
+          0.6,
+          0.25,
+          0.15,
+          0.05
+        ],
+        "cross": [
+          0.0,
+          0.05,
+          0.0,
+          0.05,
+          0.05,
+          0.0,
+          0.1,
+          0.05,
+          0.0
+        ],
+        "tost": {
+          "equivalent": false,
+          "diff": 0.3166666666666666,
+          "margin": 0.1,
+          "se": 0.09646530752325187,
+          "df": 5.151923794221444,
+          "ci_low": 0.12354348329772255,
+          "ci_high": 0.5097898500356106,
+          "p_lower": 0.0035385293465434774,
+          "p_upper": 0.9634632676895126,
+          "p_tost": 0.9634632676895126,
+          "n_same": 6,
+          "n_cross": 9,
+          "mean_same": 0.3499999999999999,
+          "mean_cross": 0.03333333333333334,
+          "alpha": 0.05
+        },
+        "cluster": {
+          "diff": 0.3166666666666666,
+          "ci_low": 0.11666666666666667,
+          "ci_high": 0.5333333333333333,
+          "n_boot": 3952,
+          "alpha": 0.05,
+          "n_cpm_runs": 3,
+          "n_munk_runs": 3,
+          "n_vtx_runs": 3,
+          "method": "run-cluster percentile bootstrap"
+        }
+      },
+      "vertex-munk": {
+        "a": "vertex",
+        "b": "munk",
+        "same": [
+          1.0,
+          1.0,
+          1.0,
+          0.25,
+          0.15,
+          0.05
+        ],
+        "cross": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.05,
+          0.0
+        ],
+        "tost": {
+          "equivalent": false,
+          "diff": 0.5694444444444444,
+          "margin": 0.1,
+          "se": 0.19189197707094877,
+          "df": 5.008390225679751,
+          "ci_low": 0.1829158725560569,
+          "ci_high": 0.9559730163328319,
+          "p_lower": 0.008723958068607896,
+          "p_upper": 0.9709446726145163,
+          "p_tost": 0.9709446726145163,
+          "n_same": 6,
+          "n_cross": 9,
+          "mean_same": 0.575,
+          "mean_cross": 0.005555555555555556,
+          "alpha": 0.05
+        },
+        "cluster": {
+          "diff": 0.5694444444444444,
+          "ci_low": 0.15,
+          "ci_high": 1.0,
+          "n_boot": 3952,
+          "alpha": 0.05,
+          "n_vertex_runs": 3,
+          "n_munk_runs": 3,
+          "n_cpm_runs": 3,
+          "n_vtx_runs": 3,
+          "method": "run-cluster percentile bootstrap"
+        }
+      }
+    },
+    "same": [
+      0.45,
+      0.6,
+      0.6,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "cross": [
+      0.55,
+      0.55,
+      0.5,
+      0.4,
+      0.5,
+      0.45,
+      0.45,
+      0.3,
+      0.35
+    ],
+    "tost": {
+      "equivalent": false,
+      "diff": 0.32500000000000007,
+      "margin": 0.1,
+      "se": 0.10704360482220941,
+      "df": 5.792799693603984,
+      "ci_low": 0.11565492127406396,
+      "ci_high": 0.5343450787259362,
+      "p_lower": 0.003953200920322995,
+      "p_upper": 0.9590410928288858,
+      "p_tost": 0.9590410928288858,
+      "n_same": 6,
+      "n_cross": 9,
+      "mean_same": 0.775,
+      "mean_cross": 0.44999999999999996,
+      "alpha": 0.05
+    }
+  }
+}

@@ -230,6 +230,14 @@ def _flipbook_html(frames, labels, title, slider_prefix):
     imgs = ",".join(json.dumps(u) for u in frames)
     labs = ",".join(json.dumps(x) for x in labels)
     n = len(frames)
+    # A single-frame flipbook is a static snapshot (e.g. a t0 side-by-side): no
+    # Play/slider — those would just be dead controls on a "video" that can't play.
+    ctl = "" if n < 2 else (
+        '<div class="ctl">'
+        '<button id="vmb-play" type="button">Play</button>'
+        f'<input id="vmb-sl" type="range" min="0" max="{n - 1}" value="0" step="1" aria-label="frame">'
+        '<span class="lbl" id="vmb-lbl"></span>'
+        '</div>')
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{_esc(title)}</title>
@@ -254,12 +262,7 @@ def _flipbook_html(frames, labels, title, slider_prefix):
 <div id="vmb-flipbook">
   <h3>{_esc(title)}</h3>
   <img id="vmb-img" alt="spatial playback frame">
-  <div class="ctl">
-    <button id="vmb-play" type="button">Play</button>
-    <input id="vmb-sl" type="range" min="0" max="{n - 1}" value="0" step="1"
-           aria-label="frame">
-    <span class="lbl" id="vmb-lbl"></span>
-  </div>
+  {ctl}
 </div>
 <script>
 (function() {{
@@ -267,13 +270,13 @@ def _flipbook_html(frames, labels, title, slider_prefix):
   var img=document.getElementById('vmb-img'), sl=document.getElementById('vmb-sl'),
       lbl=document.getElementById('vmb-lbl'), btn=document.getElementById('vmb-play');
   var i=0, timer=null;
-  function show(k) {{ i=((k%F.length)+F.length)%F.length; img.src=F[i]; sl.value=i;
-    lbl.textContent='frame '+(i+1)+'/'+F.length+'  |  '+PFX+L[i]; }}
-  function stop() {{ if(timer){{clearInterval(timer);timer=null;btn.textContent='Play';}} }}
+  function show(k) {{ i=((k%F.length)+F.length)%F.length; img.src=F[i]; if(sl)sl.value=i;
+    if(lbl)lbl.textContent='frame '+(i+1)+'/'+F.length+'  |  '+PFX+L[i]; }}
+  function stop() {{ if(timer){{clearInterval(timer);timer=null;if(btn)btn.textContent='Play';}} }}
   function play() {{ if(F.length<2)return; timer=setInterval(function(){{show(i+1);}},220);
-    btn.textContent='Pause'; }}
-  sl.addEventListener('input', function(e){{ stop(); show(+e.target.value); }});
-  btn.addEventListener('click', function(){{ if(timer)stop(); else play(); }});
+    if(btn)btn.textContent='Pause'; }}
+  if(sl) sl.addEventListener('input', function(e){{ stop(); show(+e.target.value); }});
+  if(btn) btn.addEventListener('click', function(){{ if(timer)stop(); else play(); }});
   show(0);
 }})();
 </script></body></html>"""

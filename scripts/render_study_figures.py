@@ -51,7 +51,7 @@ def _write(study_slug: str, name: str, fig) -> None:
     print(f"  wrote {study_slug}/viz/{name}.html  ({size // 1024} KB)")
 
 
-# --- flu-lung-crossparadigm: the cross-paradigm trio (capstone) ---------------
+# --- cross-paradigm-equivalence (spatial playback / dynamics / divergence): the cross-paradigm trio (capstone) ---------------
 def render_flu_lung(fast: bool) -> None:
     n = 60 if fast else 120
     seeds = (0, 1, 2)
@@ -78,21 +78,21 @@ def render_flu_lung(fast: bool) -> None:
     lo, hi, mu = M.min(0), M.max(0), M.mean(0)
     band = {"I cells": [(float(t), float(mu[t]), float(lo[t]), float(hi[t])) for t in range(n + 1)]}
 
-    _write("flu-lung-crossparadigm", "spatial-playback",
+    _write("cross-paradigm-equivalence", "spatial-playback",
            spatial_playback_multi({b: r.frames for b, r in runs0.items()}, grid))
-    _write("flu-lung-crossparadigm", "dynamics-overlay",
+    _write("cross-paradigm-equivalence", "dynamics-overlay",
            dynamics_overlay({b: r.frames for b, r in runs0.items()}, band))
     # pairwise substrate-divergence maps (cpm-vertex kept as the canonical name)
-    _write("flu-lung-crossparadigm", "divergence",
+    _write("cross-paradigm-equivalence", "divergence",
            divergence(cpm[0].frames, vtx.frames, reg, grid))
     for a, b in itertools.combinations(list(runs0), 2):
         if (a, b) == ("cpm", "vertex"):
             continue
-        _write("flu-lung-crossparadigm", f"divergence-{a}-{b}",
+        _write("cross-paradigm-equivalence", f"divergence-{a}-{b}",
                divergence(runs0[a].frames, runs0[b].frames, reg, grid))
 
 
-# --- adhesion-calibration: J↔tension sweep + neutral-sheet playback -----------
+# --- substrate-behavior-at-scale: J↔tension sweep + neutral-sheet playback -----------
 _MECH = {
     "domain": {"extent_um": [30, 30], "grid_resolution_um": 1, "boundary": "noflux"},
     "cell_types": [{"name": "H", "target_size": 25}],
@@ -101,7 +101,7 @@ _MECH = {
                       "block": {"type": "H", "origin": [6, 6], "shape": [4, 4], "spacing": 5, "size": 25}},
 }
 _SCALES = (0.5, 1.0, 1.683, 2.0, 4.0, 8.0)
-CALIBRATION = STUDIES / "adhesion-calibration" / "results" / "vertex_mechanics_calibration.json"
+CALIBRATION = STUDIES / "substrate-behavior-at-scale" / "results" / "vertex_mechanics_calibration.json"
 
 
 def _area_stats(run):
@@ -124,18 +124,18 @@ def render_adhesion(fast: bool) -> None:
         m, cv = _area_stats(v)
         v_mean.append(m)
         v_cv.append(cv)
-    _write("adhesion-calibration", "adhesion-sweep",
+    _write("substrate-behavior-at-scale", "adhesion-sweep",
            adhesion_sweep(_SCALES, v_mean, v_cv, c_mean, c_cv, target_size=25))
     # playback at the calibrated default tension scale (no override); add the
     # center-based sheet as a third panel (munk calibration itself is future work).
     vtx_ref = run_backend(Blueprint.from_dict(copy.deepcopy(_MECH)), "vertex", n)
     munk_ref = run_backend(Blueprint.from_dict(copy.deepcopy(_MECH)), "munk", n)
     grid = {"extent_um": [30, 30], "grid_resolution_um": 1}
-    _write("adhesion-calibration", "neutral-sheet-playback",
+    _write("substrate-behavior-at-scale", "neutral-sheet-playback",
            spatial_playback_multi({"cpm": cpm.frames, "vertex": vtx_ref.frames,
                                    "munk": munk_ref.frames}, grid))
     if CALIBRATION.exists():   # produced by scripts/calibrate_vertex_mechanics.py
-        _write("adhesion-calibration", "mechanics-calibration",
+        _write("substrate-behavior-at-scale", "mechanics-calibration",
                mechanics_calibration(json.loads(CALIBRATION.read_text())))
 
 
@@ -162,7 +162,7 @@ def render_dose(fast: bool) -> None:
     _write("dose-response-crossparadigm", "dose-response", dose_response(fractions, series))
 
 
-# --- initial-state-fidelity: t0 centroid residuals + t0 side-by-side ----------
+# --- blueprint-pipeline-fidelity: t0 centroid residuals + t0 side-by-side ----------
 def render_fidelity(fast: bool) -> None:
     bp = Blueprint.load(SEGO)
     by = {str(c["id"]): c for c in resolve_initial_state(bp)}
@@ -180,14 +180,14 @@ def render_fidelity(fast: bool) -> None:
             ok += int(str(f["types"][cid]) == str(c["type"]))
         residuals[backend] = res
         type_ok[backend] = ok
-    _write("initial-state-fidelity", "t0-residuals",
+    _write("blueprint-pipeline-fidelity", "t0-residuals",
            t0_fidelity(residuals, type_ok=type_ok, n_cells=len(by)))
     grid = {"extent_um": [50, 50], "grid_resolution_um": 1}
-    _write("initial-state-fidelity", "t0-side-by-side",
+    _write("blueprint-pipeline-fidelity", "t0-side-by-side",
            spatial_playback_multi({b: runs[b].frames for b in runs}, grid))
 
 
-# --- large-crossparadigm-comparison: CPM reference spatial-playback video -----
+# --- substrate-behavior-at-scale: CPM reference spatial-playback video -----
 def render_large(fast: bool) -> None:
     """Detailed single-panel CPM playback on the LARGE Sego blueprint (120x120,
     ~225-cell epithelium) — the reference-substrate video for the three-way
@@ -198,18 +198,24 @@ def render_large(fast: bool) -> None:
     d.setdefault("mechanics_mapping", {})["rules_seed"] = 0
     cpm = run_backend(Blueprint.from_dict(d), "cpm", n)
     grid = {"extent_um": [120, 120], "grid_resolution_um": 1}
-    _write("large-crossparadigm-comparison", "spatial-playback-cpm-large",
+    _write("substrate-behavior-at-scale", "spatial-playback-cpm-large",
            single_playback(cpm.frames, grid, backend="cpm",
                            title="Large Sego 2022 — CPM reference playback "
                                  "(120x120, ~225-cell epithelium)"))
 
 
+def render_substrate_scale(fast: bool) -> None:
+    """substrate-behavior-at-scale: the vertex-mechanics matching figures (J<->tension
+    sweep, calibration, neutral-sheet playback) plus the large-tissue CPM playback."""
+    render_adhesion(fast)
+    render_large(fast)
+
+
 _RENDERERS = {
-    "flu-lung-crossparadigm": render_flu_lung,
-    "adhesion-calibration": render_adhesion,
+    "cross-paradigm-equivalence": render_flu_lung,
+    "substrate-behavior-at-scale": render_substrate_scale,
     "dose-response-crossparadigm": render_dose,
-    "initial-state-fidelity": render_fidelity,
-    "large-crossparadigm-comparison": render_large,
+    "blueprint-pipeline-fidelity": render_fidelity,
 }
 
 

@@ -49,19 +49,19 @@ from __future__ import annotations
 
 import copy
 import tempfile
-import warnings
 from pathlib import Path
 
 import numpy as np
 
-from viva_multicell_blueprint.compile.base import (
-    GENERIC_LATENT,
-    MechanicsBackend,
-    latent_pool_types,
-    no_footprint,
-    sorted_cell_ids,
-)
+from viva_multicell_blueprint.compile.base import MechanicsBackend
 
+from ._common import (
+    dead_entry,
+    event_cid,
+    latent_config,
+    mint_daughter_id,
+    select_activations,
+)
 from . import vertex_coupling as coupling
 from .vertex_mesh import (
     assign_to_lattice,
@@ -141,8 +141,7 @@ class VertexBackend(MechanicsBackend):
         self._shape_gamma = float(bp.get("perimeter_elasticity", 0.0))
         self._shape_index = float(bp.get("shape_index", 3.9))
         # Immune-recruitment-as-activation (Task 20): latent pool resolution.
-        self._latent_map = {str(k): str(v) for k, v in (bp.get("latent_types") or {}).items()}
-        self._latent_generic = str(bp.get("latent_generic", GENERIC_LATENT))
+        self._latent_map, self._latent_generic = latent_config(bp)
 
         # runtime per-cell actuators (input ports, NOT the init-time config keys):
         # bid -> {"target": float|None, "motility": float|None, "adhesion": scalar|dict|None}
@@ -150,8 +149,7 @@ class VertexBackend(MechanicsBackend):
         self._tension_scale = float(bp.get("tension_scale", 1.0))
         self._div_count: dict[str, int] = {}
         self._lineage: dict[str, str] = {}
-        self._warned_adhesion_conflict = False
-        self._warned_daughter = False
+        self._warned: set = set()
 
         self._t = 0.0
         self._alive: dict[str, bool] = {}
@@ -383,8 +381,6 @@ class VertexBackend(MechanicsBackend):
         if not activations:
             return []
         fd = self._solver.eptm.face_df
-        out = []
-        consumed: set = set()
 
         def current_name(bid):
             uid = self._uid.get(bid)
@@ -395,25 +391,12 @@ class VertexBackend(MechanicsBackend):
                 return None
             return str(fd.loc[lab, "cell_type"])
 
-        for active_type in sorted(activations):
-            count = int(activations.get(active_type, 0) or 0)
-            if count <= 0:
-                continue
-            pool = latent_pool_types(active_type, self._latent_map, self._latent_generic)
-            picked = 0
-            for bid in sorted_cell_ids(self._all_ids):
-                if picked >= count:
-                    break
-                if bid in consumed or current_name(bid) not in pool:
-                    continue
-                out.append({
-                    "func": "differentiation",
-                    "cell_uid": self._uid[bid],
-                    "new_type": str(active_type),
-                })
-                consumed.add(bid)
-                picked += 1
-        return out
+        return [
+            {"func": "differentiation", "cell_uid": self._uid[bid], "new_type": str(active_type)}
+            for bid, active_type in select_activations(
+                activations, self._all_ids, current_name,
+                self._latent_map, self._latent_generic)
+        ]
 
     def _act(self, bid) -> dict:
         return self._cell_act.setdefault(bid, {"target": None, "motility": None, "adhesion": None})
@@ -464,13 +447,12 @@ class VertexBackend(MechanicsBackend):
         record ``lineage[daughter] = mother``."""
         fd = self._solver.eptm.face_df
         if "mother_uid" not in fd.columns:
-            if len(fd) > len(self._uid) and not self._warned_daughter:
-                self._warned_daughter = True
-                warnings.warn(
+            if len(fd) > len(self._uid):
+                self.warn_once(
+                    "daughter",
                     "VertexBackend: tyssue produced new face(s) but the mesh has no "
                     "`mother_uid` column, so daughters cannot be attributed; they are "
-                    "absent from the emitted maps and lineage.",
-                    RuntimeWarning, stacklevel=2)
+                    "absent from the emitted maps and lineage.")
             return
         known = set(self._uid.values())
         new = [(int(u), int(m)) for u, m in zip(fd["unique_id"], fd["mother_uid"])
@@ -478,19 +460,12 @@ class VertexBackend(MechanicsBackend):
         for uid, muid in sorted(new):
             mother = self._uid_to_bid.get(muid)
             if mother is None:
-                if not self._warned_daughter:
-                    self._warned_daughter = True
-                    warnings.warn(
-                        f"VertexBackend: daughter face {uid} has an unregistered mother "
-                        f"({muid}); it is absent from the emitted maps and lineage.",
-                        RuntimeWarning, stacklevel=2)
+                self.warn_once(
+                    "daughter",
+                    f"VertexBackend: daughter face {uid} has an unregistered mother "
+                    f"({muid}); it is absent from the emitted maps and lineage.")
                 continue
-            k = self._div_count.get(mother, 0) + 1
-            did = f"{mother}.{k}"
-            while did in self._uid:
-                k += 1
-                did = f"{mother}.{k}"
-            self._div_count[mother] = k
+            did = mint_daughter_id(self._uid, mother, self._div_count)
             self._uid[did] = uid
             self._uid_to_bid[uid] = did
             self.identity[did] = uid
@@ -516,7 +491,7 @@ class VertexBackend(MechanicsBackend):
         # deaths first, so a cell dying this step stops migrating this step
         dead_uids = []
         for ev in deaths:
-            cid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
+            cid = event_cid(ev)
             uid = self._uid.get(cid)
             if uid is not None:
                 self._alive[cid] = False
@@ -542,7 +517,7 @@ class VertexBackend(MechanicsBackend):
         behaviors += coupling.death_behaviors(dead_uids)
         div_uids = []
         for ev in divisions:
-            cid = str(ev["cell_id"] if isinstance(ev, dict) else ev)
+            cid = event_cid(ev)
             if self._uid.get(cid) is not None:
                 div_uids.append(self._uid[cid])
         # a runtime target_size survives split_cells' reset of the area to 1.0
@@ -581,8 +556,7 @@ class VertexBackend(MechanicsBackend):
                 conflict += int(getattr(self._solver.eptm, "_adhesion_conflicts", 0))
                 unlisted += int(getattr(self._solver.eptm, "_adhesion_unlisted", 0))
         self._register_daughters()
-        if adhesion and (conflict or unlisted) and not self._warned_adhesion_conflict:
-            self._warned_adhesion_conflict = True
+        if adhesion and (conflict or unlisted):
             msg = []
             if conflict:
                 msg.append("a shared junction between two cells with different adhesion "
@@ -591,8 +565,8 @@ class VertexBackend(MechanicsBackend):
                 msg.append("a per-type adhesion dict that omits a neighbour type (incl. "
                            "'medium') it borders is not applied there; unlisted types fall "
                            "back to the pair-table tension")
-            warnings.warn("VertexBackend adhesion: " + "; ".join(msg) + ".",
-                          RuntimeWarning, stacklevel=2)
+            self.warn_once("adhesion_conflict",
+                           "VertexBackend adhesion: " + "; ".join(msg) + ".")
         return self._emit()
 
     # -- read-back ----------------------------------------------------------- #
@@ -615,14 +589,10 @@ class VertexBackend(MechanicsBackend):
             lab = label_by_uid.get(uid) if uid is not None else None
             if lab is None:
                 # face vanished (extrusion / T2): report last-known state, not alive
-                cached = self._cache.get(bid) or self._cell_meta.get(bid, {})
-                positions[bid] = list(cached.get("pos", [0.0, 0.0]))
-                sizes[bid] = cached.get("size", 0.0)
-                types[bid] = cached.get("type", "")
-                alive[bid] = False
-                neighbors[bid] = []
-                shared[bid] = {}
-                footprints[bid] = no_footprint()
+                d = dead_entry(self._cache.get(bid) or self._cell_meta.get(bid, {}))
+                positions[bid], sizes[bid], types[bid] = d["pos"], d["size"], d["type"]
+                alive[bid], neighbors[bid] = d["alive"], d["neighbors"]
+                shared[bid], footprints[bid] = d["shared"], d["footprint"]
                 continue
             footprints[bid] = {"kind": "polygon", "xy": polys.get(lab, [])}
             pos = [float(fd.loc[lab, "x"]), float(fd.loc[lab, "y"])]

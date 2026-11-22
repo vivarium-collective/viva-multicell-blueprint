@@ -214,7 +214,7 @@ The temperature T and the vertex mobility/fluctuation knobs share no units, so t
 vertex knobs that have no CPM counterpart are **fitted to CPM behaviour** on the same
 Sego initial state, mechanics only, averaged over 5 seeds × 60 steps
 (`scripts/calibrate_vertex_mechanics.py` →
-`workspace/studies/adhesion-calibration/results/vertex_mechanics_calibration.json`;
+`workspace/studies/substrate-behavior-at-scale/results/vertex_mechanics_calibration.json`;
 values in `compile/to_vertex.py: CALIBRATED_DEFAULTS`):
 
 | Knob | Fitted to | CPM | Vertex (fitted) |
@@ -225,41 +225,41 @@ values in `compile/to_vertex.py: CALIBRATED_DEFAULTS`):
 | `migration_scale` = 3.54, `chemotaxis_saturation` = 105 | macrophage drift speed vs virus gradient g = 0.001 / 0.003 / 0.01 / 0.03 | 0.098 / 0.145 / 0.331 / 0.350 | 0.058 / 0.163 / 0.327 / 0.350 µm/step |
 | `tension_noise` = 5 (largest fold-free step) | epithelial area CV | 0.093 | 0.038 (not reachable; see below) |
 
-**What is *not* equivalent, honestly:**
+**Where the vertex substrate does not match the CPM:**
 
-* **Epithelial wandering is ~4× lower, immune wandering ~2× lower.** Matching the CPM's
-  epithelial MSD needs a sheet motility of ~81, but at that force (and at any force above
-  ~27 once the in-sheet immune cells walk too) the vertex sheet folds within a few
-  hundred steps. The in-sheet immune walk is capped the same way (56 vs a fit of 214):
-  a welded polygon cannot wander as freely as the old free overlay island. Folding persisted with smaller time steps, a
-  perimeter (shape) stiffness, faster rosette resolution and larger T1 thresholds.
-  tyssue's reconnection resolves short junctions, not a vertex sweeping across a
-  non-adjacent edge. So the motility is capped at the largest fold-free value, and the
-  vertex epithelium wanders less (MSD 2.2 vs 9.5 µm² over 60 steps). It still exchanges
-  neighbours: 4–11 of 85 epithelial pairs swap by step 400, gains ≈ losses (genuine T1s).
+* **Wandering is lower: epithelium ~4x, immune ~2x.** Matching the CPM's epithelial
+  MSD needs a sheet motility of ~81, but at that force (and above ~27 once the in-sheet
+  immune cells also walk) the vertex sheet folds within a few hundred steps. The
+  in-sheet immune walk is capped the same way (56 vs a fit of 214): a welded polygon
+  cannot wander as freely as the old free overlay island. Folding persisted with
+  smaller time steps, a perimeter (shape) stiffness, faster rosette resolution and
+  larger T1 thresholds; tyssue's reconnection resolves short junctions, not a vertex
+  sweeping across a non-adjacent edge. So motility is capped at the largest fold-free
+  value (epithelial MSD 2.2 vs 9.5 um^2 over 60 steps). The sheet still exchanges
+  neighbours: 4-11 of 85 epithelial pairs swap by step 400, gains roughly equal to
+  losses (genuine T1s).
 * **Area dispersion.** The vertex area CV (0.038) stays below the CPM's (0.093).
-  Tension noise raises it, but the levels that would get closer (10, 20) fold the mesh,
-  so it stays at the largest fold-free step, 5.
-* **Tension scale depends on geometry.** On the isolated 4×4 mechanics-only sheet
-  (`mechanics_sheet.yaml`) the area match is at κ ≈ 4, not 1.74. There the CPM mean
-  area drops to 18.9 (vs 23.0 on the Sego sheet), with a larger fraction of cells on the
-  tissue border. Interface energy per bond (J) vs per length
-  (Λ) is commensurable only up to this geometry-dependent factor. (A straight
-  order-2 lattice interface crosses ~3 bonds per unit length, so κ ~ 2–4 is the expected
-  range.)
-* **Neighbour exchange.** The vertex sheet now rearranges (T1s), but far less than the
-  CPM's lattice contacts turn over (60–74 of 110 pairs by step 400). CPM contacts include
-  flickering diagonal-site contacts, so the two counts are not directly comparable.
-* **Extreme tension collapses the small sheet.** At κ = 8 the 4×4 sheet collapses
-  completely (every junction merges away; area 0) instead of reaching a contracted
-  equilibrium. The backend reports every cell vanished rather than failing.
-* **Immune geometry.** Both substrates now have the immune cells edge-on in the tissue
-  plane, with contact = shared boundary. On the vertex side, though, they are attached to
-  the margin at t0 (the CPM leaves a medium gap of up to one cell diameter, so
-  `immune_attach_max` ≈ 5.6 µm). They are also half the CPM area, a representation
-  choice so they can squeeze along the tissue.
-* **Weak gradients.** At the shallowest gradient (g = 0.001) the vertex macrophage drifts
-  ~40% slower than the CPM one. There the CPM drift is partly noise-rectified, which a
-  deterministic tanh law does not reproduce.
-* Calibrated at target size 25 (η = 100). Other cell sizes need a re-run of the
-  calibration script.
+  Tension noise raises it, but the levels that would close the gap (10, 20) fold the
+  mesh, so it stays at the largest fold-free step, 5.
+* **Tension scale depends on geometry.** On the isolated 4x4 mechanics-only sheet
+  (`mechanics_sheet.yaml`) the area match is at kappa ~ 4, not 1.74; there the CPM mean
+  area is 18.9 (vs 23.0 on the Sego sheet) with more cells on the tissue border.
+  Interface energy per bond (J) and per length (Lambda) are commensurable only up to
+  this geometry-dependent factor (an order-2 lattice interface crosses ~3 bonds per
+  unit length, so kappa ~ 2-4 is the expected range).
+* **Neighbour exchange.** Far fewer vertex pairs rearrange than CPM contacts turn over
+  (4-11 of 85 vs 60-74 of 110 by step 400). CPM contacts include flickering
+  diagonal-site contacts, so the counts are not directly comparable.
+* **Extreme tension collapses the small sheet.** At kappa = 8 the 4x4 sheet collapses
+  completely (every junction merges away; area 0) rather than reaching a contracted
+  equilibrium. The backend reports every cell vanished instead of failing.
+* **Immune geometry.** Both substrates place immune cells edge-on in the tissue plane,
+  with contact = shared boundary. On the vertex side they are attached to the margin
+  at t0 (the CPM leaves a medium gap of up to one cell diameter, so
+  `immune_attach_max` ~ 5.6 um) and have half the CPM area, a representation choice
+  so they can squeeze along the tissue.
+* **Weak gradients.** At g = 0.001 the vertex macrophage drifts ~40% slower than the
+  CPM one, whose drift there is partly noise-rectified, which a deterministic tanh law
+  does not reproduce.
+* **Scope.** Calibrated at target size 25 (eta = 100); other cell sizes need a re-run
+  of the calibration script.

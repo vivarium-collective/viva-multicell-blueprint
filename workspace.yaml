@@ -1,5 +1,6 @@
 schema_version: 2
 name: multicell-blueprint
+avatar: assets/avatar.png
 created: "2026-10-27"
 plugin_version: 0.4.16
 package_path: viva_multicell_blueprint

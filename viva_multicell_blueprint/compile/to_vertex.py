@@ -1,23 +1,24 @@
 """Compile a blueprint onto the vertex (vivarium-tyssue) mechanics backend (spec §5).
 
-``compile(blueprint, backend="vertex")`` returns a composite document whose shared
-mechanism (field/rules/ODE/immune) is byte-identical to the CPM compile and whose
-single mechanics node is a :class:`VertexBackend`. The neutral type-pair
+``vertex_mechanics_node`` builds the single mechanics node (assembled by
+:func:`..compile.compile`). The node is a :class:`VertexBackend`; the shared
+mechanism (field/rules/ODE/immune) is byte-identical to the CPM and munk compiles.
+The neutral type-pair
 ``adhesion`` is lowered to per-pair tyssue junction tension via Task-12's
 ``to_vertex_tension``; field chemotaxis is flattened to the per-field
 ``{field, type, strength}`` list the vertex backend turns into ActiveMigration
-directors each step; immune types (and their latent pools) are declared IMMUNE
+directors each step. Immune types (and their latent pools) are declared IMMUNE
 types -- smaller polygons attached to the margin of the same sheet as the
 epithelium (an explicit ``vertex_overlay_types`` list moves types to a free
-overlay layer instead); and the calibrated fluctuation/mobility knobs (:data:`CALIBRATED_DEFAULTS`)
-are supplied unless the blueprint overrides them.
+overlay layer instead). The calibrated fluctuation/mobility knobs
+(:data:`CALIBRATED_DEFAULTS`) are supplied unless the blueprint overrides them.
 """
 from __future__ import annotations
 
 from viva_multicell_blueprint.compile.adhesion import to_vertex_tension
 from viva_multicell_blueprint.compile.base import INPUT_PORTS, OUTPUT_PORTS, latent_pool_types
 
-from ._shared import _as_cell_nodes, assemble, mechanics_seed, resolve_initial_state
+from ._shared import _as_cell_nodes, mechanics_seed, resolve_initial_state
 
 VERTEX_ADDR = "local:VertexBackend"
 
@@ -67,7 +68,7 @@ _VERTEX_KNOBS = ("migration_scale", "chemotaxis_saturation", "line_tension", "ar
 # The vertex substrate's free fluctuation / mobility knobs, CALIBRATED against the
 # CPM (temperature 10, neighbour order 2, size-25 cells, 2 MCS per step) on the Sego
 # initial state by scripts/calibrate_vertex_mechanics.py; provenance and fit quality
-# in workspace/studies/adhesion-calibration/results/vertex_mechanics_calibration.json
+# in workspace/studies/substrate-behavior-at-scale/results/vertex_mechanics_calibration.json
 # (and docs/mechanics.md). Valid for target_size ~25 cells (viscosity = 2 K A0 = 100).
 CALIBRATED_DEFAULTS = {
     "tension_scale": 1.683,          # Lambda_ab = scale * J_ab; mean cell area (CPM 23.0)
@@ -118,7 +119,7 @@ def vertex_mechanics_node(blueprint) -> dict:
         scale = float(mm.get("tension_scale", CALIBRATED_DEFAULTS["tension_scale"]))
         tensions = to_vertex_tension(blueprint.adhesion, scale=scale)
         # JSON-friendly keys ("a|b"); the full map is kept for provenance (the
-        # adhesion-calibration study fits the J<->tension relationship).
+        # substrate-behavior-at-scale study fits the J<->tension relationship).
         backend_params["tension_by_pair"] = {f"{a}|{b}": v for (a, b), v in tensions.items()}
         # a pair absent from the adhesion table is J = 0 on the CPM (viva-cpm's
         # default contact), so it is tension-free here too.
@@ -137,9 +138,3 @@ def vertex_mechanics_node(blueprint) -> dict:
         "inputs": {p: [p] for p in INPUT_PORTS},
         "outputs": {p: [p] for p in OUTPUT_PORTS},
     }
-
-
-def compile(blueprint, backend: str = "vertex", video_out=None) -> dict:
-    if backend != "vertex":
-        raise ValueError(f"to_vertex.compile only builds the vertex backend, got backend={backend!r}")
-    return assemble(blueprint, vertex_mechanics_node(blueprint), video_out=video_out, backend="vertex")
