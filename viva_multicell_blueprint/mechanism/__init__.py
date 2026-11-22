@@ -8,6 +8,7 @@ mechanism by that ``local:<name>`` form.
 """
 from __future__ import annotations
 
+from viva_multicell_blueprint.mechanism.actuation import CellActuationMergeStep
 from viva_multicell_blueprint.mechanism.counts import CellCountStep
 from viva_multicell_blueprint.mechanism.fields import FieldProcess
 from viva_multicell_blueprint.mechanism.immune import ImmuneRecruitmentProcess
@@ -16,6 +17,7 @@ from viva_multicell_blueprint.mechanism.subcellular import SubcellularProcess
 from viva_multicell_blueprint.mechanism.systemic_ode import SystemicODEProcess
 
 __all__ = [
+    "CellActuationMergeStep",
     "CellCountStep",
     "FieldProcess",
     "RulesProcess",
