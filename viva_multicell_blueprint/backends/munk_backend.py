@@ -569,6 +569,7 @@ class MunkBackend(MechanicsBackend):
             "neighbors": neighbors,
             "alive": alive,
             "footprints": footprints,
+            "lineage": {},
         }
 
     def _contact_length(self, cx, cy, r, ox, oy, orr):

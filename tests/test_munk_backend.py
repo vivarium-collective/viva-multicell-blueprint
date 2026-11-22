@@ -73,13 +73,14 @@ def test_munk_emits_port_shape():
     b = _make(cells, backend_params={"substeps": 1})
 
     assert isinstance(b, MechanicsBackend)
-    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths", "activations"}
+    assert set(b.inputs()) == {"fates", "field_grid", "divisions", "deaths", "activations",
+                              "target_size", "motility", "adhesion"}
     assert set(b.outputs()) == set(OUTPUT_PORTS)
 
     out = b.update({}, 1.0)
     assert set(out) == set(OUTPUT_PORTS)
     ids = {str(c["id"]) for c in cells}
-    for port in OUTPUT_PORTS:
+    for port in (p for p in OUTPUT_PORTS if p != "lineage"):  # lineage is per-event, not per-cell
         assert set(out[port]) == ids
     assert all(len(p) == 2 for p in out["positions"].values())
     assert all(s > 0 for s in out["sizes"].values())
@@ -127,7 +128,7 @@ def test_munk_applies_death_placeholder():
     out = b.update({"deaths": [{"cell_id": 30}]}, 1.0)
     assert out["alive"]["30"] is False
     # a dead cell still gets an entry in every port (placeholder), not dropped.
-    for port in OUTPUT_PORTS:
+    for port in (p for p in OUTPUT_PORTS if p != "lineage"):  # lineage is per-event, not per-cell
         assert "30" in out[port]
     assert out["footprints"]["30"]["kind"] == "none"
     assert out["neighbors"]["30"] == []
@@ -186,7 +187,7 @@ def test_munk_division_adds_daughter_body_not_cohort_citizen():
     assert any(mid.startswith("10:d") for mid in b._agents)
     # ...but the emitted cohort is still exactly the three seeded ids.
     ids = {"10", "20", "30"}
-    for port in OUTPUT_PORTS:
+    for port in (p for p in OUTPUT_PORTS if p != "lineage"):  # lineage is per-event, not per-cell
         assert set(out[port]) == ids
 
 

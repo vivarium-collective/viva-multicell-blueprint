@@ -483,6 +483,7 @@ class CPMBackend(MechanicsBackend):
             "neighbors": neighbors,
             "alive": alive,
             "footprints": footprints,
+            "lineage": {},
         }
 
     def _occupancy(self) -> dict:

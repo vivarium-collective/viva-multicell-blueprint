@@ -552,6 +552,7 @@ class VertexBackend(MechanicsBackend):
             "neighbors": neighbors,
             "alive": alive,
             "footprints": footprints,
+            "lineage": {},
         }
 
     def _face_polygons(self, labels) -> dict:
