@@ -39,8 +39,11 @@ class Blueprint:
 
     @classmethod
     def from_dict(cls, doc: dict) -> "Blueprint":
-        doc = normalize_to_flat(doc)
-        errs = validate(doc)
+        flat = normalize_to_flat(doc)
+        # A sectioned v2 doc is also checked against the v2 section layout.
+        errs = validate(doc) if flat != doc else []
+        doc = flat
+        errs = errs + validate(doc)
         if errs:
             raise ValueError("invalid blueprint: " + "; ".join(errs))
         unknown = sorted(set(doc) - set(cls.__dataclass_fields__))

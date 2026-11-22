@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from viva_multicell_blueprint.blueprint.model import Blueprint
+from viva_multicell_blueprint.blueprint.schema import validate
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,15 +22,17 @@ def _minimal_v1_dict():
 
 def _v1_equiv_dict():
     d = _minimal_v1_dict()
+    d["adhesion"] = [{"a": "epithelial", "b": "epithelial", "strength": 1.0}]
     d.update(fields=copy.deepcopy(_FIELDS), systemic_ode=dict(_SYS))
     return d
 
 
 def _v2_dict():
     return {
-        "initial_conditions": {"domain": copy.deepcopy(_DOMAIN), "initial_state": dict(_IS)},
-        "model_definition": {"cell_types": copy.deepcopy(_CT), "fields": copy.deepcopy(_FIELDS),
-                             "systemic": dict(_SYS)},
+        "initial_conditions": {"domain": copy.deepcopy(_DOMAIN), "cell_types": copy.deepcopy(_CT),
+                               "adhesion": [{"a": "epithelial", "b": "epithelial", "strength": 1.0}],
+                               "initial_state": dict(_IS)},
+        "model_definition": {"fields": copy.deepcopy(_FIELDS), "systemic": dict(_SYS)},
     }
 
 
@@ -55,7 +58,29 @@ def test_v2_subcellular_is_captured():
 
 def test_mixed_shape_rejected():
     with pytest.raises(ValueError, match="mixed"):
-        Blueprint.from_dict({"domain": copy.deepcopy(_DOMAIN), "model_definition": {"cell_types": copy.deepcopy(_CT)}})
+        Blueprint.from_dict({"domain": copy.deepcopy(_DOMAIN), "model_definition": {"fields": copy.deepcopy(_FIELDS)}})
+
+
+def test_v2_spec_layout_loads():
+    bp = Blueprint.from_dict(_v2_dict())
+    assert bp.cell_types and bp.adhesion and bp.systemic_ode == _SYS
+
+
+def test_v2_spec_layout_schema_valid():
+    assert validate(_v2_dict()) == []
+
+
+def test_v2_cell_types_under_model_definition_schema_invalid():
+    d = _v2_dict()
+    d["model_definition"]["cell_types"] = d["initial_conditions"].pop("cell_types")
+    assert validate(d)
+
+
+def test_v2_cell_types_under_model_definition_rejected():
+    d = _v2_dict()
+    d["model_definition"]["cell_types"] = d["initial_conditions"].pop("cell_types")
+    with pytest.raises(ValueError):
+        Blueprint.from_dict(d)
 
 
 def test_unknown_key_still_rejected_after_flatten():
