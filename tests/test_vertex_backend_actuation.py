@@ -120,3 +120,67 @@ def test_runtime_target_size_survives_division_and_not_aliased():
     assert all(np.isclose(v, 2.0) for v in t.values())
     assert b._cell_act[d]["adhesion"] == b._cell_act["5"]["adhesion"]
     assert b._cell_act[d]["adhesion"] is not b._cell_act["5"]["adhesion"]
+
+
+def _adh_warnings(w):
+    return [x for x in w if issubclass(x.category, RuntimeWarning) and "adhesion" in str(x.message)]
+
+
+def test_adhesion_dict_omitting_bordered_type_warns_once():
+    b = _make()   # all cells type A, border touches medium; dict lists only "B"
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        b.update({"adhesion": {"5": {"B": 0.3}}}, 1.0)
+        b.update({"adhesion": {"5": {"B": 0.3}}}, 1.0)
+    msgs = _adh_warnings(w)
+    assert len(msgs) == 1 and "fall back" in str(msgs[0].message)
+
+
+def test_adhesion_dict_covering_all_bordered_types_does_not_warn():
+    b = _make()
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        b.update({"adhesion": {"5": {"A": 0.3}}}, 1.0)   # centre cell borders only A
+    assert _adh_warnings(w) == []
+
+
+def test_conflict_in_earlier_substep_is_reported(monkeypatch):
+    from viva_multicell_blueprint.backends import vertex_coupling as vc
+    b = _make()
+    real = vc._apply_cell_tension
+    calls = {"n": 0}
+
+    def flaky(sheet, *a, **k):
+        out = real(sheet, *a, **k)
+        calls["n"] += 1
+        sheet._adhesion_conflicts = 1 if calls["n"] == 1 else 0   # only the first substep
+        return out
+
+    monkeypatch.setattr(vc, "_apply_cell_tension", flaky)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        b.update({"adhesion": {"5": 0.2}}, 1.0)
+    assert calls["n"] > 1 and len(_adh_warnings(w)) == 1
+
+
+def test_missing_mother_uid_division_warns_once():
+    b = _make()
+    b.update({}, 1.0)
+    real = b._register_daughters
+    fd = b._solver.eptm.face_df
+    if "mother_uid" not in fd.columns:
+        fd["mother_uid"] = -1
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        orig_update = b._solver.update
+
+        def drop_col(*a, **k):
+            r = orig_update(*a, **k)
+            b._solver.eptm.face_df.drop(columns=["mother_uid"], inplace=True, errors="ignore")
+            return r
+
+        b._solver.update = drop_col
+        b.update({"divisions": [{"cell_id": 5}]}, 1.0)
+        b.update({"divisions": [{"cell_id": 1}]}, 1.0)
+    msgs = [x for x in w if issubclass(x.category, RuntimeWarning) and "mother_uid" in str(x.message)]
+    assert len(msgs) == 1

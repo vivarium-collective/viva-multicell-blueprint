@@ -464,6 +464,13 @@ class VertexBackend(MechanicsBackend):
         record ``lineage[daughter] = mother``."""
         fd = self._solver.eptm.face_df
         if "mother_uid" not in fd.columns:
+            if len(fd) > len(self._uid) and not self._warned_daughter:
+                self._warned_daughter = True
+                warnings.warn(
+                    "VertexBackend: tyssue produced new face(s) but the mesh has no "
+                    "`mother_uid` column, so daughters cannot be attributed; they are "
+                    "absent from the emitted maps and lineage.",
+                    RuntimeWarning, stacklevel=2)
             return
         known = set(self._uid.values())
         new = [(int(u), int(m)) for u, m in zip(fd["unique_id"], fd["mother_uid"])
@@ -551,6 +558,7 @@ class VertexBackend(MechanicsBackend):
         # topology can change in every update) and domain confinement go in with
         # each one. Forces and directors persist on the mesh between updates.
         dt = float(interval) / self._substeps
+        conflict = unlisted = 0   # accumulated over ALL substeps
         for k in range(self._substeps):
             if len(self._solver.eptm.edge_df) == 0:
                 break   # the tissue collapsed (every junction gone): nothing left to integrate
@@ -569,14 +577,22 @@ class VertexBackend(MechanicsBackend):
                     raise
                 break
             self._t += dt
+            if adhesion:
+                conflict += int(getattr(self._solver.eptm, "_adhesion_conflicts", 0))
+                unlisted += int(getattr(self._solver.eptm, "_adhesion_unlisted", 0))
         self._register_daughters()
-        if (getattr(self._solver.eptm, "_adhesion_conflicts", 0) and adhesion
-                and not self._warned_adhesion_conflict):
+        if adhesion and (conflict or unlisted) and not self._warned_adhesion_conflict:
             self._warned_adhesion_conflict = True
-            warnings.warn(
-                "VertexBackend: adhesion is a per-cell junction tension, but a shared "
-                "junction between two cells with different adhesion has ONE tension; it "
-                "takes their mean.", RuntimeWarning, stacklevel=2)
+            msg = []
+            if conflict:
+                msg.append("a shared junction between two cells with different adhesion "
+                           "has ONE tension; it takes their mean")
+            if unlisted:
+                msg.append("a per-type adhesion dict that omits a neighbour type (incl. "
+                           "'medium') it borders is not applied there; unlisted types fall "
+                           "back to the pair-table tension")
+            warnings.warn("VertexBackend adhesion: " + "; ".join(msg) + ".",
+                          RuntimeWarning, stacklevel=2)
         return self._emit()
 
     # -- read-back ----------------------------------------------------------- #

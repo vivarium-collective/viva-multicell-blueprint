@@ -125,7 +125,9 @@ def _apply_cell_tension(sheet, edge_df, opp, own, other, adhesion, cell_tension,
     cell) or ``{neighbour_type: tension}``. A junction with an override on one side
     takes it; with overrides on BOTH sides it takes their mean (a physical junction
     has one tension). The number of junctions whose two overrides differ is left on
-    ``sheet._adhesion_conflicts`` so the backend can report that limitation.
+    ``sheet._adhesion_conflicts`` (and the count of bordered neighbour types a dict
+    override does not list, which fall back to the pair table, on
+    ``sheet._adhesion_unlisted``) so the backend can report those limitations.
     """
     uid = sheet.face_df["unique_id"] if "unique_id" in sheet.face_df.columns else None
     if uid is None:
@@ -133,7 +135,7 @@ def _apply_cell_tension(sheet, edge_df, opp, own, other, adhesion, cell_tension,
     face = edge_df["face"].to_numpy()
     uid_of = uid.reindex(face).to_numpy()
     out = adhesion.copy()
-    conflicts = 0
+    conflicts = unlisted = 0
     for i in range(len(face)):
         vals = []
         j = int(opp[i])
@@ -146,12 +148,15 @@ def _apply_cell_tension(sheet, edge_df, opp, own, other, adhesion, cell_tension,
             v = spec.get(str(nb_type)) if isinstance(spec, dict) else spec
             if v is not None:
                 vals.append(float(v))
+            else:
+                unlisted += 1   # dict override has no entry for a type it borders
         if not vals:
             continue
         if len(vals) == 2 and vals[0] != vals[1]:
             conflicts += 1
         out[i] = float(np.mean(vals)) * (boundary_factor if j < 0 else 1.0)
     sheet._adhesion_conflicts = conflicts
+    sheet._adhesion_unlisted = unlisted
     return out
 
 
