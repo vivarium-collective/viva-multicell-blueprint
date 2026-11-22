@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEMO = ROOT / "workspace" / "blueprints" / "subcellular_ode_demo.yaml"
 STUDIO = ROOT / "workspace" / "reports" / "assets" / "blueprint_studio.html"
 N_STEPS = 12
+_counts = {}
 _BACKENDS = [("cpm", "viva_cpm"), ("vertex", "vivarium_tyssue"), ("munk", "viva_munk")]
 
 
@@ -31,6 +32,7 @@ def _run(backend, mod):
         for c, s in sizes.items():
             max_size[c] = max(max_size.get(c, 0.0), float(s))
         n_max = max(n_max, len(sizes))
+        _counts.setdefault(backend, []).append(len(sizes))
         lineage_seen.update(comp.state.get("lineage") or {})
     return comp, first_sub, first_size, max_size, n_max, lineage_seen
 
@@ -51,13 +53,27 @@ def test_ode_drives_growth(backend, mod):
     assert any(max_size[c] > first_size[c] + 1e-6 for c in first_size if c in max_size)
 
 
-# KNOWN INTEGRATION GAP: CellActuationMergeStep fires twice per tick and its
-# consume-once cursor means the backend always reads an empty `divisions` list, so
-# a subcellular divide_when never reaches the backend. See the Task 11 report and
-# task-11-division-fix.patch (verified: division then occurs on all 3 backends).
-@pytest.mark.xfail(strict=True, reason="merge step drops subcellular divide requests (double-fire + cursor)")
 @pytest.mark.parametrize("backend,mod", _BACKENDS)
 def test_ode_drives_division(backend, mod):
     comp, first_sub, first_size, _, n_max, lineage_seen = _run(backend, mod)
-    assert n_max > len(first_size)
+    assert n_max > len(first_size), "no division: cell count never grew"
     assert lineage_seen, "no lineage entry produced"
+    print(backend, "cell-count progression ->", _counts[backend])
+
+
+@pytest.mark.parametrize("backend,mod", _BACKENDS)
+def test_one_threshold_crossing_one_division(backend, mod):
+    """The first S>40 crossing yields ONE division per starting cell (4 -> 8 cells, no
+    mother in two consecutive ticks' lineage). Window = first 7 ticks: halved S needs
+    ~4 more ticks to regrow past 40, so a second wave before tick 8 would be a
+    double-division bug. (Later waves are genuine regrowth; cpm additionally divides any
+    cell over its volume threshold, a documented substrate behaviour.)"""
+    pytest.importorskip(mod)
+    comp = Composite(blueprint_pipeline(backend=backend, blueprint=str(DEMO)), core=build_core())
+    prev = set()
+    for _ in range(7):
+        comp.run(1.0)
+        mothers = set((comp.state.get("lineage") or {}).values())
+        assert not (mothers & prev), f"mother(s) {mothers & prev} divided on consecutive ticks"
+        prev = mothers
+    assert len(comp.state["sizes"]) == 8, comp.state["sizes"]

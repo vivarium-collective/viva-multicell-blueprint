@@ -158,3 +158,23 @@ def test_split_missing_module_method_and_single_halving(monkeypatch):
     p.update(world(ids=(1,)), 1)           # x = 2
     out = p.update(world(ids=(1, 5, 6), lineage={"5": "1", "6": "1"}), 1)
     assert out["sub_scalar"]["1"]["x"] == pytest.approx(2.0)  # halved once (2/2+1); halving twice would give 1.5
+
+
+def test_split_halves_at_request_so_one_crossing_requests_once():
+    """division='split': the dividing cell's state is halved the SAME tick it requests
+    division, so a single threshold crossing yields one request, not one per tick."""
+    import pytest as _pt
+    _pt.importorskip("viva_tellurium")
+    from viva_multicell_blueprint.core import build_core
+    from viva_multicell_blueprint.mechanism.subcellular import SubcellularProcess
+    src = "model g\n species S; S = 30.0; mu = 0.3;\n J0: -> S; mu * S;\nend\n"
+    cfg = {"cell_type": "T", "module": "tellurium", "model": {"source": src}, "params": {},
+           "division": "split",
+           "coupling": {"const": {"t": 40.0}, "inputs": {},
+                        "outputs": {"target_size": "S", "divide_when": {"var": "S", "gt": "const.t"}}}}
+    p = SubcellularProcess(cfg, core=build_core())
+    w = {"types": {"1": "T"}, "sizes": {"1": 2.0}, "positions": {"1": [1.0, 1.0]},
+         "neighbors": {"1": []}, "alive": {"1": True}, "field_grid": {}, "divisions": [],
+         "deaths": [], "lineage": {}}
+    reqs = [len(p.update(w, 1)["req_divide"]) for _ in range(3)]
+    assert reqs == [1, 0, 0], reqs          # 30 -> 40.5 (fires, halves) -> ~27 -> ~36 (no)

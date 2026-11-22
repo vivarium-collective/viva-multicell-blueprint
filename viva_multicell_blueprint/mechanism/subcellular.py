@@ -203,6 +203,7 @@ class SubcellularProcess(Process):
         if self._division == "split" and not hasattr(self._module, "split"):
             raise ValueError(f"module {name!r} has no split(); cannot use division='split'")
         self._cells = {}
+        self._split_done = set()   # mothers already halved at request time (see update)
 
     def inputs(self):
         return {
@@ -220,7 +221,7 @@ class SubcellularProcess(Process):
             "req_target_size": "overwrite[map[float]]",
             "req_motility": "overwrite[map[float]]",
             "req_adhesion": "overwrite[map[node]]",
-            "req_divide": "list[node]", "req_die": "list[node]",
+            "req_divide": "overwrite[list[node]]", "req_die": "overwrite[list[node]]",
             "req_become": "overwrite[map[string]]",
             "req_secrete": "overwrite[map[map[float]]]",
         }
@@ -243,6 +244,9 @@ class SubcellularProcess(Process):
         new = [c for c in mine if c not in self._cells]
         if self._division == "split":  # halve each mother once, however many daughters
             for mo in sorted({lineage[c] for c in new if lineage.get(c) in self._cells}):
+                if mo in self._split_done:      # already halved when it requested division
+                    self._split_done.discard(mo)
+                    continue
                 self._cells[mo] = self._module.split(self._cells[mo])
         for c in new:
             if c not in self._cells:
@@ -266,6 +270,12 @@ class SubcellularProcess(Process):
                     out["req_adhesion"][c] = v
                 elif effect == "divide_when" and v:
                     out["req_divide"].append({"cell_id": c})
+                    if self._division == "split" and c not in self._split_done:
+                        # halve NOW (same tick as the request) so the cell drops below its
+                        # threshold and does not re-request next tick; the daughter later
+                        # copies this already-halved state. This tick's report is pre-split.
+                        self._cells[c] = self._module.split(self._cells[c])
+                        self._split_done.add(c)
                 elif effect == "die_when" and v:
                     out["req_die"].append({"cell_id": c})
                 elif effect.startswith("become.") and v:

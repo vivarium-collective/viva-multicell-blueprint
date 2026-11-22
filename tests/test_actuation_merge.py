@@ -42,81 +42,81 @@ def test_requests_pass_through():
     assert out["adhesion"] == {"1": {"a": 1}} and out["secrete"] == {"1": {"IFN": 2.0}}
 
 
-def test_cumulative_lists_do_not_repeat_divisions():
-    """Direct: the list stores grow cumulatively; one request must yield one division."""
+def test_multifire_is_idempotent_one_division_per_request():
+    """Direct: the merge is a pure function of its (per-tick overwrite) inputs, so firing
+    it N times on the same tick yields the same single division; the next tick's empty
+    request list yields none (no cross-tick repeat)."""
     s = _step()
-    acc = [{"cell_id": "7"}]
-    total = []
-    for _ in range(4):
-        total += s.update({"req_divide": list(acc)})["divisions"]
-    assert [d["cell_id"] for d in total] == ["7"]
-    # a genuinely new request later is still emitted
-    acc.append({"cell_id": "7"})
-    assert [d["cell_id"] for d in s.update({"req_divide": list(acc)})["divisions"]] == ["7"]
+    tick = {"req_divide": [{"cell_id": "7"}], "divisions": [{"cell_id": "3"}]}
+    outs = [[d["cell_id"] for d in s.update(dict(tick))["divisions"]] for _ in range(3)]
+    assert outs == [["3", "7"]] * 3
+    assert s.update({"req_divide": [], "divisions": []})["divisions"] == []
 
 
 def test_multistep_composite_no_stale_repeat():
-    """End-to-end: a process appends ONE divide request on step 1 only; the raw
-    list store accumulates, the merged channel yields it exactly once overall."""
+    """End-to-end: a process requests ONE division on tick 1 only (overwrite list); the
+    backend-facing channel carries it to the sink exactly once overall."""
     core = build_core()
+    log = []
 
     class Once(Process):
-        n = 0
+        def __init__(self, *a, **k):
+            super().__init__(*a, **k)
+            self.n = 0
         def inputs(self): return {}
-        def outputs(self): return {"req_divide": "list[node]"}
+        def outputs(self): return {"req_divide": "overwrite[list[node]]"}
         def update(self, i, interval=1):
-            Once.n += 1
-            return {"req_divide": [{"cell_id": "9"}] if Once.n == 1 else []}
+            self.n += 1
+            return {"req_divide": [{"cell_id": "9"}] if self.n == 1 else []}
 
     class Sink(Process):
-        seen = []
         def inputs(self): return {"divisions": "list[node]"}
         def outputs(self): return {}
         def update(self, i, interval=1):
-            Sink.seen.append(len(i["divisions"])); return {}
+            log.append(len(i["divisions"])); return {}
 
-    Once.n = 0
-    Sink.seen = []
     core.register_link("Once", Once)
     core.register_link("Sink", Sink)
-    mp = lambda ins, outs, addr, cfg=None: {"_type": "step", "address": addr,
-                                            "config": cfg or {}, "inputs": ins, "outputs": outs}
+    proc = lambda addr, ins, outs: {"_type": "process", "interval": 1.0, "address": addr,
+                                    "config": {}, "inputs": ins, "outputs": outs}
     c = Composite({"state": {
         "req_divide": [], "divisions": [],
-        "once": {"_type": "process", "interval": 1.0, "address": "local:Once", "config": {},
-                 "inputs": {}, "outputs": {"req_divide": ["req_divide"]}},
-        "sink": {"_type": "process", "interval": 1.0, "address": "local:Sink", "config": {},
-                 "inputs": {"divisions": ["divisions"]}, "outputs": {}},
-        "m": mp({"req_divide": ["req_divide"]}, {"divisions": ["divisions"]},
-                "local:CellActuationMergeStep"),
+        "once": proc("local:Once", {}, {"req_divide": ["req_divide"]}),
+        "sink": proc("local:Sink", {"divisions": ["divisions"]}, {}),
+        "m": {"_type": "step", "address": "local:CellActuationMergeStep", "config": {},
+              "inputs": {"req_divide": ["req_divide"]}, "outputs": {"divisions": ["divisions"]}},
     }}, core=core)
     c.run(4)
-    assert len(c.state["req_divide"]) == 1
-    # raw store keeps the request forever (stale); the backend-facing channel carries
-    # it for one step only, so the sink sees it exactly once in total.
-    assert sum(Sink.seen) == 1, Sink.seen
+    assert sum(log) == 1, log
 
 
 def test_real_topology_rules_and_subcellular_events_once_each():
-    """Rules-like + subcellular-like producers -> merge -> sink, all interval 1.0.
-    Divisions (step 2) and deaths (step 4) from BOTH sides reach the sink exactly once
-    each and never repeat on later steps (cumulative-list input paths on both sides)."""
+    """Pipeline topology: Rules-like -> merge -> Subcellular-like -> (merge fires again),
+    all interval 1.0, so the merge fires MORE THAN ONCE per tick. A Rules-side and a
+    subcellular-side division on the SAME tick (2), and deaths on tick 4, each reach the
+    backend-side sink exactly once and never repeat across ticks."""
     core = build_core()
-    log = {"div": [], "die": []}   # per-test state: no class-level leakage across runs
+    log = {"div": [], "die": [], "fires": 0}
 
-    def producer(name, div_port, die_port, div_cell, die_cell):
+    def producer(name, div_port, die_port, div_cell, die_cell, ins):
         class P(Process):
             def __init__(self, *a, **k):
                 super().__init__(*a, **k)
                 self.n = 0
-            def inputs(self): return {}
-            def outputs(self): return {div_port: "list[node]", die_port: "list[node]"}
+            def inputs(self): return {k: "list[node]" for k in ins}
+            def outputs(self):
+                return {div_port: "overwrite[list[node]]", die_port: "overwrite[list[node]]"}
             def update(self, i, interval=1):
                 self.n += 1
                 return {div_port: [{"cell_id": div_cell}] if self.n == 2 else [],
                         die_port: [{"cell_id": die_cell}] if self.n == 4 else []}
         P.__name__ = name
         return P
+
+    class Merge(CellActuationMergeStep):
+        def update(self, inputs):
+            log["fires"] += 1
+            return super().update(inputs)
 
     class Sink(Process):
         def inputs(self): return {"divisions": "list[node]", "deaths": "list[node]"}
@@ -126,22 +126,28 @@ def test_real_topology_rules_and_subcellular_events_once_each():
             log["die"] += [d["cell_id"] for d in i["deaths"]]
             return {}
 
-    core.register_link("RulesLike", producer("RulesLike", "divisions", "deaths", "r1", "r2"))
-    core.register_link("SubLike", producer("SubLike", "req_divide", "req_die", "s1", "s2"))
+    core.register_link("RulesLike", producer("RulesLike", "divisions", "deaths", "r1", "r2", []))
+    # the subcellular-like producer READS the merged channel (as the real one does), which
+    # is what makes the merge fire a second time per tick.
+    core.register_link("SubLike", producer("SubLike", "req_divide", "req_die", "s1", "s2",
+                                           ["merged_div"]))
+    core.register_link("CountingMerge", Merge)
     core.register_link("Sink", Sink)
     proc = lambda addr, ins, outs: {"_type": "process", "interval": 1.0, "address": addr,
                                     "config": {}, "inputs": ins, "outputs": outs}
     c = Composite({"state": {
-        "divisions": [], "deaths": [], "req_divide": [], "req_die": [],
+        "rules_div": [], "rules_die": [], "req_divide": [], "req_die": [],
         "out_divisions": [], "out_deaths": [],
-        "rules": proc("local:RulesLike", {}, {"divisions": ["divisions"], "deaths": ["deaths"]}),
-        "sub": proc("local:SubLike", {}, {"req_divide": ["req_divide"], "req_die": ["req_die"]}),
-        "m": {"_type": "step", "address": "local:CellActuationMergeStep", "config": {},
-              "inputs": {"divisions": ["divisions"], "deaths": ["deaths"],
+        "rules": proc("local:RulesLike", {}, {"divisions": ["rules_div"], "deaths": ["rules_die"]}),
+        "sub": proc("local:SubLike", {"merged_div": ["out_divisions"]},
+                    {"req_divide": ["req_divide"], "req_die": ["req_die"]}),
+        "m": {"_type": "step", "address": "local:CountingMerge", "config": {},
+              "inputs": {"divisions": ["rules_div"], "deaths": ["rules_die"],
                          "req_divide": ["req_divide"], "req_die": ["req_die"]},
               "outputs": {"divisions": ["out_divisions"], "deaths": ["out_deaths"]}},
         "sink": proc("local:Sink", {"divisions": ["out_divisions"], "deaths": ["out_deaths"]}, {}),
     }}, core=core)
     c.run(8)
+    assert log["fires"] > 8, f"merge did not multi-fire ({log['fires']} fires / 8 ticks)"
     assert sorted(log["div"]) == ["r1", "s1"], log
     assert sorted(log["die"]) == ["r2", "s2"], log

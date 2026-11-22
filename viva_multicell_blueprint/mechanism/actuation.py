@@ -9,19 +9,15 @@ single authoritative per-cell channels the mechanics backend consumes.
 * ``divisions`` / ``deaths``: union of both sources, de-duplicated by cell_id.
 * ``target_size`` / ``motility`` / ``adhesion`` / ``secrete``: ``req_*`` pass-through.
 
-PRECONDITION (read this): the Step assumes it runs once per producer cycle at the SAME
-interval as its producers (Rules / Subcellular), and that the Composite is run forward,
-not rebuilt or restored mid-run. Under those conditions the per-input cursor consumes
-each appended event exactly once. KNOWN LIMITATIONS (not handled): mismatched intervals
-(the Step may then miss or double-see appends) and a mid-run rebuild/restore (the
-in-memory cursor resets to 0, so the whole accumulated list is re-consumed once). A
-persisted watermark is deliberately out of scope for Pass 1.
-
-Accumulation: ``list[node]`` stores APPEND each step (``divisions``/``deaths`` from
-Rules, ``req_divide``/``req_die`` from Subcellular grow cumulatively). This Step keeps a
-per-input cursor and consumes only the entries new since its last update; its own
-``divisions``/``deaths`` outputs are ``overwrite`` so the backend sees just the current
-step's events, each cell at most once.
+MULTI-FIRE SAFE: in the real pipeline this Step fires more than once per tick (after
+Rules updates and again after Subcellular updates). It is therefore a PURE, idempotent
+function of its inputs: ``divisions`` / ``deaths`` are the current-tick union of the
+Rules-side lists (``divisions`` / ``deaths``) and the Subcellular-side lists
+(``req_divide`` / ``req_die``), de-duplicated by cell_id, recomputed on every firing.
+Both producers emit those lists as ``overwrite`` (each tick REPLACES the store with that
+tick's events), so there is no cursor and nothing to lose or repeat: firing N times on the
+same inputs yields the same output, and an event lives exactly one producer tick.
+The backend reads the merged channel once per tick, so each event is actuated once.
 """
 from __future__ import annotations
 
@@ -41,7 +37,6 @@ class CellActuationMergeStep(Step):
         self._arb = config.get("arbitration", "rules_first")
         if self._arb not in _ARBITRATION:
             raise ValueError(f"arbitration must be one of {_ARBITRATION}, got {self._arb!r}")
-        self._cursor: dict = {}
 
     def inputs(self):
         return {
@@ -60,15 +55,6 @@ class CellActuationMergeStep(Step):
             "adhesion": "overwrite[map[node]]", "secrete": "overwrite[map[map[float]]]",
         }
 
-    def _new(self, name, seq):
-        """Entries of cumulative list ``seq`` not yet consumed (reset if it shrank)."""
-        seq = list(seq or [])
-        cur = self._cursor.get(name, 0)
-        if len(seq) < cur:
-            cur = 0
-        self._cursor[name] = len(seq)
-        return seq[cur:]
-
     def _union(self, *lists):
         seen, out = set(), []
         for lst in lists:
@@ -85,10 +71,8 @@ class CellActuationMergeStep(Step):
         fates = {**rules, **req} if self._arb == "subcellular_first" else {**req, **rules}
         return {
             "fates": fates,
-            "divisions": self._union(self._new("divisions", inputs.get("divisions")),
-                                     self._new("req_divide", inputs.get("req_divide"))),
-            "deaths": self._union(self._new("deaths", inputs.get("deaths")),
-                                  self._new("req_die", inputs.get("req_die"))),
+            "divisions": self._union(inputs.get("divisions") or [], inputs.get("req_divide") or []),
+            "deaths": self._union(inputs.get("deaths") or [], inputs.get("req_die") or []),
             "target_size": dict(inputs.get("req_target_size") or {}),
             "motility": dict(inputs.get("req_motility") or {}),
             "adhesion": dict(inputs.get("req_adhesion") or {}),

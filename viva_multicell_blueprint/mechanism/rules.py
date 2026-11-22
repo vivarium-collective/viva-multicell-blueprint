@@ -85,7 +85,7 @@ class RulesProcess(Process):
         # so overwrite replaces the store whole -- a bare map[..] apply would both
         # drop keys on the empty t=0 store AND leave stale prior-step fates behind.
         return {"fates": "overwrite[map[string]]", "scalar": "overwrite[map[map[float]]]",
-                "divisions": "list[node]", "deaths": "list[node]"}
+                "divisions": "overwrite[list[node]]", "deaths": "overwrite[list[node]]"}
 
     @staticmethod
     def _exposure(grid, pos):
