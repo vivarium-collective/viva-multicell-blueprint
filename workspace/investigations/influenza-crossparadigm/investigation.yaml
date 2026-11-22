@@ -1,165 +1,143 @@
 schema_version: 2
 name: influenza-crossparadigm
-title: "Influenza cross-paradigm — one Sego 2022 blueprint, three mechanical substrates"
+title: "Blueprint to pipeline to three substrates: one backend-neutral blueprint, run faithfully on CPM, vertex and center-based, with a pluggable subcellular layer"
 created: "2026-10-27"
 status: running
 lead: eran
 
 question: >
-  Can ONE backend-neutral blueprint express the whole Sego 2022 influenza model
-  (ViralInfectionVTM) and run it faithfully on three different mechanical substrates
-  — a Cellular Potts model (viva-cpm), a vertex model (vivarium-tyssue), and a
-  center-based model (viva-munk) — and where do the substrates agree vs diverge when
-  the shared mechanism is driven live?
+  Can ONE versioned, backend-neutral blueprint be translated by a single pipeline
+  (`blueprint_pipeline`) and run faithfully on three different mechanical substrates --
+  a Cellular Potts model (viva-cpm), a vertex model (vivarium-tyssue) and a center-based
+  model (viva-munk) -- including a pluggable per-cell subcellular layer (a tellurium ODE
+  that grows and divides cells); and where do the substrates agree vs diverge when the
+  shared mechanism is driven live? The Sego 2022 influenza model (ViralInfectionVTM) is
+  the worked example for the comparison; a v2 subcellular growth/division blueprint is
+  the worked example for the subcellular layer.
 
 hypothesis: >
-  Because the field / rules / systemic-ODE / latent-pool recruitment mechanism is
-  compiled BYTE-FOR-BYTE identically onto all three backends and only the single
-  mechanics node differs, cell-FATE dynamics should be nearly backend-independent,
-  while SPATIAL morphology should diverge — each substrate samples the shared field
-  at its own cell centroid and measures cell-cell contact through its own geometry.
-  Divergence is therefore expected and is a finding about the substrate, not a bug.
-  (Confirmed three-way: fate agreement is statistically EQUIVALENT across all three
-  paradigm pairs, while spatial agreement is not — and the center-based model, which
-  is not calibrated to the other two, is the most spatially divergent of the three.)
+  Because the field / rule / systemic-ODE / subcellular mechanism is compiled identically
+  onto all three backends and only the single mechanics node differs, cell-FATE dynamics
+  should be nearly backend-independent while exact SPATIAL position should diverge: each
+  substrate samples the shared field at its own cell centroid and measures cell-cell
+  contact through its own geometry. Divergence is a finding about the substrate, not a
+  bug. Confirmed three-way: fate agreement is statistically EQUIVALENT across all three
+  paradigm pairs while exact-position agreement is not, and the center-based model, which
+  is not calibrated to the other two, is the most spatially divergent. A mechanics-
+  dominated positive control shows the test rejects when it should, and the subcellular
+  layer grows and divides cells uniformly on every backend.
 
 description: |
-  This investigation is the capstone of the `viva-multicell-blueprint` build: it
-  ties together the backend-neutral blueprint (Task 17), the `compile(blueprint,
-  backend)` compiler (Task 13), both real backends running the full model (fields
-  Task 6, rules Task 7, systemic ODE fed live by CellCountStep Task 21, immune
-  recruitment via latent-pool activation Task 20, real footprints Task 19), the
-  comparison layer (`viva_multicell_blueprint.compare` — identity, raster, metrics)
-  and the three interactive figures (`viva_multicell_blueprint.viz`).
+  This investigation covers the `viva-multicell-blueprint` pipeline end to end: the
+  backend-neutral blueprint (a versioned, statically validated artifact), the single
+  `blueprint_pipeline` composite that compiles it onto a mechanics backend, the three
+  real backends running the full model (reaction-diffusion fields, rules, a systemic
+  immune ODE fed live by cell counts, latent-pool immune recruitment, per-cell
+  subcellular ODEs), the comparison layer (`viva_multicell_blueprint.compare`: identity,
+  raster, metrics) and the interactive figures (`viva_multicell_blueprint.viz`).
 
-  **Blueprint update.** The recruitment design (Task 20) activates a PRE-PLACED
-  LATENT immune pool, so the Sego blueprint's `initial_state` now pre-places 12
-  size-25 latent immune cells (M/NK/CD8_latent) at the tissue margins via
-  `extra_blocks`; the `infected_seed` is scoped to the main epithelial block so the
-  latent pool never changes the infected count. All cells are size 25 (size-9 cells
+  **One composite.** `viva_multicell_blueprint.composites.pipeline.blueprint_pipeline`
+  (a `@composite_generator`, parameterized by `backend` and `blueprint`) is the baseline
+  composite for every study and drives the Composite Explorer. The earlier
+  `sego_crossparadigm` composite is a thin alias that delegates to it.
+
+  **Five studies.**
+    1. blueprint-pipeline-fidelity -- the blueprint contract and t0 fidelity on every backend.
+    2. cross-paradigm-equivalence -- fate and position equivalence across the three
+       substrates, with the same-backend null and a mechanics-dominated positive control.
+    3. substrate-behavior-at-scale -- distance-to-CPM behavior metrics on the large
+       Sego tissue, and how the vertex mechanics were matched to the CPM.
+    4. dose-response-crossparadigm -- all three substrates agree on the sign of the
+       dose response.
+    5. subcellular-layer-grow-divide -- the pluggable per-cell ODE layer grows and
+       divides cells on all three backends.
+
+  **Three substrates, not two.** The center-based model (viva-munk: each cell a circular
+  rigid body, area-matched to the blueprint `size`) is compiled from the SAME canonical
+  blueprint via `local:MunkBackend`, shown as a third panel in every spatial playback,
+  and scored pairwise (cpm-vertex, cpm-munk, vertex-munk). It is deliberately NOT
+  calibrated to the other two (docs/mechanics.md), so it is a genuinely independent
+  representation.
+
+  **Blueprint contents.** The Sego blueprint pre-places 12 size-25 latent immune cells
+  (M/NK/CD8_latent) at the tissue margins via `extra_blocks`; recruitment activates that
+  latent pool in place, and the `infected_seed` is scoped to the main epithelial block so
+  the latent pool never changes the infected count. All cells are size 25 (size-9 cells
   dissolve). Parameters stay faithful to Sego 2022 params.yaml @ b952eec2.
 
-  **Runnable artifact.** `viva_multicell_blueprint.composites.sego.sego_crossparadigm`
-  (a `@composite_generator`, parameterized by `backend` and `blueprint`) is the
-  baseline composite for every study and drives the dashboard Composite Explorer.
+  **Reduced scale.** Influenza studies run at a TRACTABLE reduced scale (a 50x50-site
+  patch, a 6x6 epithelial block) so the runs complete; the large Sego tissue (120x120,
+  ~225-cell epithelium) is used for behavior-metric characterization. This is a
+  demonstration, not paper scale, and the comparison is reproducible (fixed seeds).
 
-  **Reduced scale.** Every study runs at a TRACTABLE reduced scale (a 50x50-site
-  patch, a 6x6 epithelial block) so the runs actually complete; this is a
-  demonstration, not paper scale. The comparison is reproducible (fixed seeds).
-
-  **Third paradigm (center-based).** A third mechanical substrate — a center-based
-  model (viva-munk / pymunk: each cell a circular rigid body, area-matched to the
-  blueprint `size`) — is now compiled from the SAME canonical blueprint via
-  `local:MunkBackend`, visualized as a third panel in every spatial playback, and
-  scored PAIRWISE (cpm↔vertex, cpm↔munk, vertex↔munk) in the equivalence and
-  counterfactual studies. It is deliberately NOT calibrated to the other two
-  (docs/mechanics.md §3), so it is a genuinely independent representation.
-
-  **Anti-goal respected.** No parameter is tuned to force the backends to agree.
-  Honest divergence is reported.
+  **Anti-goal respected.** No parameter is tuned to force the backends to agree. Honest
+  divergence is reported.
 
 at_a_glance:
-  - study: adhesion-calibration
+  - study: blueprint-pipeline-fidelity
     role: >
-      §9.1, REVISED 2026-10-28. Both substrates' mechanics are defined term by term
-      (docs/mechanics.md). Area stiffness and adhesion ratios are energy-matched; the
-      tension scale (1.74), immune motility and the saturating chemotactic drift are
-      CALIBRATED to the CPM (area 22.8/23.0, immune displacement 9.4/9.4 um) under a
-      hard no-fold constraint. Epithelial wandering is NOT matched: the CPM-matching
-      motility folds the vertex mesh, so the vertex epithelium wanders ~5x less (MSD
-      2.0 vs 9.5 um^2), though it exchanges neighbours (T1s).
-  - study: initial-state-fidelity
+      Contract + t0 fidelity. The blueprint is a versioned, backend-neutral artifact with a
+      canonical/backend split and a static validator; `blueprint_pipeline` materializes it
+      on every backend. CPM is exact (centroid RMS 0.000 um); the vertex model has one
+      polygon per cell in a single hexagonal sheet (epithelial residual RMS 1.60 um, max
+      2.44 um; 12 immune cells attached at the margin, RMS 4.11 um); 48/48 types match.
+  - study: cross-paradigm-equivalence
     role: >
-      §9.2, REVISED 2026-10-28. CPM exact (centroid RMS 0.000 um). The vertex model has
-      one polygon per Sego cell: a connected sheet of 36 regular hexagons at area 25
-      plus 12 immune overlay islands, with no guard / medium polygons (was 50).
-      Epithelial residual is sub-cell (RMS 1.60 um, max 2.44 um). 48/48 type match.
-  - study: flu-lung-crossparadigm
+      The comparison spine. Fate is EQUIVALENT for every substrate pair (cpm-vertex diff
+      -0.0014, run-cluster CI [-0.0034, +0.0008] inside +/-0.05); exact position is not
+      (cpm-vertex +0.126 < cpm-munk +0.224 < vertex-munk +0.263), the center-based model
+      diverging most. The N=400 same-backend null table is retained, and a mechanics-
+      dominated positive control REJECTS equivalence for every pair (cpm-vertex +0.325),
+      so the test has power.
+  - study: substrate-behavior-at-scale
     role: >
-      §9.3 CAPSTONE, re-run on the revised vertex substrate with mechanics-stochastic
-      replicates. Fate (cross 0.938 between same-backend 0.926 / 0.944), occupancy IoU
-      (0.135 between 0.100 / 0.175) and patch location (3.6 vs 3.3 um) are inside seed
-      noise, so we fail to reject; the old IoU candidate signal does not survive.
-      Remaining candidate: the vertex I-count leaves the narrow CPM 3-seed envelope at
-      45% of steps by N=400.
+      Large Sego tissue (254 cells): each substrate's behavior-metric distance from the CPM
+      against the CPM-self null floor. Vertex matches per-cell trajectories and contact churn
+      but under-fluctuates (MSD 2.7x null) and mis-sorts (8.5x); center-based matches contact
+      topology and sorting but is over-mobile (MSD 23x). Includes how the vertex mechanics
+      were matched to the CPM (area, immune motility, chemotaxis calibrated; epithelial
+      wandering ~5x low under a no-fold constraint) and the open fluctuation-match question.
   - study: dose-response-crossparadigm
     role: >
-      §9 stretch. Sweep initial viral load over seeds; both substrates agree on the
-      STRICT DIRECTION -- the highest dose ends with more infection than the lowest on
-      every backend and seed (CPM 1->7 / 1->2, vertex 1->7 / 1->6). Directional, not a
-      dose-response curve.
-  - study: crossparadigm-equivalence
+      Sweep initial viral load over seeds; all three substrates agree on the STRICT DIRECTION
+      (the highest dose ends with more infection than the lowest on every backend and seed).
+      Directional, not a dose-response curve.
+  - study: subcellular-layer-grow-divide
     role: >
-      HARDENING, re-run 2026-10-28. Fate is EQUIVALENT (run-cluster CI [-0.003,
-      +0.001] within +/-0.05). The exact-position gap shrank from 0.92 to 0.135 (cross
-      0.472 vs same 0.608, CI [0.071, 0.210]): still not equivalent at +/-0.10. The old
-      gap was mostly a degenerate null (identical mechanics across replicates) plus
-      non-moving vertex cells; the rest tracks the less fluid vertex epithelium.
-  - study: substrate-divergence-counterfactual
-    role: >
-      HARDENING / positive control, re-run 2026-10-28. The spatial TOST still REJECTS
-      (cross 0.417 vs same 0.775), so the test has power. The earlier mechanism (vertex
-      climbing the gradient) was an uncalibrated-chemotaxis artifact and is retired;
-      the remaining divergence is positional / sorting and not yet isolated.
-  - study: large-crossparadigm-comparison
-    role: >
-      SCALE-UP characterization on the large Sego model (120x120, ~225-cell epithelium)
-      with the new behavior metrics (distance-to-CPM). After the munk fix, all three
-      substrates MOVE; each reproduces a DIFFERENT facet of the CPM: vertex matches
-      per-cell trajectories + contact churn but under-fluctuates (MSD 2.7x null) and
-      mis-sorts (8.5x null); center-based matches contact topology + sorting but is
-      over-mobile (MSD 23x null). Localizes the per-axis calibration targets.
-  - study: vertex-cpm-fluctuation-match
-    role: >
-      PLANNED follow-up (Design phase). Seeded from adhesion-calibration's open gap:
-      the CPM-matching vertex motility/noise folds the mesh, so it was capped and the
-      vertex epithelium wanders ~5x less than the CPM (MSD 2.2 vs 9.5). This study asks
-      whether a mesh-safe fluctuation mechanism closes that pattern gap under a
-      quantitative distance-to-CPM target, or whether the residual is a structural limit.
+      The pluggable per-cell subcellular layer (a tellurium ODE bound to a cell type in the
+      v2 blueprint) grows and divides cells on CPM, vertex and center-based through
+      `blueprint_pipeline`: cell counts cpm 4->8->16, vertex 4->8->16, munk 4->6->8->16.
+      Evidence is the e2e test run; no committed runs.db entry yet.
 
 acceptance_criteria:
-  - study: adhesion-calibration
+  - study: blueprint-pipeline-fidelity
     behavior: >
-      Both substrates' mechanics are defined with per-type / per-pair parameters, and
-      the vertex knobs without a CPM counterpart are calibrated to CPM area, motility
-      and chemotactic drift (with non-identifiable ones reported as such).
-  - study: initial-state-fidelity
+      The same immutable canonical blueprint compiles to every backend, backend/run
+      parameters are separated from the biological state and flagged by the validator, and
+      every backend reproduces the t=0 centroids/sizes/types (CPM exact; one vertex polygon
+      per cell, no guard / medium faces) with the residual reported.
+  - study: cross-paradigm-equivalence
     behavior: >
-      Both backends reproduce the t=0 centroids/sizes/types; every vertex polygon is
-      one blueprint cell (hexagonal sheet + immune overlay, no guard / medium faces)
-      and the residual is reported.
-  - study: flu-lung-crossparadigm
+      Under replication (6-seed grid, run-cluster bootstrap), cross-backend fate agreement
+      is TOST-equivalent to the same-backend baseline within +/-0.05 for every pair; the
+      spatial (exact-position) result is reported with its representation caveat; the N=400
+      same-backend null table is reported; and in a mechanics-dominated regime the spatial
+      TOST REJECTS, demonstrating the test has power.
+  - study: substrate-behavior-at-scale
     behavior: >
-      The full Sego blueprint runs on BOTH backends at reduced scale; per-cell
-      agreement, dynamics-with-band, and spatial-pattern + occupancy IoU are all
-      computed, the three figures render under the inline cap, and the agree/diverge
-      result is reported honestly.
+      On the large Sego model, the behavior-metric distances of vertex and center-based from
+      the CPM are reported against the CPM-self null floor; center-based is shown to move and
+      interact; the per-axis divergences are quantified as calibration targets; and the vertex
+      mechanics matching is documented term by term with its calibration evidence.
   - study: dose-response-crossparadigm
     behavior: >
-      Both backends agree on the monotone direction of infection vs initial viral
-      load.
-  - study: crossparadigm-equivalence
+      All three backends agree on the strict lowest-vs-highest direction of infection vs
+      initial viral load.
+  - study: subcellular-layer-grow-divide
     behavior: >
-      Under replication (6x6 seed grid), cross-backend fate agreement is TOST-
-      equivalent to the same-backend baseline within ±0.05; the spatial (exact-
-      position) result is reported with its representation caveat.
-  - study: substrate-divergence-counterfactual
-    behavior: >
-      In a mechanics-dominated regime the spatial equivalence TOST REJECTS, and the
-      migration-direction difference (vertex climbs the gradient, CPM does not) is
-      the mechanistic cause — demonstrating the test has power.
-  - study: large-crossparadigm-comparison
-    behavior: >
-      On the large Sego model, the behavior-metric distances of vertex and center-based
-      from the CPM are reported against the CPM-self null floor; center-based is shown to
-      move + interact (munk fix validated at scale), and the per-axis divergences (vertex
-      under-fluctuation + mis-sorting; munk over-mobility) are quantified as calibration targets.
-  - study: vertex-cpm-fluctuation-match
-    behavior: >
-      PLANNED. With mesh validity enforced, a provided mesh-safe fluctuation mechanism
-      drives the vertex epithelial MSD, area CV and interaction-pattern distances into a
-      tolerance band around the CPM on the large Sego model — or the residual is reported
-      honestly as a structural limit of the vertex substrate (not a forced pass).
+      The per-cell ODE species evolve, cells grow via target_size actuation, and division
+      with lineage occurs on all three backends, with one division per starting cell at the
+      first threshold crossing.
 
 competing_frameworks:
   - name: "Cellular Potts (CPM / viva-cpm)"
@@ -172,122 +150,101 @@ competing_frameworks:
       Polygon model: the epithelium is a confluent hexagonal sheet of faces with shared
       edges, evolving by overdamped force balance (area elasticity, per-type-pair
       junction tension, active motility + saturating chemotaxis via ActiveMigration)
-      with T1/T3 neighbour exchange (auto_reconnect). Immune cells are an overlay layer
-      (Sego's z=1 over z=0), and fields are overlaid on the tissue. Equations:
-      docs/mechanics.md.
+      with T1/T3 neighbour exchange (auto_reconnect). Immune cells are smaller polygons
+      attached to the sheet at the tissue margin, and fields are overlaid on the tissue.
+      Equations: docs/mechanics.md.
+  - name: "Center-based model (viva-munk)"
+    description: >
+      Particle model: each cell is a circular rigid body (pymunk), area-matched to the
+      blueprint `size`, relaxing under hard-disc collision with adhesion and chemotaxis
+      forces. Deliberately uncalibrated to the other two, so it is an independent
+      representation (docs/mechanics.md section 3).
   - name: "Framing"
     description: >
-      The investigation's question is whether a single backend-neutral blueprint gives
-      the SAME scientific answer on these two competing substrates. Equivalence
-      (crossparadigm-equivalence) and its adversarial positive control
-      (substrate-divergence-counterfactual) together bound WHEN the frameworks agree
-      (shared-mechanism-driven fate) and WHEN they diverge (mechanics-driven position).
+      The investigation asks whether a single backend-neutral blueprint, translated by one
+      pipeline, gives the SAME scientific answer on these three competing substrates.
+      Equivalence and its mechanics-dominated positive control (cross-paradigm-equivalence)
+      together bound WHEN the frameworks agree (shared-mechanism-driven fate) and WHEN they
+      diverge (mechanics-driven position); the subcellular layer shows the pipeline carries
+      per-cell models uniformly across all three.
 
 executive:
   what_is_this: >
-    The capstone cross-paradigm demonstration: one backend-neutral Sego 2022
-    influenza blueprint, compiled and run on both a Cellular Potts and a vertex
-    substrate, with a full three-family comparison and three interactive figures.
+    A demonstration that one backend-neutral blueprint, compiled by the single
+    `blueprint_pipeline`, runs the Sego 2022 influenza model and a per-cell subcellular
+    ODE model on a Cellular Potts, a vertex and a center-based substrate, with a full
+    comparison and interactive figures.
   verdict: >
-    UPDATED per the 2026-10-28 vertex-mechanics review (feedback-response.md, second
-    section). The vertex substrate was rebuilt: one polygon per Sego cell on a
-    hexagonal sheet, immune overlay, fields overlaid not meshed, auto_reconnect,
-    per-pair tension, stable sub-stepped integration, domain walls, and motility /
-    chemotaxis calibrated to the CPM under a hard no-fold constraint. Its mechanics are
-    defined in docs/mechanics.md. Vertex cells now move within the tissue and exchange
-    neighbours, but the epithelium wanders ~5x less than the CPM's: the CPM-matching
-    motility folds the vertex mesh. Replicates are now mechanics-stochastic on both
-    backends. Fate stays equivalent. The exact-position gap fell from 0.92 to 0.135
-    (still not equivalent at +/-0.10). In the capstone, fate, occupancy and location
-    are within seed noise; late I-count dynamics are the remaining candidate. The
-    counterfactual still rejects, but its migration mechanism was an artifact and is
-    retired.
-    --- 2026-10-27 framing (still in force):
-    REFRAMED per the 2026-10-27 review (see feedback-response.md). The contribution
-    is a declarative, backend-neutral BLUEPRINT with auditable lowering to CPM and
-    vertex — organized around three DISTINCT claims: (1) blueprint fidelity,
-    (2) model portability, (3) scientific equivalence. Cross-backend agreement is
-    Claim 3 evidence, NOT the headline, and never implies (1) or biological validity.
-    Status by claim: (1) PARTIAL — t0 centroid/ID/type identity shown; area/footprint/
-    contact/adjacency/topology/round-trip not yet tested (Stage 2). (2) PARTIAL — one
-    blueprint compiles to both with a byte-shared mechanism, but V/L/C/F producers are
-    absent and immune recruitment is a latent-pool approximation (named deviations, so
-    "Sego model with deviations", NOT "FULL Sego"; Stage 4). (3) SCOPED — on cell
-    FATE the backends are equivalent under a DEPENDENCE-AWARE reanalysis (run-cluster
-    bootstrap over the 6x6 grid: Δ -0.0015, 90% CI [-0.003,+0.001], within a ±0.05
-    margin that is NOT yet biologically justified); exact POSITION is not equivalent
-    (a candidate representation effect, not yet causally isolated); the mechanics-
-    dominated counterfactual shows the test has power. The earlier pair-level
-    p=5.6e-36 overstated significance (dependent seed-pairs) and is retired.
-    --- Prior reduced-scale reading (superseded as the headline, kept for provenance):
-    Judged against a NULL CONTROL (same-backend
-    seed-to-seed spread), on cell fate and infected-patch LOCATION the cross-backend
-    difference falls inside the same-backend seed spread, so we FAIL TO REJECT a
-    substrate effect at this scale and seed count (a null result, NOT proof of
-    equality): cross-backend fate agreement 0.942 (N=400), within the same-backend
-    baselines (CPM 0.934, vertex 0.943; equal 0.987 at CI scale); patch location 6.1
-    um cross vs 5.4 um same-backend; vertex trajectory inside the CPM 3-seed envelope
-    at 100% of steps. Final cell areas match (24.7 vs 24.5), so the spatial comparison
-    is not representation-confounded. The ONE exception: raw infected-patch occupancy
-    IoU trends ~25-35% below BOTH same-backend baselines (0.165 vs CPM 0.249 / vertex
-    0.212) — flagged as a candidate weak substrate signal to test at larger scale /
-    more vertex seeds, not attributed to seed noise without evidence. Dose-response
-    direction is strict on both backends across seeds. Initial-state fidelity is exact
-    on CPM and a clean 1:1 on vertex; the adhesion J<->tension mapping is directional.
-    The earlier "fate agrees, morphology diverges" reading was an artifact of
-    comparing a single seed-pair to zero. This is preliminary (reduced scale): the
-    headline N=400 numbers use 3 CPM x 3 vertex seeds (9 cross pairs), and the vertex
-    side is near-degenerate across seeds at this scale (the slow epidemic gives
-    ~identical vertex I-counts; vertex-vs-vertex sd 0.006), so more vertex seeds barely
-    move the result; the lighter CI test uses CPM {0,1,2} vs vertex seed 0. A substrate
-    effect could emerge at larger scale, where the vertex seeds would no longer be
-    degenerate. Known limits: the recruitment latent-pool
-    approximation (T20-RECRUIT), the reduced scale, the producer-less ODE inputs
-    V/L/C/F (Task 21), and the directional adhesion calibration.
+    The pipeline works as designed and the substrates differ where mechanics decides.
+    (1) The blueprint is a versioned, validated, backend-neutral artifact, and every
+    backend reproduces its t0 state (CPM exact; vertex one polygon per cell with a 1.6 um
+    epithelial residual; 48/48 types). (2) Cell FATE is statistically equivalent across all
+    three substrates (run-cluster CI [-0.0034, +0.0008] inside +/-0.05), while exact POSITION
+    is not for any pair; the gap orders cpm-vertex +0.126 < cpm-munk +0.224 < vertex-munk
+    +0.263, so the uncalibrated center-based model diverges most. A mechanics-dominated
+    positive control rejects equivalence for every pair, so the test has power. At N=400 the
+    capstone fate metric falls within the same-backend seed spread, while infected-patch
+    occupancy and location now sit outside it on the current vertex substrate (a candidate
+    substrate signal, not causally attributed). (3) On the large tissue each substrate
+    reproduces a different facet of the CPM: vertex matches trajectories and contact churn
+    but under-fluctuates (the vertex epithelium wanders ~5x less than the CPM because the
+    CPM-matching motility folds the mesh); center-based matches contact topology and sorting
+    but over-moves. (4) All three substrates agree on the direction of the dose response.
+    (5) The pluggable subcellular layer grows and divides cells on all three backends.
+    Evidence is preliminary: reduced scale, 3-6 seeds, named deviations (V/L/C/F producers
+    absent, latent-pool recruitment), and biological fidelity to Sego 2022 is not validated.
+    The project is organized around three distinct claims: (1) blueprint fidelity, (2) model
+    portability, (3) scientific equivalence; cross-backend agreement is Claim 3 evidence and
+    never implies Claims 1 or 2 or biological validity.
   verdict_status: preliminary
   decisions_needed:
-    - "STAGE 1 (BP-01): formalize a versioned blueprint schema + canonical IR, separate from backend geometric init (units, coord frame, boundaries, tessellation-independent IDs, footprints, fields, contacts, latent states, seeds, init order, mechanism bindings, provenance, allowable loss)."
-    - "STAGE 2 (BP-02/BP-04, extend initial-state-fidelity): prove blueprint fidelity beyond centroids/IDs — area, footprint, contact, adjacency, boundary, topology, round-trip, with explicit error measures and loss reports."
-    - "STAGE 3 (BP-07): adhesion-calibration now calibrates the vertex tension scale, immune motility and chemotaxis to CPM observables under a no-fold constraint (2026-10-28). Open: the vertex epithelium cannot reach CPM fluidity without folding (MSD 2.0 vs 9.5 um^2) -- needs a fold-aware topology handler or a softer epithelium; area dispersion unmatched; tension scale geometry-dependent (1.74 vs ~4); one cell size."
-    - "STAGE 4 (BP-05): V/L/C/F inputs have no producer and immune recruitment is a latent-pool approximation — build a producer/consumer ledger, implement or clearly designate deviations, and ablate frozen inputs."
-    - "STAGE 4 (BP-06): the ±0.05 fate-equivalence margin is NOT yet biologically justified; the dependence-aware reanalysis is done (cluster bootstrap) but power under biologically meaningful perturbations is not established."
-    - "STAGE 4 (BP-08): biological fidelity to Sego 2022 is NOT validated — digitize figure/table/parameter anchors and compare predictive intervals on held-out data; no biology inferred from cross-backend agreement."
+    - "STAGE 1 (BP-01): formalize a versioned blueprint schema + canonical IR, separate from backend geometric init (units, coord frame, boundaries, tessellation-independent IDs, footprints, fields, contacts, latent states, seeds, init order, mechanism bindings, provenance, allowable loss). The versioned schema, canonical/backend split and static validator exist; the remaining fields are open."
+    - "STAGE 2 (BP-02/BP-04, extend blueprint-pipeline-fidelity): prove blueprint fidelity beyond centroids/IDs -- area, footprint, contact, adjacency, boundary, topology, round-trip, with explicit error measures and loss reports."
+    - "STAGE 3 (BP-07, substrate-behavior-at-scale): the vertex tension scale, immune motility and chemotaxis are calibrated to CPM observables under a no-fold constraint. Open: the vertex epithelium cannot reach CPM fluidity without folding (MSD ~2.2 vs 9.5 um^2) -- push knobs under a mesh-validity gate, add a T1-safe fluctuation term, or accept the residual (VCF-01); area dispersion unmatched; tension scale geometry-dependent (1.74 vs ~4); one cell size."
+    - "STAGE 4 (BP-05): V/L/C/F inputs have no producer and immune recruitment is a latent-pool approximation -- build a producer/consumer ledger, implement or clearly designate deviations, and ablate frozen inputs."
+    - "STAGE 4 (BP-06): the +/-0.05 fate-equivalence margin is NOT yet biologically justified; the dependence-aware reanalysis is done (cluster bootstrap) but power under biologically meaningful perturbations is not established."
+    - "STAGE 4 (BP-08): biological fidelity to Sego 2022 is NOT validated -- digitize figure/table/parameter anchors and compare predictive intervals on held-out data; no biology inferred from cross-backend agreement."
     - "STAGE 4 (dose-response redefine): separate virion inoculum from seeded infected fraction; 6-10 graded doses x replicate seeds; it is currently directional-only, NOT a dose-response curve."
-    - "STAGE 5 (BP-09): compile a SECOND independent tissue blueprint through the same schema with no influenza-specific adaptations — the decisive generality test."
+    - "SUBCELLULAR LAYER: commit a run (runs.db) with a figure for subcellular-layer-grow-divide and test lineage / size-distribution equivalence across backends over several seeds; give viva-cpm a per-id split or document its divide-all-over-threshold semantics."
+    - "STAGE 5 (BP-09): compile a SECOND independent tissue blueprint through the same schema with no influenza-specific adaptations -- the decisive generality test."
 
 glossary:
+  - term: blueprint_pipeline
+    definition: The single composite that compiles a backend-neutral blueprint onto a mechanics backend (cpm, vertex or munk) and wires the shared fields, rules, ODEs and subcellular layer.
   - term: cross-paradigm
-    definition: Running the same model on two different mechanical substrates (CPM voxel vs vertex polygon) and comparing.
+    definition: Running the same model on different mechanical substrates (CPM voxel, vertex polygon, center-based disc) and comparing.
+  - term: subcellular layer
+    definition: A per-cell model (e.g. a tellurium ODE) bound to a cell type in the v2 blueprint; it reads fields at the centroid and actuates target_size and division through the shared stores, independent of the mechanics backend.
   - term: latent pool
     definition: Pre-placed resting immune cells (M/NK/CD8_latent) at the tissue margin that recruitment activates in place (type switch), rather than inserting new topology.
   - term: per-cell agreement
-    definition: Fraction of the t0 cohort in the same state (type, or alive-vs-dead) at each step across the two backends.
+    definition: Fraction of the t0 cohort in the same state (type, or alive-vs-dead) at each step across two backends.
   - term: occupancy IoU
-    definition: Intersection-over-union of the two backends' rasterized cell footprints (CPM voxel occupancy vs vertex face polygons).
+    definition: Intersection-over-union of two backends' rasterized cell footprints (CPM voxel occupancy vs vertex face polygons).
 
 # ============================================================================
-# Reframe per the 2026-10-27 review (feedback-response.md + references/reviews/).
-# Three distinct claims + a five-stage program. Cross-backend agreement is
-# Claim-3 evidence only; it never implies Claim 1 or biological validity.
+# Three distinct claims + a five-stage program (feedback-response.md and
+# references/reviews/). Cross-backend agreement is Claim-3 evidence only; it never
+# implies Claim 1 or biological validity.
 # ============================================================================
 claims:
   - id: 1
     name: Blueprint fidelity
-    question: Can an independently specified biological initial state be represented faithfully in either mechanical substrate?
+    question: Can an independently specified biological initial state be represented faithfully in every mechanical substrate?
     status: partial
-    evidence: "initial-state-fidelity (t0 centroid/ID/type identity; vertex now one hexagon per cell at target area, connected sheet, immune overlay). Contact/adjacency/round-trip not yet tested."
+    evidence: "blueprint-pipeline-fidelity (versioned schema + validator; t0 centroid/ID/type identity; vertex one hexagon per cell at target area in one connected sheet with margin-attached immune cells). Contact/adjacency/round-trip not yet tested."
     stage: 2
   - id: 2
     name: Model portability
-    question: Can the same biological mechanisms be connected to each backend without changing their intended semantics?
+    question: Can the same biological mechanisms (including per-cell subcellular models) be connected to each backend without changing their intended semantics?
     status: partial
-    evidence: "One blueprint compiles to both with a byte-shared mechanism; V/L/C/F producers absent and recruitment is a latent-pool approximation (named deviations)."
+    evidence: "One blueprint compiles to all three backends with a shared mechanism; subcellular-layer-grow-divide shows per-cell ODE growth and division on all three. V/L/C/F producers absent and recruitment is a latent-pool approximation (named deviations)."
     stage: 4
   - id: 3
     name: Scientific equivalence
-    question: Under which conditions should the two simulations agree, and when do differences reflect meaningful mechanical assumptions?
+    question: Under which conditions should the simulations agree, and when do differences reflect meaningful mechanical assumptions?
     status: scoped
-    evidence: "crossparadigm-equivalence (fate equivalent under run-cluster bootstrap, margin not yet biologically justified; position gap 0.135, CI [0.071, 0.210] -- not equivalent at 0.10) + substrate-divergence-counterfactual (test has power) + adhesion-calibration (vertex mechanics calibrated to CPM behaviour)."
+    evidence: "cross-paradigm-equivalence (fate equivalent across all three pairs under run-cluster bootstrap, margin not yet biologically justified; position not equivalent for any pair; mechanics-dominated positive control rejects) + substrate-behavior-at-scale (per-axis distance-to-CPM; vertex mechanics calibrated to CPM behaviour)."
     stage: 4
 
 roadmap:
@@ -299,26 +256,26 @@ roadmap:
       exit_gate: Canonical schema + portable initial-state fidelity pass for pathological and normal fixtures.
     - stage: 2
       name: Prove initialization fidelity
-      studies: [initial-state-fidelity (extend), BP-02, BP-04]
+      studies: [blueprint-pipeline-fidelity (extend), BP-02, BP-04]
       exit_gate: Geometry/contact/field adapters conform at refinement; per-backend losses quantified.
     - stage: 3
       name: Establish scientifically comparable mechanics
-      studies: [adhesion-calibration (supersede), BP-07, BP-10]
+      studies: [substrate-behavior-at-scale (extend), BP-07, BP-10]
       exit_gate: Identifiable (or explicitly unidentifiable) parameters; agreement within pre-registered physical-response bands.
     - stage: 4
       name: Complete and validate the influenza mechanism
-      studies: [BP-05, BP-06, BP-08, dose-response (redefine), flu-lung (reconcile), substrate-divergence-counterfactual (extend)]
+      studies: [BP-05, BP-06, BP-08, dose-response-crossparadigm (redefine), cross-paradigm-equivalence (extend to effect-size sweep)]
       exit_gate: No missing causal inputs; powered equivalence on justified observables; measured biology benchmarked.
     - stage: 5
       name: Demonstrate generality
-      studies: [BP-09, BP-11]
+      studies: [BP-09, BP-11, subcellular-layer-grow-divide (extend)]
       exit_gate: A second independent blueprint compiles without influenza-specific branching; losses + portability cost quantified.
 
 claim_guardrails:
-  - Passing the same code on two backends is not evidence of biological validity.
+  - Passing the same code on several backends is not evidence of biological validity.
   - Equal total counts can conceal infection-pattern and rare-cell behavior differences.
-  - Seed-pair comparisons reuse trajectories — treat statistical dependence explicitly.
-  - Failing to reject equivalence is not proof of a difference — report bounds and power.
+  - Seed-pair comparisons reuse trajectories -- treat statistical dependence explicitly.
+  - Failing to reject equivalence is not proof of a difference -- report bounds and power.
   - CPM contact energy and vertex line tension cannot be equated by a monotonic label mapping without shared physical observables.
   - Biological blueprint, compiler mapping, initialized state, dynamic mechanism, and readout remain distinct objects.
   - Every declared semantic invariant has a pass/fail test and a quantified tolerance.
@@ -340,7 +297,7 @@ proposed_studies:
 
 # Figure plan (full spec in the review file). F1 is the P0 central figure.
 figure_plan:
-  - {id: F1, priority: P0, title: "One blueprint, two substrates (central figure)"}
+  - {id: F1, priority: P0, title: "One blueprint, three substrates (central figure)"}
   - {id: F2, priority: P0, title: "Blueprint versus realized t0 (registered 3-view)"}
   - {id: F3, priority: P0, title: "Blueprint fidelity dashboard (parity + distributions)"}
   - {id: F4, priority: P1, title: "Mechanics calibration and identifiability"}
@@ -351,13 +308,14 @@ figure_plan:
   - {id: F9, priority: P1, title: "Dose-response with explicit inoculum definition"}
   - {id: F10, priority: P2, title: "Portability benchmark across blueprints"}
 members:
-  - adhesion-calibration
-  - bp-01-blueprint-schema
-  - initial-state-fidelity
-  - flu-lung-crossparadigm
+  - blueprint-pipeline-fidelity
+  - cross-paradigm-equivalence
+  - substrate-behavior-at-scale
   - dose-response-crossparadigm
-  - crossparadigm-equivalence
-  - substrate-divergence-counterfactual
-  - large-crossparadigm-comparison
-  - vertex-cpm-fluctuation-match
-
+  - subcellular-layer-grow-divide
+studies:
+  - blueprint-pipeline-fidelity
+  - cross-paradigm-equivalence
+  - substrate-behavior-at-scale
+  - dose-response-crossparadigm
+  - subcellular-layer-grow-divide

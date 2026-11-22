@@ -43,8 +43,8 @@ def get_viewers(ws_root) -> list[dict]:
             # server and the published page (view-only) under /<repo>/workbench/.
             # The target is tied to a study because the workbench only keeps a
             # target's href when it carries a study/run (env_worker._av_resolve_targets);
-            # the Studio is a workspace-level tool, anchored to the capstone study.
-            "targets": [{"study": "flu-lung-crossparadigm",
+            # the Studio is a workspace-level tool, anchored to the cross-paradigm study.
+            "targets": [{"study": "cross-paradigm-equivalence",
                          "label": "Open Blueprint Studio",
                          "href": f"/{_APP_REL}"}],
         }

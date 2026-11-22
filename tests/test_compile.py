@@ -31,7 +31,7 @@ _PRICE_PARAMS = yaml.safe_load(
 # default contact energies (a cell fully ringed by medium LOWERS its energy by
 # vanishing), so they dissolve before anything can be observed. 25-voxel cells are
 # stable, so the backend simulates LIVING cells (fine J/lambda tuning is the
-# adhesion-calibration study's job, spec sec 9.1).
+# substrate-behavior-at-scale study's job, spec sec 9.1).
 _CELL_TABLE = "id,type,x,y,size\n1,H,6,6,25\n2,H,15,6,25\n3,H,6,15,25\n4,I,15,15,25\n"
 
 

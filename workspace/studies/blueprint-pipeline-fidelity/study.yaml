@@ -1,0 +1,307 @@
+schema_version: 4
+name: blueprint-pipeline-fidelity
+created: "2026-10-27"
+status: in-progress
+phase: Evaluate
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: passed
+design_status: drafted
+title: "One blueprint, one pipeline: contract and t0 fidelity"
+kind: methods
+confidence: Accepted
+investigation: influenza-crossparadigm
+
+claim: >
+  ONE versioned, backend-neutral blueprint is compiled by the single `blueprint_pipeline`
+  composite and materialized faithfully on the CPM, vertex and center-based backends.
+  Design/Build half: the blueprint is a first-class artifact with a versioned schema, a
+  canonical/backend split (backend and run parameters live in CompileOptions, never in
+  the biological state) and a static validator with structured diagnostics. Simulate/
+  Evaluate half: the t0 state each backend actually emits matches the blueprint: 48/48
+  cell types, CPM centroid RMS 0.000 um, and a vertex sheet of 48 hexagons (36
+  epithelial + 12 immune attached at the tissue margin) with epithelial centroid RMS
+  1.60 um (max 2.44 um) and immune attachment RMS 4.11 um (max 5.60 um).
+
+experiment: >
+  (1) Contract: add `blueprint.canonical.{CompileOptions, split_canonical,
+  canonical_violations}`, `Blueprint.canonical_state()`, `schema.validate_blueprint` and a
+  `multicell-blueprint validate` CLI; version the canonical blueprints; author three
+  worked examples (simple geometry, mixed populations, infection field); assert the
+  acceptance criteria as tests (tests/test_blueprint_canonical.py). (2) Fidelity:
+  compile `workspace/blueprints/influenza_sego2022.yaml` through `blueprint_pipeline`
+  onto CPM, vertex and center-based (viva-munk), read each backend's t0 emission (no
+  steps), and compare per cell to the resolved blueprint cells: centroid distance (RMS,
+  max), type match and size. For the vertex backend also check the mesh (`residual_report`:
+  mesh, n_sheet, n_overlay, n_attached_immune, n_guard_faces, sheet_centroid_rms/max,
+  immune_attach_rms/max, unmapped_ids).
+
+result: >
+  Contract: all acceptance criteria pass (tests/test_blueprint_canonical.py): the same
+  immutable canonical blueprint compiles to all three backends; `canonical_state()` is
+  identical regardless of backend/run parameters; the validator emits structured
+  error/warning diagnostics; a missing blueprint_version and in-blueprint backend/run
+  parameters are warnings, not errors. The committed Sego and mechanics-divergence
+  blueprints are versioned and contract-clean (174 tests passed overall at the time).
+  Fidelity (2026-11-05, in-sheet immune vertex substrate): 48/48 type match on every
+  backend; CPM centroid RMS 0.000 um, mean size 25.00; vertex n_sheet 48, n_overlay 0,
+  n_attached_immune 12, 0 guard faces, 0 unmapped, t0 face area 25.0; sheet_centroid_rms
+  1.60 um (max 2.44 um); immune_attach_rms 4.11 um (max 5.60 um); center-based places one
+  area-matched disc per cell at its centroid.
+
+purpose:
+  question: >
+    Can one versioned, backend-neutral blueprint be compiled by `blueprint_pipeline` and
+    materialized faithfully on CPM, vertex and center-based, with the biological
+    specification kept separate from backend and run parameters?
+  mechanism: >
+    A canonical schema + a split that routes backend/run parameters to CompileOptions
+    keeps the biological state immutable across backends, and a static validator turns
+    each semantic invariant into a checked diagnostic. CPM then materializes each
+    blueprint cell 1:1 at its centroid with target_volume = size; the vertex backend
+    assigns cells 1:1 to a regular hexagonal lattice of the target area (alternating
+    optimal assignment with rigid recentring) and attaches the latent immune cells at
+    the tissue-margin site nearest their centroid; the center-based backend places one
+    area-matched disc per cell.
+  expected_outcome: >
+    One canonical blueprint accepted unchanged by every backend; backend/run parameters
+    recorded separately; validator reports problems explicitly; exact CPM reproduction;
+    a one-polygon-per-cell vertex sheet with a sub-cell epithelial centroid residual.
+
+key_assumptions:
+  - "Backend/run parameters are currently tension_scale (vertex), rules_seed (run) and migration_scale; genuine model constants (const) remain canonical."
+  - "blueprint_version is optional for back-compat (a warning, not an error) but set on every canonical artifact going forward."
+  - "t=0 is each backend's own initial emission (no coupled steps)."
+  - "Centroid residual is Euclidean distance in grid units = um (grid_resolution_um = 1)."
+  - "The vertex epithelium is a regular hexagonal tiling (cell area = target size); the blueprint's square block cannot be tiled by regular hexagons without a sub-cell displacement, which is reported, not hidden."
+  - "Immune (and latent immune) cells are smaller polygons attached to the sheet at the tissue margin on vertex, and same-layer cells on CPM; the representations differ by design."
+
+simulation_set:
+  - name: bp-01-acceptance
+    status: completed
+    base_model: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+    kind: analysis
+    metrics:
+      schema_versioned: true
+      canonical_state_backend_neutral: true
+      backend_run_params_separated: "tension_scale, rules_seed -> CompileOptions"
+      static_validator: "validate_blueprint + `multicell-blueprint validate`"
+      worked_examples_validate_and_compile_both_backends: 3
+      canonical_blueprints_contract_clean: "sego, mechanics_divergence"
+    pass_fail_tests:
+      - "same-canonical-blueprint-all-backends: pass"
+      - "backend-run-params-not-canonical: pass"
+      - "validator-structured-diagnostics: pass"
+      - "worked-examples-validate: pass"
+  - name: t0-fidelity
+    status: completed
+    base_model: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+    seeds: [0]
+    metrics:
+      n_cells: 48
+      cpm_centroid_rms_um: 0.000
+      cpm_type_match: "48/48"
+      cpm_mean_size: 25.00
+      vertex_mesh: hex
+      vertex_n_faces: 48
+      vertex_n_sheet: 48
+      vertex_n_overlay: 0
+      vertex_n_attached_immune: 12
+      vertex_n_guard_faces: 0
+      vertex_t0_face_area: 25.0
+      vertex_sheet_centroid_rms_um: 1.600
+      vertex_sheet_centroid_max_um: 2.435
+      vertex_immune_attach_rms_um: 4.11
+      vertex_immune_attach_max_um: 5.60
+      vertex_type_match: "48/48"
+      vertex_n_unmapped: 0
+      superseded_2026_10_28: "36 sheet hexagons + 12 overlay islands exactly on their centroids (all-cell RMS 1.39 um); before that a guard-ring Voronoi with 50 extra faces at ~46 um^2"
+    pass_fail_tests:
+      - "cpm-exact-t0: pass"
+      - "vertex-clean-identity: pass"
+      - "vertex-one-hexagonal-sheet: pass"
+      - "all-types-match: pass"
+
+readouts:
+  - name: centroid_residual
+    description: RMS (and max) Euclidean distance between each backend's t0 centroid and the blueprint centroid.
+    store_path: "mechanics/positions"
+    units: um
+    status: measured
+  - name: vertex_residual_report
+    description: The vertex mesh report (mesh, n_sheet, n_overlay, n_attached_immune, n_guard_faces, sheet_centroid_rms/max, immune_attach_rms/max, unmapped_ids, fraction_clean).
+    store_path: "mechanics/residual_report"
+    units: counts / um / fraction
+    status: measured
+
+behavior_tests:
+  - name: same-canonical-blueprint-all-backends
+    classification: primary
+    description: The same immutable canonical blueprint compiles to CPM, vertex and center-based.
+    measure: {kind: contract, field: canonical_state}
+    pass_if: {op: both_backends_accept, note: "tests/test_blueprint_canonical.py::test_same_canonical_blueprint_compiles_to_both_backends"}
+    requires_simulation: "false"
+  - name: backend-run-params-not-canonical
+    classification: primary
+    description: tension_scale and rules_seed are split out of the canonical blueprint and flagged by the validator.
+    measure: {kind: contract, field: canonical_violations}
+    pass_if: {op: separated_and_flagged, note: "tests/test_blueprint_canonical.py::test_backend_run_params_are_not_canonical"}
+    requires_simulation: "false"
+  - name: validator-structured-diagnostics
+    classification: primary
+    description: validate_blueprint returns {severity, path, message} for errors and contract warnings.
+    measure: {kind: contract, field: validate_blueprint}
+    pass_if: {op: diagnostics_shape, note: "tests/test_blueprint_canonical.py::test_validator_structured_diagnostics_and_violation_warning"}
+    requires_simulation: "false"
+  - name: cpm-exact-t0
+    classification: primary
+    description: CPM reproduces every t0 centroid exactly (residual below 1e-6 um) with all types matching.
+    measure: {kind: residual, field: centroid_residual, backend: cpm}
+    pass_if: {op: lt, value: 1.0e-6, field: centroid_rms}
+    units: um
+    requires_simulation: "true"
+  - name: vertex-clean-identity
+    classification: primary
+    description: Every cell gets its own vertex polygon (fraction_clean = 1.0, 0 unmapped, 0 guard faces) with a sub-cell epithelial centroid residual.
+    measure: {kind: residual, field: centroid_residual, backend: vertex}
+    pass_if: {op: lt, value: 2.0, field: sheet_centroid_rms, note: "fraction_clean == 1.0; n_guard_faces == 0"}
+    units: um
+    requires_simulation: "true"
+  - name: vertex-one-hexagonal-sheet
+    classification: primary
+    description: All 48 faces form ONE connected sheet (36 epithelial hexagons at the target area plus 12 immune polygons attached at the margin); no overlay islands.
+    measure: {kind: topology, field: vertex_residual_report}
+    pass_if: {op: eq, value: 48, field: n_sheet, note: "n_overlay == 0; n_attached_immune == 12; immune_attach_max < 6 um"}
+    units: count
+    requires_simulation: "true"
+  - name: all-types-match
+    classification: primary
+    description: Every backend places every cell with the correct blueprint type.
+    measure: {kind: count, field: type_match}
+    pass_if: {op: eq, value: 48, field: n_type_match}
+    units: count
+    requires_simulation: "true"
+
+controls:
+  - name: dirty-blueprint-negative
+    kind: negative
+    description: A blueprint missing `domain` yields an ERROR diagnostic; a blueprint with tension_scale yields a WARNING -- the validator exposes problems, not a badge.
+
+conclusion_logic:
+  if_primary_tests_pass:
+    implementation_status: "One versioned canonical blueprint is compiled by blueprint_pipeline and every backend reproduces its t0 state; the cross-paradigm comparison starts from a shared initial condition."
+    biological_validation: "The t0 tissue is identical across substrates up to the sub-cell hexagonal re-tiling of the vertex epithelium and the margin attachment of the vertex immune cells."
+    pipeline_unblocks:
+      - "cross-paradigm-equivalence per-cell agreement starts at 1.0 by construction."
+      - "subcellular-layer-grow-divide reuses the same pipeline and contract."
+  if_primary_tests_fail:
+    diagnose:
+      - "Vertex placement residual large -- inspect the lattice assignment for an irregular input layout."
+      - "CPM residual non-zero -- check the seed-block placement."
+      - "Canonical state differs across backends -- a backend/run parameter leaked into the biological state."
+    block_downstream: "A non-shared t0 would confound the fate-agreement metric."
+
+limitations:
+  - "Stage 1 of the review program: this study establishes the schema, contract, validator and t0 identity. Per-cell area, perimeter, footprint IoU, contact surface, adjacency, boundary, polygon validity, coverage and round-trip (serialize, compile, inspect, reconstruct) are only partly tested (area, polygon validity and connectivity are); the rest is BP-02 / BP-03."
+  - "Centroid + cell-count + type identity is necessary but NOT sufficient for blueprint fidelity."
+  - "The hexagonal sheet re-tiles the blueprint's SQUARE block, so epithelial adjacency differs by construction: 6 neighbours per interior cell on vertex vs 4 edge (+4 corner) on CPM."
+  - "Immune cells are margin-attached polygons on vertex but same-layer cells on CPM; the substrates represent immune geometry differently by design."
+  - "For irregular (data-derived) layouts the hexagonal re-tiling residual will be larger; it is reported per run, not hidden."
+  - "The canonical split currently recognizes tension_scale/rules_seed/migration_scale; further backend/run keys are added as backends grow."
+
+report:
+  title: "One blueprint, one pipeline: a versioned contract, exact on CPM, one hexagon per cell on vertex"
+  verdict: >
+    The biological specification is stated once as a versioned, statically validated,
+    backend-neutral artifact and compiled by the single `blueprint_pipeline`. The
+    validator and the canonical/backend split are tested (worked examples validate and
+    compile on every backend). Every backend reproduces the Sego 48-cell t0 state with
+    100% type match: CPM is exact (centroid RMS 0.000 um, mean size 25.00); the vertex
+    backend builds one polygon per cell in a single hexagonal sheet at the target area with
+    a sub-cell epithelial residual (RMS 1.60 um, max 2.44 um) and the 12 immune cells
+    attached at the margin (RMS 4.11 um, max 5.60 um); center-based places an area-matched
+    disc per cell.
+  confidence: high
+  evidence_quality: solid
+  main_insight: >
+    A backend-neutral specification is only meaningful if backend and run parameters are
+    kept out of it and the realized t0 is measured against it. One polygon per blueprint
+    cell, hexagonal and at the target area, is the vertex model's natural t0; the price
+    is a measurable sub-cell re-tiling of the square blueprint block. Meshing the medium
+    (the old guard ring) gave a cleaner centroid residual but a less faithful tissue.
+  caveat: >
+    Schema + contract + validator and t0 identity only; geometric round-trip fidelity
+    (area, footprint, contact, topology) is not claimed. Adjacency differs by construction
+    (hexagonal vs square); immune geometry differs by design.
+
+findings:
+  - id: F1-canonical-blueprint-artifact
+    kind: computational
+    status: confirms
+    tier: interpretation
+    mechanism_origin: engineered
+    statement: >
+      One versioned canonical blueprint compiles unchanged to all backends; backend/run
+      parameters are separated into CompileOptions and flagged by a static validator; three
+      worked examples validate and compile on every backend.
+    evidence:
+      observed: "9 acceptance tests pass; sego + mechanics_divergence validate contract-clean; 174 passed overall (at the time)"
+    explanation: "A canonical schema + split + validator make the biological blueprint a first-class, tested artifact."
+    next_action: "BP-02: prove round-trip geometric fidelity (area, footprint, contact, adjacency, topology) with explicit error measures."
+    provenance:
+      run_ids: [bp-01-acceptance]
+  - id: F2-shared-t0-across-substrates
+    kind: computational
+    status: confirms
+    tier: interpretation
+    mechanism_origin: engineered
+    statement: >
+      The blueprint's t0 state materializes faithfully on all three backends (CPM exact;
+      vertex one hexagon per cell with a 1.6 um sub-cell epithelial residual and immune
+      cells attached at the margin; center-based one area-matched disc per cell at its
+      centroid), so the cross-paradigm comparison begins from a shared initial condition.
+    evidence:
+      observed: "48/48 type match; CPM RMS 0.000 um; vertex n_sheet 48 (36 epithelial hexagons area 25 + 12 attached immune), 0 guard, sheet RMS 1.60 um (max 2.44), immune attach RMS 4.11 um (max 5.60)"
+    explanation: "CPM seeds cells 1:1; vertex assigns cells 1:1 to a hexagonal lattice of the target area and attaches immune cells at the nearest margin site."
+    next_action: "BP-02: contact / adjacency / round-trip fidelity."
+    provenance:
+      run_ids: [t0-fidelity]
+
+bibliography:
+  sources:
+    - key: sego2022
+      note: "Sego 2022 initial epithelial layout; the blueprint's generative initial_state transcribes it."
+    - key: review-2026-10-27
+      note: "Cross-paradigm review (references/reviews/influenza_blueprint_feedback.yaml), BP-01 and the t0 fidelity requirement."
+
+visualizations:
+  - name: "t0 centroid residuals"
+    address: "html:t0-residuals.html"
+    config: {title: "Per-cell t0 centroid residual per backend"}
+  - name: "t0 side-by-side"
+    address: "html:t0-side-by-side.html"
+    config: {title: "Initial state: CPM | vertex | center-based"}
+
+conditions:
+  baseline:
+    name: sego-t0-fidelity
+    composite: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+    description: The Sego blueprint compiled by blueprint_pipeline; each backend's t0 emission is compared to the resolved blueprint cells and the contract is exercised against the same artifact.
+    params:
+      backend: cpm
+      blueprint: workspace/blueprints/influenza_sego2022.yaml
+  variants:
+    - name: vertex-t0
+      description: The same blueprint compiled onto the vertex backend.
+      params: {backend: vertex}
+      composite: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+    - name: munk-t0
+      description: The same blueprint compiled onto the center-based backend.
+      params: {backend: munk}
+      composite: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+  model_settings: []
+inputs: []
+question: >
+  Can one versioned, backend-neutral blueprint be compiled by `blueprint_pipeline` and
+  materialized faithfully on CPM, vertex and center-based?

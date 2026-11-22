@@ -1,4 +1,4 @@
-"""Behavior test for study `substrate-divergence-counterfactual` (adversarial).
+"""Behavior test for study `cross-paradigm-equivalence (counterfactual arm)` (adversarial).
 
 The positive control: in a mechanics-dominated regime the SPATIAL equivalence test
 must REJECT (the two backends place cells differently). With the vertex chemotaxis

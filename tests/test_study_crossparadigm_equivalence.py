@@ -1,4 +1,4 @@
-"""Behavior test for study `crossparadigm-equivalence`.
+"""Behavior test for study `cross-paradigm-equivalence`.
 
 A fast replicate of the equivalence grid: run the Sego blueprint on both backends
 over a few seeds and assert that cross-backend FATE agreement is TOST-equivalent to

@@ -1,4 +1,4 @@
-"""Fast integration guard for the large-crossparadigm-comparison study: the large
+"""Fast integration guard for the substrate-behavior-at-scale study: the large
 blueprint is really large, the behavior metrics integrate with the 3-backend runner,
 and center-based (munk) MOVES on the big tissue (the #24 fix, validated at scale).
 
@@ -20,7 +20,7 @@ from viva_multicell_blueprint.compile._shared import resolve_initial_state
 
 ROOT = Path(__file__).resolve().parents[1]
 LARGE = ROOT / "workspace" / "blueprints" / "influenza_sego2022_large.yaml"
-STUDY = ROOT / "workspace" / "studies" / "large-crossparadigm-comparison" / "study.yaml"
+STUDY = ROOT / "workspace" / "studies" / "substrate-behavior-at-scale" / "study.yaml"
 
 
 def _ids():
@@ -55,7 +55,11 @@ def test_study_yaml_wellformed_and_uses_large_preset():
     # the other study specs, and CI runs with an ascii default locale.
     text = STUDY.read_text(encoding="utf-8")
     s = yaml.safe_load(text)
-    assert s["baseline"][0]["composite"].endswith("sego_crossparadigm_large")
+    assert s["name"] == "substrate-behavior-at-scale"
+    # re-pointed at the canonical pipeline; the LARGE tissue comes in via the blueprint param
+    base = s["baseline"][0]
+    assert base["composite"].endswith("composites.pipeline.blueprint_pipeline")
+    assert base["params"]["blueprint"].endswith("influenza_sego2022_large.yaml")
     assert {r["name"] for r in s["readouts"]} >= {
         "msd_distance", "neighbour_graph_distance", "front_speed_distance"}
     assert "PENDING_FILL" not in text

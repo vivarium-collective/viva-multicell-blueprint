@@ -67,7 +67,7 @@ _VERTEX_KNOBS = ("migration_scale", "chemotaxis_saturation", "line_tension", "ar
 # The vertex substrate's free fluctuation / mobility knobs, CALIBRATED against the
 # CPM (temperature 10, neighbour order 2, size-25 cells, 2 MCS per step) on the Sego
 # initial state by scripts/calibrate_vertex_mechanics.py; provenance and fit quality
-# in workspace/studies/adhesion-calibration/results/vertex_mechanics_calibration.json
+# in workspace/studies/substrate-behavior-at-scale/results/vertex_mechanics_calibration.json
 # (and docs/mechanics.md). Valid for target_size ~25 cells (viscosity = 2 K A0 = 100).
 CALIBRATED_DEFAULTS = {
     "tension_scale": 1.683,          # Lambda_ab = scale * J_ab; mean cell area (CPM 23.0)
@@ -118,7 +118,7 @@ def vertex_mechanics_node(blueprint) -> dict:
         scale = float(mm.get("tension_scale", CALIBRATED_DEFAULTS["tension_scale"]))
         tensions = to_vertex_tension(blueprint.adhesion, scale=scale)
         # JSON-friendly keys ("a|b"); the full map is kept for provenance (the
-        # adhesion-calibration study fits the J<->tension relationship).
+        # substrate-behavior-at-scale study fits the J<->tension relationship).
         backend_params["tension_by_pair"] = {f"{a}|{b}": v for (a, b), v in tensions.items()}
         # a pair absent from the adhesion table is J = 0 on the CPM (viva-cpm's
         # default contact), so it is tension-free here too.

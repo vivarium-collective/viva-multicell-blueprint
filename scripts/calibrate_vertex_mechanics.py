@@ -21,7 +21,7 @@ field / rule / ODE coupling -- each backend is driven directly):
 Everything else is NOT fitted: area elasticity is energy-matched (K = 2
 lambda_volume), the per-pair tension RATIOS are the blueprint's J ratios (only the
 overall scale is fitted), viscosity is set for Euler stability. Results are averaged
-over seeds and written to the adhesion-calibration study's results/.
+over seeds and written to the substrate-behavior-at-scale study's results/.
 
 Usage: python scripts/calibrate_vertex_mechanics.py [--fast]
 """
@@ -41,7 +41,7 @@ from viva_multicell_blueprint.core import build_core
 
 ROOT = Path(__file__).resolve().parents[1]
 SEGO = ROOT / "workspace" / "blueprints" / "influenza_sego2022.yaml"
-OUT = ROOT / "workspace" / "studies" / "adhesion-calibration" / "results" / "vertex_mechanics_calibration.json"
+OUT = ROOT / "workspace" / "studies" / "substrate-behavior-at-scale" / "results" / "vertex_mechanics_calibration.json"
 IMMUNE = {"M", "NK", "CD8", "M_latent", "NK_latent", "CD8_latent"}
 
 

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Reproduce the equivalence + counterfactual studies and render their figures.
 
-Two studies, one shared method (``metrics.equivalence_tost`` + TOST):
+Two arms of ONE study (cross-paradigm-equivalence), one shared method (``metrics.equivalence_tost`` + TOST):
 
-* **crossparadigm-equivalence** — the Sego model on a CPM x vertex seed grid.
+* **cross-paradigm-equivalence** — the Sego model on a CPM x vertex seed grid.
   Tests whether cross-backend agreement is statistically EQUIVALENT to the
   same-backend (seed-to-seed) baseline, on fate AND spatial metrics. Turns the
   capstone's "fail to reject a difference" into a positive equivalence claim.
 
-* **substrate-divergence-counterfactual** — a mechanics-dominated blueprint
+* **counterfactual positive-control arm** — a mechanics-dominated blueprint
   (strong differential adhesion + strong chemotaxis) where the engines genuinely
   differ. The spatial equivalence test should REJECT -- the positive control
   proving the test can detect a real substrate difference.
@@ -49,18 +49,23 @@ def _run(bp_path, backend, seed, n):
     return run_backend(Blueprint.from_dict(d), backend, n)
 
 
-def _write(study, name, fig):
-    d = STUDIES / study / "viz"
-    d.mkdir(parents=True, exist_ok=True)
-    (d / f"{name}.html").write_text(fig.to_html(include_plotlyjs="cdn"), encoding="utf-8")
-    print(f"  wrote {study}/viz/{name}.html")
+# Both arms live in ONE study dir (cross-paradigm-equivalence); the counterfactual
+# positive control's files carry a ``counterfactual-`` prefix.
+STUDY_DIR = "cross-paradigm-equivalence"
 
 
-def _results(study, payload):
-    d = STUDIES / study / "results"
+def _write(study, name, fig, prefix=""):
+    d = STUDIES / STUDY_DIR / "viz"
     d.mkdir(parents=True, exist_ok=True)
-    (d / "equivalence.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    print(f"  wrote {study}/results/equivalence.json")
+    (d / f"{prefix}{name}.html").write_text(fig.to_html(include_plotlyjs="cdn"), encoding="utf-8")
+    print(f"  wrote {STUDY_DIR}/viz/{prefix}{name}.html")
+
+
+def _results(study, payload, fname="equivalence.json"):
+    d = STUDIES / STUDY_DIR / "results"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / fname).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(f"  wrote {STUDY_DIR}/results/{fname}")
 
 
 def _pairs_same(runs_by_backend, score):
@@ -98,7 +103,7 @@ def _pair_analysis(runs_by_backend, a, b, score, margin, *, fast):
 
 
 def equivalence_study(fast: bool) -> None:
-    study = "crossparadigm-equivalence"
+    study = "cross-paradigm-equivalence"
     print(f"[{study}]")
     bp = BP_DIR / "influenza_sego2022.yaml"
     n = 60 if fast else 120
@@ -138,8 +143,8 @@ def equivalence_study(fast: bool) -> None:
 
 
 def counterfactual_study(fast: bool) -> None:
-    study = "substrate-divergence-counterfactual"
-    print(f"[{study}]")
+    study = "cross-paradigm-equivalence"
+    print(f"[{study}: counterfactual positive-control arm]")
     bp = BP_DIR / "mechanics_divergence.yaml"
     n = 50 if fast else 80
     seeds = (0, 1, 2)
@@ -150,7 +155,7 @@ def counterfactual_study(fast: bool) -> None:
     def spatial(a, b):
         return metrics.per_cell_spatial_agreement(a.frames, b.frames, _reg(ids, a, b), tol_um=5.0)["mean"]
 
-    out = {"study": study, "n_steps": n, "seeds": list(seeds),
+    out = {"study": study, "arm": "counterfactual-positive-control", "n_steps": n, "seeds": list(seeds),
            "backends": ["cpm", "vertex", "munk"], "spatial": {"margin": margin_spatial, "pairs": {}}}
     for a, b in _PAIRS:
         res = _pair_analysis(runs_by_backend, a, b, spatial, margin_spatial, fast=fast)
@@ -162,14 +167,14 @@ def counterfactual_study(fast: bool) -> None:
         _write(study, fname, equivalence_plot(
             res["same"], res["cross"], tost, metric="spatial agreement",
             title=f"Counterfactual — spatial equivalence ({_BLABEL[a]}↔{_BLABEL[b]})",
-            pair_label=f"{_BLABEL[a]}↔{_BLABEL[b]}"))
+            pair_label=f"{_BLABEL[a]}↔{_BLABEL[b]}"), prefix="counterfactual-")
         print(f"  spatial {a}↔{b}: same={tost['mean_same']:.4f} cross={tost['mean_cross']:.4f} "
               f"diff={tost['diff']:+.4f} margin={margin_spatial} -> equivalent={tost['equivalent']}")
     _write(study, "spatial-playback", spatial_playback_multi(
         {b: runs_by_backend[b][0].frames for b in ("cpm", "vertex", "munk")},
         {"extent_um": [40, 40], "grid_resolution_um": 1},
-        title="Mechanics-dominated: CPM vs vertex vs center-based"))
-    _results(study, out)
+        title="Mechanics-dominated: CPM vs vertex vs center-based"), prefix="counterfactual-")
+    _results(study, out, fname="counterfactual-equivalence.json")
 
 
 def main() -> None:

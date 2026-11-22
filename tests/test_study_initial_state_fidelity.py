@@ -1,4 +1,4 @@
-"""Behavior test for study `initial-state-fidelity` (spec §9.2).
+"""Behavior test for study `blueprint-pipeline-fidelity` (spec §9.2).
 
 Both backends must reproduce the blueprint's t=0 centroids / sizes / types. We
 read each backend's t0 emission (``n_steps=0``) and compare to the resolved

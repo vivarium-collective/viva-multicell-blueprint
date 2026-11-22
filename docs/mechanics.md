@@ -214,7 +214,7 @@ The temperature T and the vertex mobility/fluctuation knobs share no units, so t
 vertex knobs that have no CPM counterpart are **fitted to CPM behaviour** on the same
 Sego initial state, mechanics only, averaged over 5 seeds × 60 steps
 (`scripts/calibrate_vertex_mechanics.py` →
-`workspace/studies/adhesion-calibration/results/vertex_mechanics_calibration.json`;
+`workspace/studies/substrate-behavior-at-scale/results/vertex_mechanics_calibration.json`;
 values in `compile/to_vertex.py: CALIBRATED_DEFAULTS`):
 
 | Knob | Fitted to | CPM | Vertex (fitted) |

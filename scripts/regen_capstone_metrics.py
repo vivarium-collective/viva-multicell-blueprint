@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproduce the `flu-lung-crossparadigm` capstone headline numbers (Task 18, §9.3).
+"""Reproduce the `cross-paradigm-equivalence` (capstone arm) headline numbers (Task 18, §9.3).
 
 Runs the full Sego blueprint on both backends for N steps across >=3 CPM rules-seeds
 and prints the NULL-CONTROL table: cross-backend metrics judged against the

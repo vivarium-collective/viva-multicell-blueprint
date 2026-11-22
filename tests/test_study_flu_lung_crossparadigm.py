@@ -1,4 +1,4 @@
-"""Behavior test for the CAPSTONE study `flu-lung-crossparadigm` (spec §9.3).
+"""Behavior test for the CAPSTONE study `cross-paradigm-equivalence` (spec §9.3).
 
 Runs the FULL Sego 2022 influenza blueprint on BOTH backends at a tractable
 reduced scale and computes the three comparison families -- but ALWAYS against a

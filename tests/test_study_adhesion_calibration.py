@@ -1,4 +1,4 @@
-"""Behavior test for study `adhesion-calibration` (spec §9.1).
+"""Behavior test for study `substrate-behavior-at-scale` (spec §9.1).
 
 A mechanics-only sheet (no rules/fields/ODE) runs on BOTH backends; the neutral
 adhesion lowers to CPM contact J (direct) and to vertex line tension (scaled).
