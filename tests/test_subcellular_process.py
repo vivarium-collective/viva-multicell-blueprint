@@ -115,5 +115,46 @@ def test_unknown_coupling_var_errors():
         resolve_outputs({"target_size": "nope"}, {"x": 1.0})
     with pytest.raises(ValueError, match="unknown"):
         resolve_inputs({"u": "bogus.thing"}, "a", {"types": {"a": "T"}})
+    # validated at construction, not first update
     with pytest.raises(ValueError, match="nope"):
-        make(coupling={"inputs": {}, "outputs": {"target_size": "nope"}}).update(world(), 1)
+        make(coupling={"inputs": {}, "outputs": {"target_size": "nope"}})
+    with pytest.raises(ValueError, match="nope"):
+        make(coupling={"inputs": {}, "outputs": {"divide_when": {"var": "nope", "gt": 1}}})
+
+
+def test_unknown_input_var_errors_at_construction():
+    with pytest.raises(ValueError, match="bogus_in"):
+        make(coupling={"inputs": {"bogus_in": "size"}, "outputs": {}})
+
+
+def test_threshold_grammar():
+    ro = lambda spec, v, const=None: resolve_outputs(spec, {"B": v}, const)
+    assert ro({"divide_when": {"var": "B", "gt": 2.0}}, 2.5) == {"divide_when": True}
+    assert ro({"divide_when": {"var": "B", "gt": 2.0}}, 1.5) == {"divide_when": False}
+    assert ro({"die_when": {"var": "B", "lt": 0.1}}, 0.05) == {"die_when": True}
+    assert ro({"divide_when": {"var": "B", "gt": "const.Bdiv"}}, 3.0, {"Bdiv": 2.0}) == {
+        "divide_when": True}
+    with pytest.raises(ValueError, match="Bdiv"):
+        ro({"divide_when": {"var": "B", "gt": "const.Bdiv"}}, 3.0)
+    assert ro({"divide_when": "B"}, 0.9) == {"divide_when": True}  # bare form kept
+    # end to end: x starts 1, +1/step; x=2,3,4; divides once x > Bdiv=3.5 (3rd step)
+    p = make(coupling={"inputs": {}, "const": {"Bdiv": 3.5},
+                       "outputs": {"divide_when": {"var": "x", "gt": "const.Bdiv"}}})
+    fired = [bool(p.update(world(ids=(1,)), 1)["req_divide"]) for _ in range(3)]
+    assert fired == [False, False, True]
+
+
+def test_split_missing_module_method_and_single_halving(monkeypatch):
+    from viva_multicell_blueprint.mechanism import subcellular as sc
+    class NoSplit:
+        def __init__(self, model=None, params=None): pass
+        def input_vars(self): return set()
+        def output_vars(self): return set()
+    monkeypatch.setitem(sc.MODULES, "nosplit", NoSplit)
+    with pytest.raises(ValueError, match="split"):
+        SubcellularProcess({"cell_type": "T", "module": "nosplit", "division": "split"},
+                           core=build_core())
+    p = make("split")
+    p.update(world(ids=(1,)), 1)           # x = 2
+    out = p.update(world(ids=(1, 5, 6), lineage={"5": "1", "6": "1"}), 1)
+    assert out["sub_scalar"]["1"]["x"] == pytest.approx(2.0)  # halved once (2/2+1); halving twice would give 1.5

@@ -43,6 +43,9 @@ class SubcellularModule(Protocol):
     def init_cell(self, cell_id: str, inputs: dict) -> object: ...
     def step(self, state: object, mapped_inputs: dict, interval: float) -> object: ...
     def read(self, state: object) -> dict: ...
+    def split(self, state: object) -> object: ...   # halve extensive quantities
+    def input_vars(self) -> set: ...                 # coupling.inputs keys must be in here
+    def output_vars(self) -> set: ...                # coupling.outputs vars must be in here
 
 
 class TestLinearModule:
@@ -71,6 +74,12 @@ class TestLinearModule:
 
     def split(self, state):
         return {**state, "x": state["x"] / 2.0}
+
+    def input_vars(self):
+        return {"drive"}
+
+    def output_vars(self):
+        return {"x", "drive", "gt1"}
 
 
 MODULES = {"test_linear": TestLinearModule}
@@ -112,17 +121,46 @@ def resolve_inputs(coupling_inputs, cell_id, port_maps, const=None) -> dict:
     return out
 
 
-def resolve_outputs(coupling_outputs, read_vars) -> dict:
-    """Map actuation effects to values read from the model variables."""
+def _out_var(spec):
+    return spec["var"] if isinstance(spec, dict) else spec
+
+
+def _threshold(val, const):
+    if isinstance(val, str):
+        if not val.startswith("const.") or val[6:] not in const:
+            raise ValueError(f"unknown threshold {val!r}; expected a number or const.<name>")
+        return float(const[val[6:]])
+    return float(val)
+
+
+def resolve_outputs(coupling_outputs, read_vars, const=None) -> dict:
+    """Map actuation effects to values read from the model variables.
+
+    Boolean effects (divide_when, die_when, become.<type>) take ``"var"`` (fires when
+    var > 0.5) or ``{"var": v, "gt": t}`` / ``{"var": v, "lt": t}`` where ``t`` is a
+    number or ``const.<name>`` (from ``coupling.const``).
+    """
+    const = const or {}
     out = {}
-    for effect, var in (coupling_outputs or {}).items():
+    for effect, spec in (coupling_outputs or {}).items():
         if effect not in _EFFECTS and not effect.startswith(_PREFIXED):
             raise ValueError(f"unknown coupling output effect {effect!r}")
+        var = _out_var(spec)
         if var not in read_vars:
             raise ValueError(f"unknown model variable {var!r} in coupling output {effect!r}")
         v = float(read_vars[var])
         boolean = effect in ("divide_when", "die_when") or effect.startswith("become.")
-        out[effect] = (v > _FIRE_THRESHOLD) if boolean else v
+        if not boolean:
+            if isinstance(spec, dict):
+                raise ValueError(f"threshold form only valid for boolean effects, not {effect!r}")
+            out[effect] = v
+        elif isinstance(spec, dict):
+            if ("gt" in spec) == ("lt" in spec):
+                raise ValueError(f"coupling output {effect!r} needs exactly one of gt/lt")
+            out[effect] = (v > _threshold(spec["gt"], const) if "gt" in spec
+                           else v < _threshold(spec["lt"], const))
+        else:
+            out[effect] = v > _FIRE_THRESHOLD
     return out
 
 
@@ -150,6 +188,17 @@ class SubcellularProcess(Process):
         self._cin = dict(coupling.get("inputs") or {})
         self._cout = dict(coupling.get("outputs") or {})
         self._const = {k: float(v) for k, v in (coupling.get("const") or {}).items()}
+        for var in self._cin:
+            if var not in self._module.input_vars():
+                raise ValueError(f"unknown model variable {var!r} in coupling inputs "
+                                 f"(module {name!r} declares {sorted(self._module.input_vars())})")
+        for effect, spec in self._cout.items():
+            if _out_var(spec) not in self._module.output_vars():
+                raise ValueError(f"unknown model variable {_out_var(spec)!r} in coupling output "
+                                 f"{effect!r} (module {name!r} declares "
+                                 f"{sorted(self._module.output_vars())})")
+        if self._division == "split" and not hasattr(self._module, "split"):
+            raise ValueError(f"module {name!r} has no split(); cannot use division='split'")
         self._cells = {}
 
     def inputs(self):
@@ -177,9 +226,6 @@ class SubcellularProcess(Process):
         m = self._cells.get(mother) if mother is not None else None
         if m is None or self._division == "reset":
             return self._module.init_cell(cid, inputs)
-        if self._division == "split":  # both halves keep half the extensive quantities
-            self._cells[mother] = self._module.split(m)
-            return copy.deepcopy(self._cells[mother])
         return copy.deepcopy(m)
 
     def update(self, inputs, interval=1):
@@ -191,7 +237,11 @@ class SubcellularProcess(Process):
                       if t == self._type and alive.get(c, True) and c not in dead)
 
         # spawn first (a mother that dies this step is still in _cells), then drop
-        for c in mine:
+        new = [c for c in mine if c not in self._cells]
+        if self._division == "split":  # halve each mother once, however many daughters
+            for mo in sorted({lineage[c] for c in new if lineage.get(c) in self._cells}):
+                self._cells[mo] = self._module.split(self._cells[mo])
+        for c in new:
             if c not in self._cells:
                 self._cells[c] = self._spawn(c, inputs, lineage.get(c))
         for c in [c for c in self._cells if c not in mine]:
@@ -204,7 +254,7 @@ class SubcellularProcess(Process):
             self._cells[c] = self._module.step(self._cells[c], mapped, interval)
             read = self._module.read(self._cells[c])
             out["sub_scalar"][c] = {k: float(v) for k, v in read.items()}
-            for effect, v in resolve_outputs(self._cout, read).items():
+            for effect, v in resolve_outputs(self._cout, read, self._const).items():
                 if effect == "target_size":
                     out["req_target_size"][c] = v
                 elif effect == "motility":
