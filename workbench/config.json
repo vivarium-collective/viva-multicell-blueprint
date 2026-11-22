@@ -1,7 +1,6 @@
 {
   "mode": "snapshot",
-  "smsApiBase": "",
   "repo": "https://github.com/vivarium-collective/viva-multicell-blueprint",
-  "commit": "e66db757b871e2311a477a9d2e14c1a4c26328ce",
+  "commit": "a55f9c914aa657ca2258d7cfc1ff79dd386104c9",
   "generated_from_ref": "main"
 }
