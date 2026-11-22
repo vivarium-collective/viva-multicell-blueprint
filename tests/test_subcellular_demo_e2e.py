@@ -68,6 +68,11 @@ def test_one_threshold_crossing_one_division(backend, mod):
     ~4 more ticks to regrow past 40, so a second wave before tick 8 would be a
     double-division bug. (Later waves are genuine regrowth; cpm additionally divides any
     cell over its volume threshold, a documented substrate behaviour.)"""
+    # CPM CAVEAT (pre-existing substrate behaviour, not fixed here): viva-cpm has no
+    # per-id split; the backend maps division events onto World.divide_cells(threshold),
+    # which splits EVERY cell at/over the volume threshold, not just the requested ones.
+    # That is why cpm can exceed "one division per request" after the first wave (e.g.
+    # 16 -> 30 cells at tick 9), and why this strict check is limited to the first 7 ticks.
     pytest.importorskip(mod)
     comp = Composite(blueprint_pipeline(backend=backend, blueprint=str(DEMO)), core=build_core())
     prev = set()

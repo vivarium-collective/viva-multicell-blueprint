@@ -178,3 +178,25 @@ def test_split_halves_at_request_so_one_crossing_requests_once():
          "deaths": [], "lineage": {}}
     reqs = [len(p.update(w, 1)["req_divide"]) for _ in range(3)]
     assert reqs == [1, 0, 0], reqs          # 30 -> 40.5 (fires, halves) -> ~27 -> ~36 (no)
+
+
+def test_split_done_cleared_when_mother_leaves_live_set():
+    """A mother that requested division but then died (daughter never appeared) must not
+    linger in _split_done, or a later re-request would skip its halving."""
+    import pytest as _pt
+    _pt.importorskip("viva_tellurium")
+    from viva_multicell_blueprint.core import build_core
+    from viva_multicell_blueprint.mechanism.subcellular import SubcellularProcess
+    src = "model g\n species S; S = 30.0; mu = 0.3;\n J0: -> S; mu * S;\nend\n"
+    cfg = {"cell_type": "T", "module": "tellurium", "model": {"source": src}, "params": {},
+           "division": "split",
+           "coupling": {"const": {"t": 40.0}, "inputs": {},
+                        "outputs": {"divide_when": {"var": "S", "gt": "const.t"}}}}
+    p = SubcellularProcess(cfg, core=build_core())
+    w = {"types": {"1": "T"}, "sizes": {"1": 2.0}, "positions": {"1": [1.0, 1.0]},
+         "neighbors": {"1": []}, "alive": {"1": True}, "field_grid": {}, "divisions": [],
+         "deaths": [], "lineage": {}}
+    assert len(p.update(w, 1)["req_divide"]) == 1 and p._split_done == {"1"}
+    w["alive"] = {"1": False}
+    p.update(w, 1)
+    assert p._split_done == set()

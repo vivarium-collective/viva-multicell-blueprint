@@ -88,3 +88,40 @@ def test_multiple_subcellular_entries_fail_loud():
     d["model_definition"]["subcellular"]["other"] = {"module": "test_linear"}
     with pytest.raises(NotImplementedError):
         blueprint_pipeline(backend="cpm", blueprint=d)
+
+
+def test_legacy_rules_division_reaches_backend_once_per_event():
+    """No-subcellular path (Rules wired straight to the backend): Rules' per-tick
+    overwrite ``divisions`` list drives real divisions at runtime. (The blueprint schema
+    has no ``divide`` rule kind, so the compiled rules node is patched to add one.) Each
+    tick the backend must see each requested cell at most once (no accumulated history
+    replayed), divisions must actually occur, and cell count == start + events received."""
+    pytest.importorskip("viva_munk")
+    from viva_multicell_blueprint.backends import munk_backend as mb
+    from viva_multicell_blueprint.compile._shared import resolve_initial_state
+    from viva_multicell_blueprint.composites.pipeline import _load_blueprint
+    doc = blueprint_pipeline(backend="munk")
+    assert not [n for n in doc["state"].values() if isinstance(n, dict)
+                and "Subcellular" in n.get("address", "")]
+    doc["state"]["rules"]["config"]["rules"] = [
+        {"kind": "divide", "type": "H", "rate_expr": "1e9"}]
+    seen = []
+    orig = mb.MunkBackend.update
+
+    def spy(self, inputs, interval):
+        seen.append([str(e["cell_id"] if isinstance(e, dict) else e)
+                     for e in (inputs.get("divisions") or [])])
+        return orig(self, inputs, interval)
+
+    mb.MunkBackend.update = spy
+    try:
+        comp = Composite(doc, core=build_core())
+        n0 = len(resolve_initial_state(_load_blueprint(None)))
+        comp.run(3)
+    finally:
+        mb.MunkBackend.update = orig
+    total = sum(len(s) for s in seen)
+    assert total > 0, f"no division reached the backend: {[len(s) for s in seen]}"
+    for s in seen:
+        assert len(s) == len(set(s)), "an event was replayed within a tick"
+    assert len(comp.state["sizes"]) == n0 + total, (n0, total, len(comp.state["sizes"]))

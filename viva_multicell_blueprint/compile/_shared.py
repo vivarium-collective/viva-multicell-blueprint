@@ -425,6 +425,8 @@ def _video_node(blueprint, backend: str, video_out: str) -> dict:
 # the authoritative backend-input stores (fates/divisions/deaths/target_size/
 # motility/adhesion).
 _SUB_STORE_DEFAULTS = {
+    # NOTE: producers feeding the merge (Rules, Subcellular) MUST emit per-tick overwrite
+    # divisions/deaths (see mechanism/actuation.py PRODUCER CONTRACT).
     "rules_fates": {}, "rules_divisions": [], "rules_deaths": [],
     "req_target_size": {}, "req_motility": {}, "req_adhesion": {},
     "req_divide": [], "req_die": [], "req_become": {}, "req_secrete": {},

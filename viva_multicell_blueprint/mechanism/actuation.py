@@ -9,6 +9,14 @@ single authoritative per-cell channels the mechanics backend consumes.
 * ``divisions`` / ``deaths``: union of both sources, de-duplicated by cell_id.
 * ``target_size`` / ``motility`` / ``adhesion`` / ``secrete``: ``req_*`` pass-through.
 
+PRODUCER CONTRACT (READ THIS): every producer feeding this Step MUST emit PER-TICK
+``overwrite[list[node]]`` divisions/deaths (each tick REPLACES the store with that tick's
+events). The Step has no cursor, so an ACCUMULATING ``list[node]`` producer would have its
+whole history re-emitted (and re-actuated) every tick. CAVEAT -- grammar swap: viva-grammar's
+``BlueprintGrammarProcess`` (a declared drop-in for RulesProcess) still declares
+``divisions: list[node]`` (append); wiring it into this pipeline needs it to emit per-tick
+overwrite first.
+
 MULTI-FIRE SAFE: in the real pipeline this Step fires more than once per tick (after
 Rules updates and again after Subcellular updates). It is therefore a PURE, idempotent
 function of its inputs: ``divisions`` / ``deaths`` are the current-tick union of the

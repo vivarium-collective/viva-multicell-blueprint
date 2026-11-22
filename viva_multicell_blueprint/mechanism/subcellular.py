@@ -254,6 +254,9 @@ class SubcellularProcess(Process):
         for c in [c for c in self._cells if c not in mine]:
             del self._cells[c]
 
+        # drop bookkeeping for mothers no longer live (died / division never materialised)
+        self._split_done &= set(mine)
+
         out = {"sub_scalar": {}, "req_target_size": {}, "req_motility": {}, "req_adhesion": {},
                "req_divide": [], "req_die": [], "req_become": {}, "req_secrete": {}}
         for c in mine:
