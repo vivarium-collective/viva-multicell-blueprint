@@ -66,6 +66,12 @@ particles = ["smoldyn"]
 [project.scripts]
 multicell-blueprint = "viva_multicell_blueprint.cli.__main__:main"
 
+[tool.pytest.ini_options]
+# importlib import-mode so same-basename test files in different dirs don't collide
+# (tests/test_compile.py vs tests/model_format/test_compile.py). See pytest "good
+# integration practices" — the recommended fix for duplicate basenames without __init__.py.
+addopts = "--import-mode=importlib"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
