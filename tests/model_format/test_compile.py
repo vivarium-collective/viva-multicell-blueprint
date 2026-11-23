@@ -20,6 +20,8 @@ from viva_multicell_blueprint.core import build_core
 from viva_multicell_blueprint.model_format.adapters.ode_tellurium import ODEAdapter
 from viva_multicell_blueprint.model_format.adapters.particle_smoldyn import ParticleAdapter
 from viva_multicell_blueprint.model_format.compile import compile_scene
+from viva_multicell_blueprint.model_format.extracellular import FieldExtracellular
+from viva_multicell_blueprint.model_format.membrane import NoExtracellularHome
 from viva_multicell_blueprint.model_format.registry import (
     ModelSpec,
     Registry,
@@ -93,6 +95,39 @@ def test_particle_scene_runs_three_steps():
     comp = Composite({"state": doc["state"]}, core=build_core())
     comp.run(3.0)
     assert comp.state["n_cells"] == 2
+
+
+def test_real_mechanics_backend_is_used_not_the_fallback():
+    # Locks in that the REAL tissue backend ran, not the static-square degrade path:
+    # a VertexBackend regression (build/compile throwing) would otherwise stay green.
+    doc = compile_scene(_scene(), _registry())
+    comp = Composite({"state": doc["state"]}, core=build_core())
+    proc = comp.state["scene_model"]["instance"]
+
+    assert proc._mech is not None
+    assert proc._mech_error is None
+    comp.run(3.0)
+    # no runtime mechanics-step failure was recorded either
+    assert proc._mech_error is None
+
+
+def test_permeable_species_without_extracellular_home_errors_at_compile():
+    # ODE cell declares Z permeable, but the prebuilt field has no Z grid -> the
+    # membrane contract has no home for it, so compile_scene must raise AT COMPILE
+    # (before any Composite is built).
+    reg = Registry({
+        "E": ModelSpec(formalism="ode", source=_NET, params={},
+                       membrane={"Z": Transport("cross", 0.2)}),
+    })
+    scene = Scene(
+        domain={"extent_um": [30.0, 30.0]},
+        cells={"e1": CellSpec(type="E", position=[9.0, 14.0], molecule_levels={"A": 4.0})},
+    )
+    field = FieldExtracellular(shape=(30, 30), species=[], extent=(30.0, 30.0))  # no Z
+    assert not field.has("Z")
+
+    with pytest.raises(NoExtracellularHome, match="Z"):
+        compile_scene(scene, reg, extracellular=field)
 
 
 def test_unbound_cell_type_errors_at_compile():

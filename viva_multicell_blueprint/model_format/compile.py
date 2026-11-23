@@ -237,7 +237,10 @@ class SceneModelProcess(Process):
             return dict(self._static_fp), dict(self._static_pos)
         try:
             g = self._mech._emit() or {}
-        except Exception:
+        except Exception as exc:
+            # Record (don't swallow): a backend emit failure must be observable
+            # even though we fall back to static squares for this step.
+            self._mech_error = f"emit: {exc!r}"
             g = {}
         fp_by_mech = _footprints(g.get("footprints", {}))
         pos_by_mech = g.get("positions", {}) or {}
@@ -255,8 +258,10 @@ class SceneModelProcess(Process):
             return
         try:
             self._mech.update({"fates": {}, "field_grid": {}, "divisions": []}, 1.0)
-        except Exception:
-            pass
+        except Exception as exc:
+            # Record (don't swallow): a runtime mechanics-step failure must be
+            # observable via self._mech_error, not masked by the static fallback.
+            self._mech_error = f"advance: {exc!r}"
 
     # ---- process-bigraph contract -------------------------------------------
     def inputs(self):
