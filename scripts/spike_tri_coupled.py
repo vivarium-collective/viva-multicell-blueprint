@@ -157,6 +157,7 @@ def main():
     bp = Blueprint.from_dict(BP)
     insts = {"vertex": make(bp, "vertex"), "munk": make(bp, "munk")}
     insts["munk"]._nudge_gain = 1.5
+    insts["munk"]._squish = 0.8          # reported-shape oblong under crowding
     ext = BP["domain"]["extent_um"]; W, H = float(ext[0]), float(ext[1])
     nx, ny = int(W * CPM_RES), int(H * CPM_RES)
     xs = (np.arange(nx) + 0.5) / CPM_RES; ys = (np.arange(ny) + 0.5) / CPM_RES
