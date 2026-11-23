@@ -290,6 +290,8 @@ class SceneModelProcess(Process):
 
             adapter.step(dt, step_inputs)
 
+            # NOTE: adapters return crossed() == {} this milestone, so the shared
+            # field stays inert here until per-adapter efflux lands (future step).
             crossed = adapter.crossed()
             if crossed and membrane_spec:
                 membrane_apply(crossed, cell_pos, self._field, membrane_spec)

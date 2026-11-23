@@ -98,7 +98,7 @@ def render_flipbook(frames: list[dict], steps_label: str = "") -> str:
 .k{{display:inline-block;margin-right:14px;font-size:13px}}.d{{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:4px}}
 button{{padding:5px 14px;border:1px solid #ccc;border-radius:6px;background:#f6f6f8;cursor:pointer}}</style></head>
 <body><h2>Mixed-formalism scene: ODE, particle and Boolean cells sharing one field</h2>
-<p>Cells are coloured by the formalism of their model. The grey haze is the shared extracellular field. {legend} {steps_label}</p>
+<p>Cells are coloured by the formalism of their model. The grey haze is the shared extracellular field, shown as plumbing: it is wired and validated, but live efflux across the membrane is future work (adapters report no crossing yet). {legend} {steps_label}</p>
 <img id="img"><div style="margin-top:8px"><button id="play">Play</button>
 <input id="sl" type="range" min="0" max="{max(len(uris) - 1, 0)}" value="0" style="width:420px;vertical-align:middle"></div>
 <script>var F=[{frames_js}],i=0,t=null,im=document.getElementById('img'),sl=document.getElementById('sl'),b=document.getElementById('play');

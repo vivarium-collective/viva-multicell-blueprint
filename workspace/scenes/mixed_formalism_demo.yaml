@@ -1,5 +1,7 @@
 # Three cell types, three formalisms, one shared field.
-#   metabolic  -> SBML/ODE   (A+B<->C, C leaks into the shared field)
+#   metabolic  -> SBML/ODE   (A+B<->C; the shared extracellular field is wired and
+#                             validated, but live efflux/uptake across the membrane is
+#                             not yet active this milestone: adapters report no crossing)
 #   signalling -> particle   (Smoldyn, same A+B<->C)
 #   fate       -> Boolean    (MaBoSS, tiny bnet)
 domain:
