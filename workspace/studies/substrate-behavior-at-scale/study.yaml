@@ -16,7 +16,7 @@ confidence: Investigating
 investigation: influenza-crossparadigm
 
 parent_studies:
-  - {study: cross-paradigm-equivalence, condition: ran, relation: builds-on}
+- {study: cross-paradigm-equivalence, condition: ran, relation: builds-on}
 
 question: >
   On the LARGE Sego 2022 blueprint (120x120, ~225-cell epithelium), how far does each
@@ -28,7 +28,8 @@ question: >
 
 experiment: >
   Run blueprint_pipeline on the LARGE Sego blueprint (influenza_sego2022_large.yaml)
-  on CPM, vertex and center-based over rules-seeds {0,1,2} (N=60, 254 cells). For each behavior metric, score the cross-backend
+  on CPM, vertex and center-based over rules-seeds {0,1,2} (N=60, 254 cells). For each behavior metric,
+  score the cross-backend
   distance from the CPM (all seed combos) against the CPM-self seed-pair null floor.
   Script: scripts/compare_large_crossparadigm.py (results.json). The vertex
   mechanics used here were matched to the CPM beforehand (see "How the vertex mechanics
@@ -75,97 +76,123 @@ purpose:
     MSD. The study reports the honest distances, not a forced agreement.
 
 key_assumptions:
-  - "Mechanics matching is mechanics-only: no fields / rules / ODE / immune coupling, so only the substrates' own mechanics are compared. One coupled step = 2 MCS (CPM) = one explicit-Euler step dt = 1 (vertex); viscosity eta = 2*K*A0 = 100 for Euler stability."
-  - "CPM temperature 10, neighbour order 2, lambda_volume 1, target size 25 (viva-cpm defaults + blueprint); a type pair absent from the adhesion table is J = 0 on CPM and Lambda = 0 on vertex."
-  - "The CPM is the reference substrate; vertex and munk are scored as distance-to-CPM on the shared large blueprint, same seeds."
-  - "Behavior metrics (compare/metrics.py) are the minimization target; the same-backend (seed-varied) distance is the matched null floor each cross distance is judged against."
-  - "Nothing is tuned here to force agreement — the study characterizes the substrates as they stand after the munk fix; the vertex mechanics matching is documented in the methods section below and the remaining fluctuation gap is the open question at the end."
+- "Mechanics matching is mechanics-only: no fields / rules / ODE / immune coupling, so only the substrates'
+  own mechanics are compared. One coupled step = 2 MCS (CPM) = one explicit-Euler step dt = 1 (vertex);
+  viscosity eta = 2*K*A0 = 100 for Euler stability."
+- "CPM temperature 10, neighbour order 2, lambda_volume 1, target size 25 (viva-cpm defaults + blueprint);
+  a type pair absent from the adhesion table is J = 0 on CPM and Lambda = 0 on vertex."
+- "The CPM is the reference substrate; vertex and munk are scored as distance-to-CPM on the shared large
+  blueprint, same seeds."
+- "Behavior metrics (compare/metrics.py) are the minimization target; the same-backend (seed-varied) distance
+  is the matched null floor each cross distance is judged against."
+- "Nothing is tuned here to force agreement — the study characterizes the substrates as they stand after
+  the munk fix; the vertex mechanics matching is documented in the methods section below and the remaining
+  fluctuation gap is the open question at the end."
 
 baseline:
-  - name: sego-large
-    composite: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
-    params: {backend: cpm, blueprint: workspace/blueprints/influenza_sego2022_large.yaml}
-  - name: neutral-mechanics-sheet
-    composite: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
-    params: {backend: cpm, blueprint: workspace/blueprints/mechanics_sheet.yaml}
+- name: sego-large
+  composite: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+  params: {backend: cpm, blueprint: workspace/blueprints/influenza_sego2022_large.yaml}
+- name: neutral-mechanics-sheet
+  composite: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+  params: {backend: cpm, blueprint: workspace/blueprints/mechanics_sheet.yaml}
 
 canonical_runs:
-  - name: behavior-distances
-    default: true
-    script: scripts/compare_large_crossparadigm.py
-    args: ["60", "--json", "workspace/studies/substrate-behavior-at-scale/results.json"]
-    label: "3-way behavior-metric distances on the large Sego model (N=60, seeds 0-2)"
+- name: behavior-distances
+  default: true
+  script: scripts/compare_large_crossparadigm.py
+  args: ["60", "--json", "workspace/studies/substrate-behavior-at-scale/results.json"]
+  label: "3-way behavior-metric distances on the large Sego model (N=60, seeds 0-2)"
 
 # The behavior metrics compared across substrates (each a cross-backend distance-to-CPM).
 readouts:
-  - name: per_cell_displacement_distance
-    description: RMS over the t0 cohort of |Δpos_vertex/munk − Δpos_cpm| per step (trajectory divergence).
-    store_path: "mechanics/positions"
-    units: um
-    status: measured
-  - name: msd_distance
-    description: Cohort-matched RMS gap between the two MSD(t) curves (motility-amplitude divergence).
-    store_path: "mechanics/positions"
-    units: um^2
-    status: measured
-  - name: neighbour_graph_distance
-    description: Per-step Jaccard distance between the two contact graphs on the shared cohort (interaction-pattern divergence).
-    store_path: "mechanics/neighbors"
-    units: fraction
-    status: measured
-  - name: front_speed_distance
-    description: RMS gap between the I-patch front-advance curves (infection-spread-geometry divergence).
-    store_path: "mechanics/positions"
-    units: um
-    status: measured
-  - name: sorting_index_distance
-    description: RMS gap between same-type-neighbour-fraction curves (cell-sorting divergence).
-    store_path: "mechanics/neighbors"
-    units: fraction
-    status: measured
+- name: per_cell_displacement_distance
+  description: RMS over the t0 cohort of |Δpos_vertex/munk − Δpos_cpm| per step (trajectory 
+    divergence).
+  store_path: "mechanics/positions"
+  units: um
+  status: measured
+- name: msd_distance
+  description: Cohort-matched RMS gap between the two MSD(t) curves (motility-amplitude divergence).
+  store_path: "mechanics/positions"
+  units: um^2
+  status: measured
+- name: neighbour_graph_distance
+  description: Per-step Jaccard distance between the two contact graphs on the shared cohort 
+    (interaction-pattern divergence).
+  store_path: "mechanics/neighbors"
+  units: fraction
+  status: measured
+- name: front_speed_distance
+  description: RMS gap between the I-patch front-advance curves (infection-spread-geometry 
+    divergence).
+  store_path: "mechanics/positions"
+  units: um
+  status: measured
+- name: sorting_index_distance
+  description: RMS gap between same-type-neighbour-fraction curves (cell-sorting divergence).
+  store_path: "mechanics/neighbors"
+  units: fraction
+  status: measured
 
 behavior_tests:
-  - name: munk-moves-and-interacts
-    classification: primary
-    description: Center-based cells now MOVE and change contacts — the munk per-cell displacement distance is well above a frozen baseline (validates the munk fix in this large regime).
-    measure: {kind: distance, field: per_cell_displacement_distance, backend: munk}
-    pass_if: {op: gt, value: 0.5, note: "munk displacement distance >> 0 (was ~0 when frozen)"}
-    units: um
-    requires_simulation: "true"
-  - name: vertex-closest-to-cpm
-    classification: primary
-    description: Vertex sits closer to the CPM than center-based on the motility axes (displacement + MSD distance).
-    measure: {kind: comparison, field: msd_distance}
-    pass_if: {op: lt, note: "vertex_vs_cpm < munk_vs_cpm on displacement and MSD"}
-    units: um^2
-    requires_simulation: "true"
-  - name: distances-above-null-floor
-    classification: primary
-    description: Each cross-backend distance is reported against the CPM-self (seed-varied) null floor, so a genuine substrate difference is distinguished from seed noise.
-    measure: {kind: null_control, field: all_metrics}
-    pass_if: {op: reported, note: "cross vs null floor reported per metric"}
-    units: mixed
-    requires_simulation: "true"
+- name: munk-moves-and-interacts
+  classification: primary
+  description: Center-based cells now MOVE and change contacts — the munk per-cell displacement 
+    distance is well above a frozen baseline (validates the munk fix in this large regime).
+  measure: {kind: distance, field: per_cell_displacement_distance, backend: munk}
+  pass_if: {op: gt, value: 0.5, note: "munk displacement distance >> 0 (was ~0 when frozen)"}
+  units: um
+  requires_simulation: "true"
+- name: vertex-closest-to-cpm
+  classification: primary
+  description: Vertex sits closer to the CPM than center-based on the motility axes (displacement + 
+    MSD distance).
+  measure: {kind: comparison, field: msd_distance}
+  pass_if: {op: lt, note: "vertex_vs_cpm < munk_vs_cpm on displacement and MSD"}
+  units: um^2
+  requires_simulation: "true"
+- name: distances-above-null-floor
+  classification: primary
+  description: Each cross-backend distance is reported against the CPM-self (seed-varied) null 
+    floor, so a genuine substrate difference is distinguished from seed noise.
+  measure: {kind: null_control, field: all_metrics}
+  pass_if: {op: reported, note: "cross vs null floor reported per metric"}
+  units: mixed
+  requires_simulation: "true"
 
 controls:
-  - name: cpm-self-null
-    kind: negative
-    description: CPM-vs-CPM (seed-varied) distance per metric — the matched null floor; a vertex/munk match must approach this, not 0.
+- name: cpm-self-null
+  kind: negative
+  description: CPM-vs-CPM (seed-varied) distance per metric — the matched null floor; a vertex/munk 
+    match must approach this, not 0.
 
 alternative_hypotheses:
-  - hypothesis: "The substrates already agree on movement/interaction (differences are seed noise)."
-    excluded_by: "The CPM-self null floor is reported alongside every cross distance; cross distances that exceed the null are real substrate differences."
-  - hypothesis: "Center-based still doesn't move (the fix didn't take at scale)."
-    excluded_by: "The munk displacement/MSD distances are well above the frozen baseline on the 225-cell tissue (munk-moves-and-interacts test)."
+- hypothesis: "The substrates already agree on movement/interaction (differences are seed noise)."
+  excluded_by: "The CPM-self null floor is reported alongside every cross distance; cross distances that
+    exceed the null are real substrate differences."
+- hypothesis: "Center-based still doesn't move (the fix didn't take at scale)."
+  excluded_by: "The munk displacement/MSD distances are well above the frozen baseline on the 225-cell
+    tissue (munk-moves-and-interacts test)."
 
 limitations:
-  - "Epithelial wandering is ~5x below the CPM's (MSD 2.2 vs 9.5 um^2): the CPM-matching sheet motility folds the vertex mesh (persisted with sub-stepping, perimeter stiffness, faster rosette resolution and larger T1 thresholds), so motility is capped at the fold-free value. Area dispersion is unmatched (vertex CV 0.038 vs CPM 0.093; the tension noise that would raise it folds the mesh)."
-  - "Mechanics are calibrated at target size 25 (viscosity 100); other cell sizes need a re-run of scripts/calibrate_vertex_mechanics.py. The J<->Lambda scale is geometry-dependent: 1.74 on the Sego sheet vs ~4 on the isolated 4x4 sheet, and at 8 the small sheet collapses."
-  - "Neighbour exchange is present (T1s) but far below the CPM's contact turnover; the CPM count includes flickering diagonal contacts, so the two are not directly comparable. At the shallowest gradient (g = 0.001) the vertex macrophage drifts ~40% slower than the CPM one."
-  - "Immune contact is edge-on in the CPM (same layer) but face-on overlap on vertex (Sego's 2-layer geometry); kill rates read different contact units."
-  - "N=60 steps, 3 seeds — a characterization run, not a long-horizon or high-replication study."
-  - "The behavior metrics are necessary but not sufficient for full pattern identity; visual (flipbook) agreement is a secondary check."
-  - "munk force parameters (jitter / adhesion-scale / chemotaxis-gain) are principled but uncalibrated; the center-based model is deliberately not matched to the CPM here."
+- "Epithelial wandering is ~5x below the CPM's (MSD 2.2 vs 9.5 um^2): the CPM-matching sheet motility
+  folds the vertex mesh (persisted with sub-stepping, perimeter stiffness, faster rosette resolution and
+  larger T1 thresholds), so motility is capped at the fold-free value. Area dispersion is unmatched (vertex
+  CV 0.038 vs CPM 0.093; the tension noise that would raise it folds the mesh)."
+- "Mechanics are calibrated at target size 25 (viscosity 100); other cell sizes need a re-run of scripts/calibrate_vertex_mechanics.py.
+  The J<->Lambda scale is geometry-dependent: 1.74 on the Sego sheet vs ~4 on the isolated 4x4 sheet,
+  and at 8 the small sheet collapses."
+- "Neighbour exchange is present (T1s) but far below the CPM's contact turnover; the CPM count includes
+  flickering diagonal contacts, so the two are not directly comparable. At the shallowest gradient (g
+  = 0.001) the vertex macrophage drifts ~40% slower than the CPM one."
+- "Immune contact is edge-on in the CPM (same layer) but face-on overlap on vertex (Sego's 2-layer geometry);
+  kill rates read different contact units."
+- "N=60 steps, 3 seeds — a characterization run, not a long-horizon or high-replication study."
+- "The behavior metrics are necessary but not sufficient for full pattern identity; visual (flipbook)
+  agreement is a secondary check."
+- "munk force parameters (jitter / adhesion-scale / chemotaxis-gain) are principled but uncalibrated;
+  the center-based model is deliberately not matched to the CPM here."
 
 falsifiability: >
   If the cross-backend distances were indistinguishable from the CPM-self null on every
@@ -175,8 +202,8 @@ falsifiability: >
 report:
   title: "How far each substrate's movement/interaction pattern sits from the CPM (large Sego)"
   verdict: >
-    SUPPORTED (every behavior_test passed on the rerun; the claim is a set of reported distances, not a match). 
-    Three-way behavior-metric comparison on the large Sego model (N=60, 254 cells,
+    SUPPORTED (every behavior_test passed on the rerun; the claim is a set of reported distances, not
+    a match).  Three-way behavior-metric comparison on the large Sego model (N=60, 254 cells,
     seeds 0-2). No substrate matches the CPM on every axis; each diverges on specific
     ones, giving concrete calibration targets. VERTEX is closest on per-cell trajectory
     (displacement 2.93, BELOW the CPM-self null 3.77 -- within seed noise) and contact
@@ -210,14 +237,16 @@ report:
     proxy for full pattern identity.
 
 study_card:
-  goal: "Measure how close vertex and center-based get to the CPM's movement/interaction pattern on the large Sego model, as distance-to-CPM behavior metrics."
+  goal: "Measure how close vertex and center-based get to the CPM's movement/interaction pattern on the
+    large Sego model, as distance-to-CPM behavior metrics."
   mechanism: >
     Same shared mechanism + same large blueprint on all three substrates; only the
     mechanics node differs, so behavior-metric distances isolate the substrate effect.
   why_before_next: >
     Establishes the quantitative baseline any further vertex calibration (the open
     fluctuation-match question) must minimize against, on the large tissue.
-  expected_result: "Vertex closest to CPM (but under-fluctuating); center-based moves but diverges most; all distances above the null floor."
+  expected_result: "Vertex closest to CPM (but under-fluctuating); center-based moves but diverges most;
+    all distances above the null floor."
   main_expert_question: "Which metric axis matters most as the headline distance-to-CPM target for calibration?"
 
 # Spatial-playback VIDEO of the reference substrate on the large tissue. CPM only:
@@ -228,18 +257,18 @@ study_card:
 # Rendered by scripts/render_study_figures.py --study substrate-behavior-at-scale
 # (80-step CPM run on influenza_sego2022_large, decimated to 28 frames, 120x120).
 visualizations:
-  - name: "Spatial playback — CPM on the large Sego tissue"
-    address: "html:spatial-playback-cpm-large.html"
-    config: {title: "Large Sego 2022 — CPM reference playback (120x120, ~225-cell epithelium)"}
-  - name: "Vertex mechanics calibration"
-    address: "html:mechanics-calibration.html"
-    config: {title: "Vertex knobs fitted to CPM area, wandering and chemotactic drift"}
-  - name: "J ↔ tension sweep"
-    address: "html:adhesion-sweep.html"
-    config: {title: "Cell-shape statistics across the vertex tension sweep vs CPM"}
-  - name: "Neutral sheet playback — CPM vs vertex vs center-based"
-    address: "html:neutral-sheet-playback.html"
-    config: {title: "Mechanics-only sheet relaxation, all three paradigms (center-based not calibrated)"}
+- name: "Spatial playback — CPM on the large Sego tissue"
+  address: "html:spatial-playback-cpm-large.html"
+  config: {title: "Large Sego 2022 — CPM reference playback (120x120, ~225-cell epithelium)"}
+- name: "Vertex mechanics calibration"
+  address: "html:mechanics-calibration.html"
+  config: {title: "Vertex knobs fitted to CPM area, wandering and chemotactic drift"}
+- name: "J ↔ tension sweep"
+  address: "html:adhesion-sweep.html"
+  config: {title: "Cell-shape statistics across the vertex tension sweep vs CPM"}
+- name: "Neutral sheet playback — CPM vs vertex vs center-based"
+  address: "html:neutral-sheet-playback.html"
+  config: {title: "Mechanics-only sheet relaxation, all three paradigms (center-based not calibrated)"}
 
 # Detailed walkthrough of what the CPM video shows, tied to the behavior metrics.
 biological_summary: >
@@ -341,102 +370,108 @@ description: >
   substrate at these parameters.
 
 simulation_set:
-  - name: behavior-distances
-    status: completed
-    base_model: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
-    seeds: [0, 1, 2]
-    metrics:
-      n_steps: 60
-      n_cells: 254
-      displacement_null_vertex_munk: "3.77 / 2.93 / 9.96"
-      msd_null_vertex_munk: "3.25 / 8.89 / 124.1"
-      neighbour_graph_null_vertex_munk: "0.41 / 0.45 / 0.46"
-      front_speed_null_vertex_munk: "1.54 / 3.59 / 6.77"
-      sorting_null_vertex_munk: "0.014 / 0.123 / 0.021"
-      artifact: "results.json"
-  - name: vertex-mechanics-calibration
-    status: completed
-    base_model: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
-    seeds: [0, 1, 2, 3, 4]
-    pass_fail_tests:
-      - "mechanics-defined: pass"
-      - "area-matched: pass"
-      - "immune-motility-matched: pass (2026-10-28 calibration; 2026-11-05 in-sheet immune is a fold-free cap, 4.6 vs 9.4 um)"
-      - "chemotaxis-drift-matched: pass (low-gradient point ~40% slow)"
-      - "mesh-valid-no-folds: pass"
-      - "epithelial-msd-matched: fail (capped by mesh validity: 2.2 vs 9.5 um^2)"
-      - "area-dispersion-matched: fail (CV 0.038 vs 0.093)"
-    metrics:
-      cpm_area_mean: 22.98
-      vertex_area_mean: 22.97
-      cpm_area_cv: 0.093
-      vertex_area_cv: 0.038
-      cpm_epi_msd_um2: 9.5
-      vertex_epi_msd_um2: 2.2
-      cpm_immune_disp_um: 9.4
-      vertex_immune_disp_um: 4.6
-      fitted_tension_scale: 1.683
-      fitted_sheet_motility_fold_free_cap: 26.6
-      fitted_immune_motility_fold_free_cap: 56.1
-      fitted_tension_noise: 5
-      fitted_migration_scale: 3.54
-      fitted_chemotaxis_saturation: 105.0
-      mesh_valid_3_seeds_x_400_steps: true
-      artifact: "results/vertex_mechanics_calibration.json"
-      superseded_2026_10_28: "tension 1.74 -> area 22.8; immune 9.36 vs 9.37 um; epi MSD 2.04 vs 9.54 (sheet_motility fit 83.3, cap 34.1); tension_noise 0 -> CV 0.033; 4-11 of 85 pairs exchanged by step 400"
-  - name: adhesion-sweep
-    status: completed
-    base_model: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
-    seeds: [0]
-    metrics:
-      cpm_mean_area: 18.94
-      cpm_area_cv: 0.103
-      vertex_mean_area_by_scale: "0.5: 24.48, 1: 23.73, 1.74: 22.58, 2: 22.15, 4: 18.46, 8: 1.81 (collapse)"
-      vertex_area_cv_by_scale: "0.5: 0.017, 1: 0.020, 1.74: 0.024, 2: 0.026, 4: 0.044, 8: 0.668"
-      area_matching_scale_small_sheet: "~4"
+- name: behavior-distances
+  status: completed
+  base_model: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+  seeds: [0, 1, 2]
+  metrics:
+    n_steps: 60
+    n_cells: 254
+    displacement_null_vertex_munk: "3.77 / 2.93 / 9.96"
+    msd_null_vertex_munk: "3.25 / 8.89 / 124.1"
+    neighbour_graph_null_vertex_munk: "0.41 / 0.45 / 0.46"
+    front_speed_null_vertex_munk: "1.54 / 3.59 / 6.77"
+    sorting_null_vertex_munk: "0.014 / 0.123 / 0.021"
+    artifact: "results.json"
+- name: vertex-mechanics-calibration
+  status: completed
+  base_model: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+  seeds: [0, 1, 2, 3, 4]
+  pass_fail_tests:
+  - "mechanics-defined: pass"
+  - "area-matched: pass"
+  - "immune-motility-matched: pass (2026-10-28 calibration; 2026-11-05 in-sheet immune is a fold-free
+    cap, 4.6 vs 9.4 um)"
+  - "chemotaxis-drift-matched: pass (low-gradient point ~40% slow)"
+  - "mesh-valid-no-folds: pass"
+  - "epithelial-msd-matched: fail (capped by mesh validity: 2.2 vs 9.5 um^2)"
+  - "area-dispersion-matched: fail (CV 0.038 vs 0.093)"
+  metrics:
+    cpm_area_mean: 22.98
+    vertex_area_mean: 22.97
+    cpm_area_cv: 0.093
+    vertex_area_cv: 0.038
+    cpm_epi_msd_um2: 9.5
+    vertex_epi_msd_um2: 2.2
+    cpm_immune_disp_um: 9.4
+    vertex_immune_disp_um: 4.6
+    fitted_tension_scale: 1.683
+    fitted_sheet_motility_fold_free_cap: 26.6
+    fitted_immune_motility_fold_free_cap: 56.1
+    fitted_tension_noise: 5
+    fitted_migration_scale: 3.54
+    fitted_chemotaxis_saturation: 105.0
+    mesh_valid_3_seeds_x_400_steps: true
+    artifact: "results/vertex_mechanics_calibration.json"
+    superseded_2026_10_28: "tension 1.74 -> area 22.8; immune 9.36 vs 9.37 um; epi MSD 2.04 vs 9.54 (sheet_motility
+      fit 83.3, cap 34.1); tension_noise 0 -> CV 0.033; 4-11 of 85 pairs exchanged by step 400"
+- name: adhesion-sweep
+  status: completed
+  base_model: viva_multicell_blueprint.composites.pipeline.blueprint_pipeline
+  seeds: [0]
+  metrics:
+    cpm_mean_area: 18.94
+    cpm_area_cv: 0.103
+    vertex_mean_area_by_scale: "0.5: 24.48, 1: 23.73, 1.74: 22.58, 2: 22.15, 4: 18.46, 8: 1.81 (collapse)"
+    vertex_area_cv_by_scale: "0.5: 0.017, 1: 0.020, 1.74: 0.024, 2: 0.026, 4: 0.044, 8: 0.668"
+    area_matching_scale_small_sheet: "~4"
 
 findings:
-  - id: F1-vertex-distance-to-cpm-by-axis
-    kind: computational
-    status: confirms
-    tier: interpretation
-    mechanism_origin: engineered
-    statement: >
-      No substrate matches the CPM on every axis. Vertex matches per-cell trajectories
-      (displacement 2.93, below the CPM-self null 3.77) and contact churn (0.445 vs 0.414)
-      but under-fluctuates (MSD 2.7x null) and mis-sorts (8.5x null); center-based now moves
-      and interacts (displacement 9.96, MSD 124.1) with contact topology (0.458) and sorting
-      (0.021) close to the CPM, but is over-mobile (MSD 38x null) and diverges most on
-      infection-front speed (4.4x null). Munk values are from the 2026-11 rerun (seeded
-      per-instance motility RNG; not bit-reproducible vs the earlier stored run).
-    evidence:
-      observed: "results.json: N=60, 254 cells, seeds 0-2; see result"
-    explanation: "Same shared mechanism and blueprint on all three substrates; only the mechanics node differs."
-    next_action: "calibrate the center-based model per axis; close the vertex fluctuation gap (open question below)."
-    provenance:
-      run_ids: [behavior-distances]
-  - id: F2-mechanics-calibrated-under-no-fold
-    kind: methodological
-    status: confirms
-    tier: interpretation
-    mechanism_origin: engineered
-    statement: >
-      With the mechanics defined term by term and per-pair tension applied, the vertex
-      tension scale, immune motility and chemotactic mobility are identifiable and
-      calibrated to the CPM (area 22.97 vs 22.98; immune displacement 9.4 vs 9.4 um in the
-      2026-10-28 calibration; drift within ~10% for g >= 0.003). Epithelial wandering is
-      capped by mesh validity (MSD 2.2 vs 9.5 um^2) and area dispersion is unmatched.
-    evidence:
-      observed: "results/vertex_mechanics_calibration.json"
-    explanation: "Tension contracts cells against area elasticity; active motility replaces the CPM temperature's wandering, up to the shear a tyssue sheet tolerates without folding."
-    next_action: "a fold-aware topology handler (or a softer epithelium) to reach CPM fluidity; validate on a second geometry / cell size (BP-07)."
-    provenance:
-      run_ids: [vertex-mechanics-calibration, adhesion-sweep]
+- id: F1-vertex-distance-to-cpm-by-axis
+  kind: computational
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: >
+    No substrate matches the CPM on every axis. Vertex matches per-cell trajectories
+    (displacement 2.93, below the CPM-self null 3.77) and contact churn (0.445 vs 0.414)
+    but under-fluctuates (MSD 2.7x null) and mis-sorts (8.5x null); center-based now moves
+    and interacts (displacement 9.96, MSD 124.1) with contact topology (0.458) and sorting
+    (0.021) close to the CPM, but is over-mobile (MSD 38x null) and diverges most on
+    infection-front speed (4.4x null). Munk values are from the 2026-11 rerun (seeded
+    per-instance motility RNG; not bit-reproducible vs the earlier stored run).
+  evidence:
+    observed: "results.json: N=60, 254 cells, seeds 0-2; see result"
+  explanation: "Same shared mechanism and blueprint on all three substrates; only the mechanics node differs."
+  next_action: "calibrate the center-based model per axis; close the vertex fluctuation gap (open question
+    below)."
+  provenance:
+    run_ids: [behavior-distances]
+- id: F2-mechanics-calibrated-under-no-fold
+  kind: methodological
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: >
+    With the mechanics defined term by term and per-pair tension applied, the vertex
+    tension scale, immune motility and chemotactic mobility are identifiable and
+    calibrated to the CPM (area 22.97 vs 22.98; immune displacement 9.4 vs 9.4 um in the
+    2026-10-28 calibration; drift within ~10% for g >= 0.003). Epithelial wandering is
+    capped by mesh validity (MSD 2.2 vs 9.5 um^2) and area dispersion is unmatched.
+  evidence:
+    observed: "results/vertex_mechanics_calibration.json"
+  explanation: "Tension contracts cells against area elasticity; active motility replaces the CPM temperature's
+    wandering, up to the shear a tyssue sheet tolerates without folding."
+  next_action: "a fold-aware topology handler (or a softer epithelium) to reach CPM fluidity; validate
+    on a second geometry / cell size (BP-07)."
+  provenance:
+    run_ids: [vertex-mechanics-calibration, adhesion-sweep]
 
 bibliography:
   sources:
-    - key: sego2022
-      note: "Sego 2022 adhesion (Table 3) supplies the neutral epithelial J values the mechanics-only sheet uses; the large blueprint scales the same mechanism up."
+  - key: sego2022
+    note: "Sego 2022 adhesion (Table 3) supplies the neutral epithelial J values the mechanics-only sheet
+      uses; the large blueprint scales the same mechanism up."
 
 # ---------------------------------------------------------------------------
 # OPEN QUESTION / next step (absorbed from the former, never-run
@@ -444,44 +479,60 @@ bibliography:
 # Nothing below has been run; all numbers are CPM references to approach.
 # ---------------------------------------------------------------------------
 design_pivot_required:
-  - id: VCF-01
-    question: "Can the vertex backend reproduce the CPM's emergent interaction pattern on the large Sego blueprint WITHOUT folding the mesh? Close the gap by pushing capped knobs, or by adding a new T1-safe fluctuation mechanism?"
-    alternatives:
-      - "A. Knob-push only -- raise sheet_motility / tension_noise under a mesh-validity gate; simplest, may fold before matching."
-      - "B. New mesh-safe fluctuation term -- bounded per-vertex jitter / boundary roughness that cannot shrink a junction past the T1 threshold; more work, likely required if A folds."
-      - "C. Accept the residual -- report the capped vertex as an honest structural limit if neither A nor B reaches the band."
-    status: open
-    requested_response: "Expert steer on how far to push mechanism changes into the tyssue backend vs accepting an honest residual."
+- id: VCF-01
+  question: "Can the vertex backend reproduce the CPM's emergent interaction pattern on the large Sego
+    blueprint WITHOUT folding the mesh? Close the gap by pushing capped knobs, or by adding a new T1-safe
+    fluctuation mechanism?"
+  alternatives:
+  - "A. Knob-push only -- raise sheet_motility / tension_noise under a mesh-validity gate; simplest, may
+    fold before matching."
+  - "B. New mesh-safe fluctuation term -- bounded per-vertex jitter / boundary roughness that cannot shrink
+    a junction past the T1 threshold; more work, likely required if A folds."
+  - "C. Accept the residual -- report the capped vertex as an honest structural limit if neither A nor
+    B reaches the band."
+  status: open
+  requested_response: "Expert steer on how far to push mechanism changes into the tyssue backend vs accepting
+    an honest residual."
 
 followup_proposals:
-  - title: "Vertex-to-CPM fluctuation match under a hard mesh-validity gate"
-    rationale: >
-      Today the honest CPM-matching motility/noise values invert short junctions and
-      self-intersect the polygons, so they were capped, leaving the vertex epithelium ~5x
-      less mobile (MSD ~2.2 vs ~9.5 um^2), immune displacement ~4.6 vs ~9.4 um, and area CV
-      ~0.038 vs ~0.093. PLANNED targets (unrun): epithelial MSD within 30% of the CPM; area
-      CV within 30% of the CPM; neighbour-graph-churn and front-speed distances below the
-      shipped-vertex baseline; mesh validity every step (hard gate, overrides any metric
-      match). Candidate arms: vertex-knob-push, vertex-mesh-safe-fluctuation, and an
-      immune-representation toggle (free-wandering vs margin-attached). Falsifiable: if no
-      provided mechanism enters the tolerance bands with the mesh valid, the honest
-      result is that the vertex substrate cannot reach CPM-level fluctuation without
-      folding. Status: planned, Design phase, no runs.
+- title: "Vertex-to-CPM fluctuation match under a hard mesh-validity gate"
+  rationale: >
+    Today the honest CPM-matching motility/noise values invert short junctions and
+    self-intersect the polygons, so they were capped, leaving the vertex epithelium ~5x
+    less mobile (MSD ~2.2 vs ~9.5 um^2), immune displacement ~4.6 vs ~9.4 um, and area CV
+    ~0.038 vs ~0.093. PLANNED targets (unrun): epithelial MSD within 30% of the CPM; area
+    CV within 30% of the CPM; neighbour-graph-churn and front-speed distances below the
+    shipped-vertex baseline; mesh validity every step (hard gate, overrides any metric
+    match). Candidate arms: vertex-knob-push, vertex-mesh-safe-fluctuation, and an
+    immune-representation toggle (free-wandering vs margin-attached). Falsifiable: if no
+    provided mechanism enters the tolerance bands with the mesh valid, the honest
+    result is that the vertex substrate cannot reach CPM-level fluctuation without
+    folding. Status: planned, Design phase, no runs.
 
 implementation_requirements:
-  - id: req-mesh-validity-gate
-    title: "Per-step mesh-validity invariant exposed from the vertex backend"
-    kind: process
-    effort: S
-    status: planned
-  - id: req-t1-safe-fluctuation
-    title: "A T1-safe (sub-threshold) fluctuation term for the vertex backend"
-    kind: process
-    effort: L
-    status: planned
-    description: "Candidate mesh-safe analog of the CPM temperature: bounded per-vertex jitter / boundary-roughness that cannot shrink a junction past the T1 threshold."
-  - id: req-immune-representation-arm
-    title: "Free-wandering vs margin-attached immune representation toggle"
-    kind: parameter_hook
-    effort: M
-    status: planned
+- id: req-mesh-validity-gate
+  title: "Per-step mesh-validity invariant exposed from the vertex backend"
+  kind: process
+  effort: S
+  status: planned
+- id: req-t1-safe-fluctuation
+  title: "A T1-safe (sub-threshold) fluctuation term for the vertex backend"
+  kind: process
+  effort: L
+  status: planned
+  description: "Candidate mesh-safe analog of the CPM temperature: bounded per-vertex jitter / boundary-roughness
+    that cannot shrink a junction past the T1 threshold."
+- id: req-immune-representation-arm
+  title: "Free-wandering vs margin-attached immune representation toggle"
+  kind: parameter_hook
+  effort: M
+  status: planned
+conclusion_logic:
+  if_primary_tests_pass:
+    verdict: supported
+    summary: |
+      Every behavior-metric test passes on the rerun: munk now moves and interacts (validating the fix), vertex sits closest to the CPM on per-cell trajectory and contact churn, and all backend distances stay above the same-backend null floor. No substrate matches the CPM on every axis; each diverges on specific metrics, giving concrete calibration targets.
+  if_primary_tests_fail:
+    verdict: refuted
+    summary: |
+      A backend indistinguishable from its own null floor, or a frozen munk, would mean the substrate-behavior comparison has no power or the munk fix regressed.

@@ -11,6 +11,11 @@ from .pipeline import blueprint_pipeline
 from .grammar_demo import grammar_rules_demo
 from .bounded_particles import bounded_particles
 from .scene_model import scene_model
+from .coupled_subcellular import (coupled_fate_oscillator, coupled_particle_catalysis,
+                                  coupled_triple_cell)
+from .fateful_tissue import fateful_tissue
 
 __all__ = ["sego_crossparadigm", "sego_crossparadigm_large", "grammar_rules_demo",
-           "blueprint_pipeline", "bounded_particles", "scene_model"]
+           "blueprint_pipeline", "bounded_particles", "scene_model",
+           "coupled_fate_oscillator", "coupled_particle_catalysis", "coupled_triple_cell",
+           "fateful_tissue"]

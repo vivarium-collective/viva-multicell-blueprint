@@ -10,7 +10,8 @@ gate_status: pending
 execution_status: planned
 verdict:
 design_status: drafted
-title: "Smoldyn particles bounded by center-based (viva-munk) discs: confinement, conservation across division, reaction equilibrium"
+title: "Smoldyn particles bounded by center-based (viva-munk) discs: confinement, conservation across
+  division, reaction equilibrium"
 kind: demonstration
 confidence: Investigating
 investigation: particle-multicell-composition
@@ -18,13 +19,14 @@ investigation: particle-multicell-composition
 composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
 backend: munk
 baseline:
-  - name: bounded-particles-munk
-    composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
-    params: {backend: munk}
+- name: bounded-particles-munk
+  composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
+  params: {backend: munk}
 
 claim: >
   A Smoldyn particle sim composed with the munk backend keeps every cell's molecules
-  strictly inside that cell's moving boundary (pymunk discs (oblong under crowding)), conserves molecule count when a
+  strictly inside that cell's moving boundary (pymunk discs (oblong under crowding)), conserves molecule
+  count when a
   cell divides (each molecule inherited by exactly one daughter, by containment), and lets
   the reversible reaction A+B<->C reach equilibrium inside the living tissue.
 
@@ -48,3 +50,8 @@ notes: |
   three multicellular substrates, so the particle coupling can be compared across
   paradigms. Smoldyn runs via SmoldynRunner (in-process on Linux 3.12, 3.11 subprocess
   bridge on macOS).
+visualizations:
+- name: particles bounded by munk cells — flipbook
+  address: html:bounded-particles-flipbook.html
+  config:
+    title: Smoldyn particles confined in munk cells, split on division
