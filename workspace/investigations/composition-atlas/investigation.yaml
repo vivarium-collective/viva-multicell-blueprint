@@ -98,6 +98,9 @@ at_a_glance:
 - study: particles-in-consensus
   role: |
     Particle <-> multi-tissue: a Smoldyn sim confined inside each cell of the tri-coupled consensus tissue -- molecules bounded by a boundary three tissue simulators agree on (vertex shape, munk position, CPM area).
+- study: heterotypic-regions
+  role: |
+    Tissue type <-> tissue type: a vertex epithelium sitting on a munk mesenchyme, coupled at a reflective interface -- two tissue types, two physics, the way organs layer epithelium on stroma.
 executive:
   what_is_this: >
     A curated showcase of composition across modelling paradigms, built on the
@@ -163,6 +166,7 @@ members:
 - tri-coupled-consensus
 - fateful-consensus
 - particles-in-consensus
+- heterotypic-regions
 studies:
 - coupled-fate-oscillator
 - coupled-particle-catalysis
@@ -175,6 +179,7 @@ studies:
 - tri-coupled-consensus
 - fateful-consensus
 - particles-in-consensus
+- heterotypic-regions
 scientific_argument:
   main_claim: |
     A model's SEMANTICS (its chemistry/logic) are separable from its MECHANICS (the solver that runs it) at every scale, so the same few simulators compose in many directions through small, typed coupling contracts: several sub-cellular simulators couple inside one cell (a product threshold pins a Boolean input; a particle count sets an ODE rate; a Boolean output gates a reaction), a cell is itself a coupled composite, and a tissue of such cells couples the sub-cellular scale back to mechanics — a cell's own metabolism->fate chain decides when the tissue divides.

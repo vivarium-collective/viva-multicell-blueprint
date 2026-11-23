@@ -116,6 +116,16 @@ def atlas_committed_final(reader, test, ws_root) -> float:
     return float(vals[-1]) if vals else 0.0
 
 
+@declares_sources("interface_breaches")
+def atlas_breaches_max(reader, test, ws_root) -> float:
+    """Max per-step interface breaches (mesenchyme cells reflected off the epithelial floor). A
+    small bound means the interface holds — the two tissues couple without the mesenchyme
+    flooding through."""
+    vals = _values(reader, "interface_breaches")
+    sim = vals[1:] if len(vals) > 1 else vals
+    return float(max(sim)) if sim else 0.0
+
+
 def register_derived_scalars(reg: dict) -> None:
     reg["atlas_fate_transitions"] = atlas_fate_transitions
     reg["atlas_product_final"] = atlas_product_final
@@ -126,3 +136,4 @@ def register_derived_scalars(reg: dict) -> None:
     reg["atlas_total_molecules_final"] = atlas_total_molecules_final
     reg["atlas_spread_max"] = atlas_spread_max
     reg["atlas_committed_final"] = atlas_committed_final
+    reg["atlas_breaches_max"] = atlas_breaches_max

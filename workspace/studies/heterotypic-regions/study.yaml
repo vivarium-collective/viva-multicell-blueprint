@@ -1,0 +1,211 @@
+schema_version: 4
+name: heterotypic-regions
+created: '2026-11-23'
+status: draft
+phase: Design
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: pending
+execution_status: planned
+verdict:
+design_status: drafted
+title: 'Heterotypic tissue regions: a vertex epithelium on a munk mesenchyme, coupled at an interface'
+kind: confirmatory
+confidence: Accepted
+investigation: composition-atlas
+report:
+  verdict: supported
+question: |
+  Can one tissue be composed of two compartments simulated by DIFFERENT mechanics -- a vertex epithelium sitting on a center-based munk mesenchyme -- coupled at their interface?
+study_card:
+  goal: |
+    Model a tissue cross-section as two tissue types, each simulated by the mechanics that fits it.
+  mechanism: |
+    The epithelium (a sheet) is a vertex backend; the mesenchyme (loose cells) is a center-based munk backend. They share a domain and are coupled at their interface: the epithelium's basal edge is a reflective floor the mesenchyme presses up against but cannot cross.
+  why_before_next: |
+    A different KIND of multi-tissue composition from the consensus: not three paradigms on one cell set, but two tissues of different types meeting at a boundary -- the way real organs layer epithelium on stroma.
+  expected_result: |
+    A vertex epithelium and a munk mesenchyme coexist in one tissue, coupled at an interface the mesenchyme cannot cross -- two tissue types, two physics, one composite.
+  main_expert_question: |
+    Should the coupling be bidirectional -- the mesenchyme pushing the epithelium up (buckling it) -- rather than only the epithelium confining the mesenchyme?
+composite: viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions
+baseline:
+- name: heterotypic-regions
+  composite: viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions
+  params: &id001
+    extent: 30
+    n_epi: 6
+    n_mes: 10
+conditions:
+  baseline:
+    name: heterotypic-regions-baseline
+    composite: viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions
+    description: |
+      The epithelium (a sheet) is a vertex backend; the mesenchyme (loose cells) is a center-based munk backend. They share a domain and are coupled at their interface: the epithelium's basal edge is a reflective floor the mesenchyme presses up against but cannot cross.
+    params: *id001
+variants:
+- name: reference
+  params: *id001
+  description: the published reference configuration (single baseline run)
+readouts:
+- name: n_epithelium
+  description: vertex-simulated epithelial cells
+  store_path: n_epithelium
+  units: cells
+  status: measured
+- name: n_mesenchyme
+  description: munk-simulated mesenchymal cells
+  store_path: n_mesenchyme
+  units: cells
+  status: measured
+- name: interface_breaches
+  description: mesenchyme cells reflected off the epithelial floor per step
+  store_path: interface_breaches
+  units: count
+  status: measured
+- name: n_cells
+  description: total cells across both tissues
+  store_path: n_cells
+  units: cells
+  status: measured
+behavior_tests:
+- name: both-tissues-coexist
+  classification: primary
+  description: |
+    Both compartments persist together (>=16 cells: the vertex epithelium and the munk mesenchyme coexist in one domain).
+  measure:
+    kind: derived_scalar
+    path: atlas_cells_min
+  pass_if:
+    op: '>='
+    value: 16
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: cells
+- name: interface-holds
+  classification: primary
+  description: |
+    The interface functions as a boundary: at most a few mesenchyme cells breach it per step before being reflected, so the mesenchyme does not flood through the epithelium.
+  measure:
+    kind: derived_scalar
+    path: atlas_breaches_max
+  pass_if:
+    op: <=
+    value: 4
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: count
+conclusion_verdicts:
+  if_primary_tests_pass: |
+    A vertex epithelium and a munk mesenchyme coexist in one tissue, coupled at an interface the mesenchyme cannot cross -- two tissue types, two physics, one composite.
+  if_primary_tests_fail: |
+    A collapsing compartment or an interface the mesenchyme floods through would mean the two tissues do not couple.
+conclusion_logic:
+  if_primary_tests_pass:
+    verdict: supported
+    summary: |
+      A vertex epithelium and a munk mesenchyme coexist in one tissue, coupled at an interface the mesenchyme cannot cross -- two tissue types, two physics, one composite.
+  if_primary_tests_fail:
+    verdict: refuted
+    summary: |
+      A collapsing compartment or an interface the mesenchyme floods through would mean the two tissues do not couple.
+findings:
+- id: F1-heterotypic-regions
+  kind: computational
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: |
+    One tissue is composed of two compartments simulated by different mechanics -- a vertex epithelium on a munk mesenchyme -- coupled at a reflective interface the mesenchyme presses against but cannot cross.
+  evidence:
+    from_test: both-tissues-coexist
+    from_run: baseline
+    observed: 6 epithelial + 10 mesenchymal cells coexist; interface breaches stay <=2/step
+    expected: primary test 'both-tissues-coexist' passes
+  provenance:
+    run_ids:
+    - baseline
+visualizations:
+- name: heterotypic-regions — consensus flipbook
+  address: html:heterotypic-regions.html
+  config:
+    title: 'Heterotypic tissue regions: a vertex epithelium on a munk mesenchyme, coupled at an interface'
+runs:
+- name: baseline
+  status: completed
+  timestamp: 1795469895.680227
+  emitter:
+    kind: sqlite
+    store: workspace/studies/heterotypic-regions/runs/baseline/history.db
+  generations: 1
+  sim_minutes: 0
+  n_readouts: 4
+  computed_outcomes:
+    both-tissues-coexist:
+      result: PASS
+      measured_value: 16.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 16 >= 16.0
+      axis:
+        id: both-tissues-coexist
+        label: "Both compartments persist together (>=16 cells: the vertex epithelium and the munk mesenchyme coexist in one domain).\n"
+        verdict: within_tol
+        value: 16.0
+        meter: 0.5
+        detail:
+        expected:
+          kind: value
+          value: 16.0
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 0.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+    interface-holds:
+      result: PASS
+      measured_value: 3.0
+      evaluated_by: code
+      operator: derived_scalar/<=
+      detail: 3 <= 4.0
+      axis:
+        id: interface-holds
+        label: "The interface functions as a boundary: at most a few mesenchyme cells breach it per step before being reflected, so the mesenchyme does not flood through the epithelium.\n"
+        verdict: within_tol
+        value: 3.0
+        meter: 0.625
+        detail:
+        expected:
+          kind: value
+          value: 4.0
+          low:
+          high:
+          op: <=
+          tol: 0.05
+          statement:
+          units:
+        margin: 1.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+  outcomes:
+    both-tissues-coexist:
+      result: PASS
+    interface-holds:
+      result: PASS
+pipeline_gate:
+  gate_evaluator:
+    result: passed
+    blocked_by: []
+    evaluated_by: code
+    diverges_from_authored: false
