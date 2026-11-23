@@ -580,3 +580,341 @@ _save_viz('fateful-tissue', 'fateful-tissue_verdict_scorecard', _render_one('htm
 # | --- | --- | --- |
 # | fate-drives-division _(primary)_ | kind=derived_scalar path=atlas_divisions_final | op >= value 1 |
 # | tissue-sustains _(primary)_ | kind=derived_scalar path=atlas_cells_min | op >= value 4 |
+
+# ## Study: Smoldyn particles bounded by Cellular Potts (CPM) voxel cells: confinement, conservation across division, reaction equilibrium (`bounded-particles-cpm`)
+#
+# **Question.** Can a Smoldyn particle sim be confined inside each Cellular Potts (CPM) cell's moving boundary, split into the two daughters on division, and run A+B<->C to equilibrium inside a living tissue?
+#
+# **Claim.** A Smoldyn particle sim composed with the cpm backend keeps every cell's molecules strictly inside that cell's moving boundary (voxel-region outlines traced from the occupancy), conserves molecule count when a cell divides (each molecule inherited by exactly one daughter, by containment), and lets the reversible reaction A+B<->C reach equilibrium inside the living tissue.
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `viva_multicell_blueprint.composites.bounded_particles.bounded_particles` | `viva_multicell_blueprint.composites.bounded_particles.bounded_particles` | 20 | — |
+#
+# Declared parameter sets (`study.yaml` variants):
+#
+# - **reference** — `backend=cpm`, `seed_per_cell=60`, `divide_every=8`
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.bounded_particles.bounded_particles`**
+#
+# Smoldyn particle sims confined inside tyssue cells: each vertex cell is a moving polygon with its own reflective Smoldyn sim (A+B<->C); molecules split into daughters on division. Writes a cell-coloured overlay to reports/assets/<overlay_out>.html.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = {
+    'blueprint'    : '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/bounded_particles_patch.yaml',   # a path to a YAML file, inline YAML text, or a dict
+    'backend'      : 'vertex',   # multicellular substrate the particles are bounded by: 'cpm', 'vertex', or 'munk'
+    'seed_per_cell': 60,   # molecules (A+B) seeded per cell
+    'divide_every' : 8,   # divide one cell every N steps (0 = never)
+    'overlay_out'  : 'bounded_particles',   # overlay written to reports/assets/<overlay_out>.html
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: bounded-particles-cpm ===
+STUDY = 'bounded-particles-cpm'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# Reproduce the recorded run(s). STEPS = composite steps.
+STEPS_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = 20
+INTERVAL_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_bounded_particles_bounded_particles if 'ov_viva_multicell_blueprint_composites_bounded_particles_bounded_particles' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = materialize_composite('viva_multicell_blueprint.composites.bounded_particles.bounded_particles', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_bounded_particles_bounded_particles['state']}, core=core)
+            _comp.run(STEPS_viva_multicell_blueprint_composites_bounded_particles_bounded_particles)
+        print('ran', 'viva_multicell_blueprint.composites.bounded_particles.bounded_particles', f'(viva_multicell_blueprint.composites.bounded_particles.bounded_particles) for', STEPS_viva_multicell_blueprint_composites_bounded_particles_bounded_particles, 'steps')
+    except Exception as _e:
+        print(f"viva_multicell_blueprint.composites.bounded_particles.bounded_particles not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **particles bounded by cpm cells — flipbook**
+
+# particles bounded by cpm cells — flipbook
+_save_viz('bounded-particles-cpm', 'particles_bounded_by_cpm_cells_flipbook', _render_one('html:bounded-particles-flipbook.html', {'title': 'Smoldyn particles confined in cpm cells, split on division'}, RUNS_DB, STUDY_YAML))
+
+# **bounded-particles-cpm — verdict scorecard**
+
+# bounded-particles-cpm — verdict scorecard
+_save_viz('bounded-particles-cpm', 'bounded-particles-cpm_verdict_scorecard', _render_one('html:bounded-particles-cpm-verdict.html', {'title': 'Behaviour tests: measured value vs pass threshold (code-graded)'}, RUNS_DB, STUDY_YAML))
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | particles-stay-confined _(primary)_ | kind=derived_scalar path=atlas_confined_min | op >= value 0.9 |
+# | cells-divide-and-split _(primary)_ | kind=derived_scalar path=atlas_divisions_final | op >= value 1 |
+
+# ## Study: Smoldyn particles bounded by tyssue (vertex) polygons: confinement, conservation across division, reaction equilibrium (`bounded-particles-vertex`)
+#
+# **Question.** Can a Smoldyn particle sim be confined inside each tyssue (vertex) cell's moving boundary, split into the two daughters on division, and run A+B<->C to equilibrium inside a living tissue?
+#
+# **Claim.** A Smoldyn particle sim composed with the vertex backend keeps every cell's molecules strictly inside that cell's moving boundary (junction-tension polygons), conserves molecule count when a cell divides (each molecule inherited by exactly one daughter, by containment), and lets the reversible reaction A+B<->C reach equilibrium inside the living tissue.
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `viva_multicell_blueprint.composites.bounded_particles.bounded_particles` | `viva_multicell_blueprint.composites.bounded_particles.bounded_particles` | 20 | — |
+#
+# Declared parameter sets (`study.yaml` variants):
+#
+# - **reference** — `backend=vertex`, `seed_per_cell=60`, `divide_every=8`
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.bounded_particles.bounded_particles`**
+#
+# Smoldyn particle sims confined inside tyssue cells: each vertex cell is a moving polygon with its own reflective Smoldyn sim (A+B<->C); molecules split into daughters on division. Writes a cell-coloured overlay to reports/assets/<overlay_out>.html.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = {
+    'blueprint'    : '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/bounded_particles_patch.yaml',   # a path to a YAML file, inline YAML text, or a dict
+    'backend'      : 'vertex',   # multicellular substrate the particles are bounded by: 'cpm', 'vertex', or 'munk'
+    'seed_per_cell': 60,   # molecules (A+B) seeded per cell
+    'divide_every' : 8,   # divide one cell every N steps (0 = never)
+    'overlay_out'  : 'bounded_particles',   # overlay written to reports/assets/<overlay_out>.html
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: bounded-particles-vertex ===
+STUDY = 'bounded-particles-vertex'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# Reproduce the recorded run(s). STEPS = composite steps.
+STEPS_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = 20
+INTERVAL_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_bounded_particles_bounded_particles if 'ov_viva_multicell_blueprint_composites_bounded_particles_bounded_particles' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = materialize_composite('viva_multicell_blueprint.composites.bounded_particles.bounded_particles', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_bounded_particles_bounded_particles['state']}, core=core)
+            _comp.run(STEPS_viva_multicell_blueprint_composites_bounded_particles_bounded_particles)
+        print('ran', 'viva_multicell_blueprint.composites.bounded_particles.bounded_particles', f'(viva_multicell_blueprint.composites.bounded_particles.bounded_particles) for', STEPS_viva_multicell_blueprint_composites_bounded_particles_bounded_particles, 'steps')
+    except Exception as _e:
+        print(f"viva_multicell_blueprint.composites.bounded_particles.bounded_particles not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **particles bounded by vertex cells — flipbook**
+
+# particles bounded by vertex cells — flipbook
+_save_viz('bounded-particles-vertex', 'particles_bounded_by_vertex_cells_flipbook', _render_one('html:bounded-particles-flipbook.html', {'title': 'Smoldyn particles confined in vertex cells, split on division'}, RUNS_DB, STUDY_YAML))
+
+# **bounded-particles-vertex — verdict scorecard**
+
+# bounded-particles-vertex — verdict scorecard
+_save_viz('bounded-particles-vertex', 'bounded-particles-vertex_verdict_scorecard', _render_one('html:bounded-particles-vertex-verdict.html', {'title': 'Behaviour tests: measured value vs pass threshold (code-graded)'}, RUNS_DB, STUDY_YAML))
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | particles-stay-confined _(primary)_ | kind=derived_scalar path=atlas_confined_min | op >= value 0.9 |
+# | cells-divide-and-split _(primary)_ | kind=derived_scalar path=atlas_divisions_final | op >= value 1 |
+
+# ## Study: Smoldyn particles bounded by center-based (viva-munk) discs: confinement, conservation across division, reaction equilibrium (`bounded-particles-munk`)
+#
+# **Question.** Can a Smoldyn particle sim be confined inside each center-based (viva-munk) cell's moving boundary, split into the two daughters on division, and run A+B<->C to equilibrium inside a living tissue?
+#
+# **Claim.** A Smoldyn particle sim composed with the munk backend keeps every cell's molecules strictly inside that cell's moving boundary (pymunk discs (oblong under crowding)), conserves molecule count when a cell divides (each molecule inherited by exactly one daughter, by containment), and lets the reversible reaction A+B<->C reach equilibrium inside the living tissue.
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `viva_multicell_blueprint.composites.bounded_particles.bounded_particles` | `viva_multicell_blueprint.composites.bounded_particles.bounded_particles` | 20 | — |
+#
+# Declared parameter sets (`study.yaml` variants):
+#
+# - **reference** — `backend=munk`, `seed_per_cell=60`, `divide_every=8`
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.bounded_particles.bounded_particles`**
+#
+# Smoldyn particle sims confined inside tyssue cells: each vertex cell is a moving polygon with its own reflective Smoldyn sim (A+B<->C); molecules split into daughters on division. Writes a cell-coloured overlay to reports/assets/<overlay_out>.html.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = {
+    'blueprint'    : '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/bounded_particles_patch.yaml',   # a path to a YAML file, inline YAML text, or a dict
+    'backend'      : 'vertex',   # multicellular substrate the particles are bounded by: 'cpm', 'vertex', or 'munk'
+    'seed_per_cell': 60,   # molecules (A+B) seeded per cell
+    'divide_every' : 8,   # divide one cell every N steps (0 = never)
+    'overlay_out'  : 'bounded_particles',   # overlay written to reports/assets/<overlay_out>.html
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: bounded-particles-munk ===
+STUDY = 'bounded-particles-munk'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# Reproduce the recorded run(s). STEPS = composite steps.
+STEPS_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = 20
+INTERVAL_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_bounded_particles_bounded_particles if 'ov_viva_multicell_blueprint_composites_bounded_particles_bounded_particles' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_bounded_particles_bounded_particles = materialize_composite('viva_multicell_blueprint.composites.bounded_particles.bounded_particles', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_bounded_particles_bounded_particles['state']}, core=core)
+            _comp.run(STEPS_viva_multicell_blueprint_composites_bounded_particles_bounded_particles)
+        print('ran', 'viva_multicell_blueprint.composites.bounded_particles.bounded_particles', f'(viva_multicell_blueprint.composites.bounded_particles.bounded_particles) for', STEPS_viva_multicell_blueprint_composites_bounded_particles_bounded_particles, 'steps')
+    except Exception as _e:
+        print(f"viva_multicell_blueprint.composites.bounded_particles.bounded_particles not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **particles bounded by munk cells — flipbook**
+
+# particles bounded by munk cells — flipbook
+_save_viz('bounded-particles-munk', 'particles_bounded_by_munk_cells_flipbook', _render_one('html:bounded-particles-flipbook.html', {'title': 'Smoldyn particles confined in munk cells, split on division'}, RUNS_DB, STUDY_YAML))
+
+# **bounded-particles-munk — verdict scorecard**
+
+# bounded-particles-munk — verdict scorecard
+_save_viz('bounded-particles-munk', 'bounded-particles-munk_verdict_scorecard', _render_one('html:bounded-particles-munk-verdict.html', {'title': 'Behaviour tests: measured value vs pass threshold (code-graded)'}, RUNS_DB, STUDY_YAML))
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | particles-stay-confined _(primary)_ | kind=derived_scalar path=atlas_confined_min | op >= value 0.9 |
+# | cells-divide-and-split _(primary)_ | kind=derived_scalar path=atlas_divisions_final | op >= value 1 |
+
+# ## Study: Model-definition format: one scene, three cell types, three formalisms (ODE, Smoldyn particles, MaBoSS) sharing an extracellular field (`scene-model-mixed-formalism`)
+#
+# **Question.** Does a declarative scene plus a per-type model registry compile to ONE composite where ODE, Smoldyn-particle and MaBoSS cells run together sharing an extracellular field?
+#
+# **Claim.** A declarative scene (cells + types) bound to a per-type model registry compiles to one composite in which metabolic cells run an SBML-style ODE, signalling cells run Smoldyn particles and fate cells run a MaBoSS Boolean network, all coupled to a shared extracellular field through typed membrane transport.
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `viva_multicell_blueprint.composites.scene_model.scene_model` | `viva_multicell_blueprint.composites.scene_model.scene_model` | 12 | — |
+#
+# Declared parameter sets (`study.yaml` variants):
+#
+# - **reference** — `mechanics=vertex`
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.scene_model.scene_model`**
+#
+# A scene of cells, each bound by type to a model in its own formalism (SBML-ODE, Smoldyn particles, MaBoSS Boolean) sharing one extracellular field.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_scene_model_scene_model = {
+    'scene'      : '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/scenes/mixed_formalism_demo.yaml',   # path to a scene YAML
+    'mechanics'  : 'vertex',   # tissue mechanics backend: 'vertex', 'cpm' or 'munk'
+    'overlay_out': 'scene_model',   # reserved: overlay name under reports/assets/
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: scene-model-mixed-formalism ===
+STUDY = 'scene-model-mixed-formalism'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# Reproduce the recorded run(s). STEPS = composite steps.
+STEPS_viva_multicell_blueprint_composites_scene_model_scene_model = 12
+INTERVAL_viva_multicell_blueprint_composites_scene_model_scene_model = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_scene_model_scene_model if 'ov_viva_multicell_blueprint_composites_scene_model_scene_model' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_scene_model_scene_model = materialize_composite('viva_multicell_blueprint.composites.scene_model.scene_model', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_scene_model_scene_model['state']}, core=core)
+            _comp.run(STEPS_viva_multicell_blueprint_composites_scene_model_scene_model)
+        print('ran', 'viva_multicell_blueprint.composites.scene_model.scene_model', f'(viva_multicell_blueprint.composites.scene_model.scene_model) for', STEPS_viva_multicell_blueprint_composites_scene_model_scene_model, 'steps')
+    except Exception as _e:
+        print(f"viva_multicell_blueprint.composites.scene_model.scene_model not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **mixed-formalism scene — flipbook**
+
+# mixed-formalism scene — flipbook
+_save_viz('scene-model-mixed-formalism', 'mixed-formalism_scene_flipbook', _render_one('html:scene-model-flipbook.html', {'title': 'ODE / Smoldyn / MaBoSS cells over a shared field'}, RUNS_DB, STUDY_YAML))
+
+# **scene-model-mixed-formalism — verdict scorecard**
+
+# scene-model-mixed-formalism — verdict scorecard
+_save_viz('scene-model-mixed-formalism', 'scene-model-mixed-formalism_verdict_scorecard', _render_one('html:scene-model-mixed-formalism-verdict.html', {'title': 'Behaviour tests: measured value vs pass threshold (code-graded)'}, RUNS_DB, STUDY_YAML))
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | scene-compiles-to-five-cells _(primary)_ | kind=derived_scalar path=atlas_cells_min | op >= value 5 |
+# | mixed-formalism-produces-state _(primary)_ | kind=derived_scalar path=atlas_total_molecules_final | op > value 0 |

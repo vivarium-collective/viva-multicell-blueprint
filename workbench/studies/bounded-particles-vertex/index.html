@@ -27,7 +27,10 @@
     
   </h1>
   </div>
-  
+  <p id="study-question-headline" class="study-question-headline" title="Can a Smoldyn particle sim be confined inside each tyssue (vertex) cell&#39;s moving boundary, split into the two daughters on division, and run A+B&lt;-&gt;C to equilibrium inside a living tissue?
+" data-edit-kind="study" data-edit-field="question" data-edit-value="Can a Smoldyn particle sim be confined inside each tyssue (vertex) cell&#39;s moving boundary, split into the two daughters on division, and run A+B&lt;-&gt;C to equilibrium inside a living tissue?
+" data-edit-multiline data-edit-label="Question"><span class="q-glyph">Q</span> <span class="study-question-headline-text">Can a Smoldyn particle sim be confined inside each tyssue (vertex) cell&#39;s moving boundary, split into the two daughters on division, and run A+B&lt;-&gt;C to equilibrium inside a living tissue?
+</span></p>
   </div>
   <span class="study-header-actions" style="display:inline-flex; gap:10px; flex-shrink:0; align-items:center;">
     
@@ -35,7 +38,7 @@
     
     
     
-    <span id="study-nav" class="study-nav" data-investigation="particle-multicell-composition" style="display:none">
+    <span id="study-nav" class="study-nav" data-investigation="composition-atlas" style="display:none">
       <button type="button" id="study-prev" class="btn-mini study-nav-btn" title="Previous study" aria-label="Previous study">←</button>
       <span class="study-jump-wrap" style="position:relative;display:inline-flex">
         <button type="button" id="study-jump-btn" class="btn-mini study-nav-btn" aria-haspopup="true" aria-expanded="false" title="Jump to any study in this investigation">⇄ Studies</button>
@@ -79,7 +82,7 @@
   </button>
   <button class="study-pillar" data-kind="conclusions" onclick="_setStudyTab('conclusions')">
     <svg class="pillar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M6 8.2v7.6"/><path d="M6 12h6a4 4 0 0 0 4-4V11"/></svg>
-    <span class="pillar-label">Conclusions</span>
+    <span class="pillar-label">Decide</span>
   </button>
   
   <span class="study-dl study-export-wrap" style="margin-left:auto; align-self:center; position:relative; display:inline-flex">
@@ -91,7 +94,7 @@
       <button type="button" id="study-report-dl" role="menuitem" class="btn-mini study-export-item" onclick="window._vivStudyReportDownload(event, 'bounded-particles-vertex')">Download HTML</button>
       <div class="study-export-sec">Notebook</div>
       <button type="button" id="study-nb-open" role="menuitem" class="btn-mini study-export-item" onclick="window._vivStudyNotebookOpen(event, 'bounded-particles-vertex')">Open in browser</button>
-      <button type="button" id="study-dl-notebook" role="menuitem" class="btn-mini study-export-item" onclick="window._vivStudyNotebookFromCard(event, 'bounded-particles-vertex', 'particle-multicell-composition')">Download .ipynb</button>
+      <button type="button" id="study-dl-notebook" role="menuitem" class="btn-mini study-export-item" onclick="window._vivStudyNotebookFromCard(event, 'bounded-particles-vertex', 'composition-atlas')">Download .ipynb</button>
       <div class="study-export-sec">Figures</div>
       <button type="button" id="study-fig-open" role="menuitem" class="btn-mini study-export-item" onclick="window._vivStudyFiguresOpen(event, 'bounded-particles-vertex')">Open in browser</button>
       <button type="button" id="study-dl-figures" role="menuitem" class="btn-mini study-export-item" onclick="window._vivStudyFiguresFromCard(event, 'bounded-particles-vertex')">Download (zip)</button>
@@ -574,6 +577,16 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
     </div>
 
     
+    <div class="ctr-block">
+      <h2 class="overview-label ctr-h">Background</h2>
+      <div class="ctr-meta">
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Question</span> <span class="ctr-meta-item" data-edit-kind="study" data-edit-field="question" data-edit-value="Can a Smoldyn particle sim be confined inside each tyssue (vertex) cell&#39;s moving boundary, split into the two daughters on division, and run A+B&lt;-&gt;C to equilibrium inside a living tissue?
+" data-edit-multiline data-edit-label="Question">Can a Smoldyn particle sim be confined inside each tyssue (vertex) cell&#39;s moving boundary, split into the two daughters on division, and run A+B&lt;-&gt;C to equilibrium inside a living tissue?
+</span></div>
+        
+      </div>
+    </div>
+    
 
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Model &amp; approach</h2>
@@ -581,6 +594,8 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
 </p>
       <div class="ctr-meta">
         <div class="ctr-meta-row"><span class="ctr-meta-k">Model</span> <code>bounded-particles-vertex</code><a class="ov-tablink" href="#" onclick="_setStudyTab('compose');return false;">model →</a></div>
+        
+        <div class="ctr-meta-row"><span class="ctr-meta-k">Measures</span> <span class="ctr-meta-item">2 behavior tests</span><a class="ov-tablink" href="#" onclick="_setStudyTab('audit');return false;">see Tests →</a></div>
         
       </div>
     </div>
@@ -593,19 +608,98 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
     <div class="ctr-block">
       <h2 class="overview-label ctr-h">Result</h2>
       
-      <p class="ctr-text" data-edit-kind="study" data-edit-field="result" data-edit-value="" data-edit-multiline data-edit-label="Result"></p>
+      <p class="ctr-text" data-edit-kind="study" data-edit-field="result" data-edit-value="" data-edit-multiline data-edit-label="Result">A Smoldyn particle sim is confined inside each tyssue (vertex) cell&#39;s moving boundary and its molecules are split into the two daughters on division, giving reaction-diffusion chemistry inside a living tissue.
+</p>
+      
+      
+      <div class="ov-metrics">
+        
+        <div class="ov-metric ov-metric-pass">
+          <div class="ov-metric-v">PASS</div>
+          <div class="ov-metric-k">particles-stay-confined</div>
+        </div>
+        
+        <div class="ov-metric ov-metric-pass">
+          <div class="ov-metric-v">PASS</div>
+          <div class="ov-metric-k">cells-divide-and-split</div>
+        </div>
+        
+      </div>
+      
+      
+      
+      
+    <div class="overview-section findings-section">
+      <h2 class="overview-label">🔬 Findings — what this study taught us</h2>
       
       
       
       
       
+      
+      
+      
+      <div class="finding-card finding-kind-computational finding-status-confirms" id="finding-F1-bounded-particles-vertex">
+        <details class="finding-details">
+          <summary class="finding-row">
+            <span class="finding-status-glyph">✓</span>
+            <span class="finding-claim finding-statement" data-edit-kind="study" data-edit-field="findings[F1-bounded-particles-vertex].statement" data-edit-value="A Smoldyn particle sim is confined inside each tyssue (vertex) cell&#39;s moving boundary and its molecules are split into the two daughters on division, giving reaction-diffusion chemistry inside a living tissue.
+" data-edit-multiline data-edit-label="Finding F1-bounded-particles-vertex">A Smoldyn particle sim is confined inside each tyssue (vertex) cell&#39;s moving boundary and its molecules are split into the two daughters on division, giving reaction-diffusion chemistry inside a living tissue.
+</span>
+            
+            <span class="finding-chip">via <code>particles-stay-confined</code></span>
+            
+          </summary>
+          <div class="finding-drawer">
+            <div class="finding-header">
+              <span class="finding-id">F1-bounded-particles-vertex</span>
+              <span class="finding-kind">computational</span>
+              <span class="finding-status-text">confirms literature</span>
+            </div>
+            
+            
+            <div class="finding-evidence">
+              <strong>observed:</strong> confined fraction stays at 1.0; molecules split across divisions · 
+              
+              via test <a href="#bt-particles-stay-confined" onclick="_gotoStudyTab('audit','bt-particles-stay-confined');return false;"><code>particles-stay-confined</code></a> · 
+              in run <a href="#run-baseline"><code>baseline</code></a>
+              
+              
+            </div>
+            
+            
+            
+            
+            <div class="finding-traceability" style="font-size:0.84em;color:#475569;padding:4px 10px;margin:4px 0">
+              
+              
+              runs: <a href="#run-baseline"><code>baseline</code></a>
+              
+            </div>
+            
+            
+            
+            <div class="pass_if-band muted small" style="font-size:0.82em;padding:2px 10px">judged against <code>pass_if: ≥ 0.9</code></div>
+            
+            
+            
+            
+            
+            
+          </div>
+        </details>
+      </div>
+      
+      
+    </div>
+    
       
       
       
       <div class="ctr-meta ctr-assess">
         
         <div class="ctr-meta-row"><span class="ctr-meta-k">Confidence</span>
-          <span class="ctr-badge ctr-badge-investigating">Investigating</span>
+          <span class="ctr-badge ctr-badge-accepted">Accepted</span>
           
           
         </div>
@@ -634,6 +728,50 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
 
     
     
+    
+    
+    <div class="figure-card embed-viz-card">
+      <iframe src="/viva-multicell-blueprint/workbench/workspace/studies/bounded-particles-vertex/viz/bounded-particles-flipbook.html"
+              class="figure-media-frame figure-media-frame--embed"
+              loading="lazy" title="bounded-particles-flipbook (auto)"
+              onload="window.__fitFigureFrame&&window.__fitFigureFrame(this)"
+              ></iframe>
+      
+      <p class="figure-desc muted">Auto-discovered Plotly viz (1742 KB) rendered by render_visualizations against the study&#39;s runs.db history.</p>
+      
+      <div class="figure-caption-row">
+        <span class="figure-source-chip">embed</span>
+        <span class="figure-title">bounded-particles-flipbook (auto)</span>
+        
+        <a href="#" class="figure-run-link" data-run-id="baseline">from run baseline ↗</a>
+        
+        <a href="/viva-multicell-blueprint/workbench/workspace/studies/bounded-particles-vertex/viz/bounded-particles-flipbook.html" target="_blank" class="figure-open-link">Open in new tab ↗</a>
+      </div>
+    </div>
+    
+    
+    
+    <div class="figure-card embed-viz-card">
+      <iframe src="/viva-multicell-blueprint/workbench/workspace/studies/bounded-particles-vertex/viz/bounded-particles-vertex-verdict.html"
+              class="figure-media-frame figure-media-frame--embed"
+              loading="lazy" title="bounded-particles-vertex-verdict (auto)"
+              onload="window.__fitFigureFrame&&window.__fitFigureFrame(this)"
+              ></iframe>
+      
+      <p class="figure-desc muted">Auto-discovered Plotly viz (38 KB) rendered by render_visualizations against the study&#39;s runs.db history.</p>
+      
+      <div class="figure-caption-row">
+        <span class="figure-source-chip">embed</span>
+        <span class="figure-title">bounded-particles-vertex-verdict (auto)</span>
+        
+        <a href="#" class="figure-run-link" data-run-id="baseline">from run baseline ↗</a>
+        
+        <a href="/viva-multicell-blueprint/workbench/workspace/studies/bounded-particles-vertex/viz/bounded-particles-vertex-verdict.html" target="_blank" class="figure-open-link">Open in new tab ↗</a>
+      </div>
+    </div>
+    
+    
+    
 
     <div id="viz-charts-panel" class="charts-panel figure-mount"></div>
 
@@ -650,7 +788,7 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
   <div class="model-subtabs" role="tablist" aria-label="Model sections">
     <button type="button" class="model-subtab active" data-modelsub="composition" role="tab" aria-selected="true" onclick="_setModelSubtab('composition')">Composition</button>
     <button type="button" class="model-subtab" data-modelsub="loom" role="tab" aria-selected="false" onclick="_setModelSubtab('loom')">Loom</button>
-    <button type="button" class="model-subtab" data-modelsub="variants" role="tab" aria-selected="false" onclick="_setModelSubtab('variants')">Variants</button>
+    <button type="button" class="model-subtab" data-modelsub="variants" role="tab" aria-selected="false" onclick="_setModelSubtab('variants')">Variants <span class="model-subtab-count">1</span></button>
     <button type="button" class="model-subtab" data-modelsub="interventions" role="tab" aria-selected="false" onclick="_setModelSubtab('interventions')">Interventions</button>
     <button type="button" class="model-subtab" data-modelsub="readouts" role="tab" aria-selected="false" onclick="_setModelSubtab('readouts')">Readouts</button>
   </div>
@@ -711,10 +849,42 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
       
       
       
+      
+      
+      
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+      
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+        
+        <span class="cond-pill"><span class="cond-pill-k">seed_per_cell</span>=<code>60</code></span>
+        
+        <span class="cond-pill"><span class="cond-pill-k">divide_every</span>=<code>8</code></span>
+        
+        
+      </div>
+      
+      
+      
       <div class="model-config-mount" style="margin-top:8px">
         <div class="viv-loading"><span class="viv-loading-spin" aria-hidden="true"></span><span>Loading configuration…</span></div></div>
       
       
+      
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;font-size:0.8em">
+        
+        <span class="cond-pill"><span class="cond-pill-k">steps</span>=20</span>
+        
+        <span class="cond-pill"><span class="cond-pill-k">status</span>=completed</span>
+      </div>
       
     </div>
     
@@ -739,7 +909,26 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
   <div class="overview-section" id="study-variants-section">
     <p class="msub-intro">A <strong>variant</strong> is a copy of a baseline model with a few parameters changed, run and compared against the baseline. Everything else stays fixed.</p>
     
-    <div class="msub-empty">No variants yet. Add one below to perturb the baseline and compare against it.</div>
+    <div class="var-list">
+      
+      <div class="var-card">
+        <div class="var-card-main">
+          <div class="var-card-head">
+            <code class="var-name">reference</code>
+            <span class="var-base">based on the baseline</span>
+          </div>
+          
+          <div class="var-overrides">
+            <span class="ovr-chip"><span class="ovr-k">backend</span><span class="ovr-eq">=</span><span class="ovr-v">vertex</span></span><span class="ovr-chip"><span class="ovr-k">seed_per_cell</span><span class="ovr-eq">=</span><span class="ovr-v">60</span></span><span class="ovr-chip"><span class="ovr-k">divide_every</span><span class="ovr-eq">=</span><span class="ovr-v">8</span></span>
+          </div>
+        </div>
+        <div class="var-card-actions">
+          <button type="button" class="action-btn study-variant-run" data-variant="reference" title="Run this variant">▶ Run</button>
+          <button type="button" class="icon-btn study-variant-del" data-variant="reference" title="Delete variant" aria-label="Delete variant reference">✕</button>
+        </div>
+      </div>
+      
+    </div>
     
     
     <form class="study-variant-add-form msub-addcard" onsubmit="return _submitStudyVariantAdd(this)">
@@ -955,11 +1144,104 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
   
   
   
-  <ul class="tests-list" id="tests-list" style="margin-top: 12px;">
-    <li class="placeholder">No <code>expected_behavior:</code> entries declared in study.yaml yet.
-      Add some to see them appear here as test rows. Click "Run tests" to discover and
-      execute additional <code>studies/&lt;slug&gt;/tests/test_*.py</code> files alongside
-      the auto-generated assertions.</li>
+  <ul class="expected-behavior-list" id="tests-list" style="list-style:none; padding-left:0; margin-top: 12px;">
+    
+    
+    
+    
+    
+    
+    
+    
+    <li class="expected-behavior-item" id="bt-particles-stay-confined"
+        data-test-kind="behavioral"
+        
+        data-pytest-node="particles-stay-confined"
+        data-classification="primary"
+        data-result="PASS"
+        style="margin: 0 0 10px 0; padding: 10px 12px; border-left: 4px solid #10b981; background: #f8fafc; border-radius: 4px;">
+      
+        
+      <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+        <span class="bt-result" style="font-size: 0.75em; font-family: monospace; padding: 2px 8px; border-radius: 9999px; background: #d1fae5; color: #065f46">✓ PASS</span>
+        <span class="classification-pill classification-primary">primary</span>
+        <strong style="font-size: 0.9em;">particles-stay-confined</strong>
+        
+        <span class="muted" style="font-size:0.78em">requires: <code>true</code></span>
+        
+      </div>
+      <div style="margin-top: 6px; font-size: 0.95em;">Every step, at least 90% of particles lie inside their own cell&#39;s boundary (confinement holds across cell motion and division).
+</div>
+      
+      <div style="margin-top:6px;font-size:0.85em;padding:6px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:3px">
+        <strong>Latest result:</strong>
+        
+        
+          
+        
+      </div>
+      
+      
+      <details style="margin-top: 6px; font-size: 0.82em;">
+        <summary class="muted" style="cursor: pointer;">Assertion</summary>
+        
+        <pre style="background:#fff; padding:8px; margin:4px 0 0 0; border:1px solid #e2e8f0; border-radius:3px; overflow-x:auto;">measure: {"kind": "derived_scalar", "path": "atlas_confined_min"}
+pass_if: {"op": "\u003e=", "value": 0.9}</pre>
+      </details>
+      
+      
+      
+      
+    </li>
+    
+    
+    
+    
+    
+    
+    
+    
+    <li class="expected-behavior-item" id="bt-cells-divide-and-split"
+        data-test-kind="behavioral"
+        
+        data-pytest-node="cells-divide-and-split"
+        data-classification="primary"
+        data-result="PASS"
+        style="margin: 0 0 10px 0; padding: 10px 12px; border-left: 4px solid #10b981; background: #f8fafc; border-radius: 4px;">
+      
+        
+      <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+        <span class="bt-result" style="font-size: 0.75em; font-family: monospace; padding: 2px 8px; border-radius: 9999px; background: #d1fae5; color: #065f46">✓ PASS</span>
+        <span class="classification-pill classification-primary">primary</span>
+        <strong style="font-size: 0.9em;">cells-divide-and-split</strong>
+        
+        <span class="muted" style="font-size:0.78em">requires: <code>true</code></span>
+        
+      </div>
+      <div style="margin-top: 6px; font-size: 0.95em;">At least one division occurs, splitting the mother&#39;s confined molecules into the two daughter polygons.
+</div>
+      
+      <div style="margin-top:6px;font-size:0.85em;padding:6px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:3px">
+        <strong>Latest result:</strong>
+        
+        
+          
+        
+      </div>
+      
+      
+      <details style="margin-top: 6px; font-size: 0.82em;">
+        <summary class="muted" style="cursor: pointer;">Assertion</summary>
+        
+        <pre style="background:#fff; padding:8px; margin:4px 0 0 0; border:1px solid #e2e8f0; border-radius:3px; overflow-x:auto;">measure: {"kind": "derived_scalar", "path": "atlas_divisions_final"}
+pass_if: {"op": "\u003e=", "value": 1}</pre>
+      </details>
+      
+      
+      
+      
+    </li>
+    
   </ul>
   
   </div>
@@ -1002,25 +1284,25 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
         <span class="gate-current-tag">you are here</span>
       </span>
       
-      <span class="status-step  gate-status-not-assessed">
+      <span class="status-step set gate-status-passed">
         <span class="dot"></span>2 · Execution
-        <span class="step-val">not_run</span>
+        <span class="step-val">ran</span>
         
       </span>
       
-      <span class="status-step  gate-status-not-assessed">
+      <span class="status-step set gate-status-passed">
         <span class="dot"></span>3 · Evidence
-        <span class="step-val">not_evaluated</span>
+        <span class="step-val">evaluated</span>
         
       </span>
       
-      <span class="status-step  gate-status-not-assessed">
+      <span class="status-step set gate-status-passed">
         <span class="dot"></span>4 · Quality
-        <span class="step-val">not_evaluated</span>
+        <span class="step-val">evaluated</span>
         
       </span>
       
-      <span class="status-step  gate-status-not-assessed">
+      <span class="status-step set gate-status-passed">
         <span class="dot"></span>5 · Decision
         <span class="step-val">pending</span>
         
@@ -1115,19 +1397,67 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
         evaluator's result from the behavior-test outcomes — the evaluation the
         conclusion rests on.</p>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="gate-status-not_started" style="padding:2px 12px;border-radius:9999px;font-weight:700;font-size:0.85em">not_started</span>
+        <span class="gate-status-passed" style="padding:2px 12px;border-radius:9999px;font-weight:700;font-size:0.85em">passed</span>
         <span class="muted small">evaluated by code</span>
-        <span class="muted small">0/0 passed</span>
+        <span class="muted small">2/2 passed</span>
       </div>
       
     </div>
     
 
     
+    
+    
+    
+    <div class="decide-section" style="margin-top:18px">
+      <h3 class="overview-label">Conclusion logic — gate decision</h3>
+      
+      <div style="padding:10px 14px;background:#f0fdf4;border-left:4px solid #10b981;border-radius:4px;margin-bottom:8px">
+        <strong>✓ If primary tests pass:</strong>
+        
+        
+        
+      </div>
+      
+      
+      <div style="padding:10px 14px;background:#fef2f2;border-left:4px solid #dc2626;border-radius:4px">
+        <strong>✗ If primary tests fail:</strong>
+        
+        
+      </div>
+      
+    </div>
+    
+
+    
+    
+    
 
   </div>
 
   
+  
+  <div class="overview-section"><h2 class="overview-label">Plan &amp; assumptions</h2>
+
+    
+    <div class="overview-section">
+      <h3 class="overview-label">Pipeline gate</h3>
+      <p class="muted" style="margin: 0 0 8px 0;font-size:0.88em">
+        Each study is a model-building gate: it answers <em>"Can we safely build the next layer?"</em>
+      </p>
+      
+      <div style="margin-bottom:6px"><strong>Prerequisites:</strong> <em class="muted">none (root study)</em></div>
+      
+      
+      
+    </div>
+    
+
+    
+
+    
+
+  </div>
   
 
   
@@ -1135,22 +1465,29 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
 
     
     
-    <p class="muted" style="margin:0 0 10px 0;font-size:0.85em">
-      Synthesised read-only from canonical fields — edit <code>findings</code>,
-      <code>limitations</code>, and <code>discovery_implications</code> to change
-      this (and the generated report) together.
-    </p>
-    <div class="conclusions-grid conclusions-synthesis">
-      <div class="conclusion-field">
-        <h3>Claims <span class="muted small">(from findings)</span></h3>
-        <p class="muted">No findings recorded yet.</p>
+    
+    
+    <div class="decide-section">
+      <h3 class="overview-label">Latest run outcomes</h3>
+      <div style="font-size:0.88em;color:#64748b;margin-bottom:8px">
+        baseline · seed ? ·
+        ?s simulated ·
+        ? history rows ·
+        started 1795464605.105336
       </div>
-      <div class="conclusion-field">
-        <h3>Evidence <span class="muted small">(from findings)</span></h3>
-        
-        <p class="muted">No evidence recorded on findings yet.</p>
-      </div>
+      
+      
+      
+      <p class="muted" style="margin:0;font-size:0.9em">
+        <strong>2</strong> test outcomes
+        — <span style="color:#065f46;font-weight:600">2 PASS</span> ·
+        <span style="color:#991b1b;font-weight:600">0 FAIL</span>.
+        Per-test outcomes (measured value · evaluator · band) are canonical on the
+        <a onclick="_setStudyTab('audit')" style="cursor:pointer;color:#3b82f6;text-decoration:underline">Tests (in Audit) →</a>.
+      </p>
+      
     </div>
+    
     
 
   </div>
@@ -1158,6 +1495,16 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
   
   <div class="overview-section" id="study-findings-authoring">
     <h2 class="overview-label">Record a finding</h2>
+    
+    <ul class="synthesis-list" style="margin:0 0 12px">
+      
+      <li style="display:flex;align-items:flex-start;gap:8px">
+        <button type="button" class="action-btn study-finding-del" data-id="F1-bounded-particles-vertex" title="Delete finding" style="font-size:0.72em;line-height:1;padding:2px 6px">✕</button>
+        <span>A Smoldyn particle sim is confined inside each tyssue (vertex) cell&#39;s moving boundary and its molecules are split into the two daughters on division, giving reaction-diffusion chemistry inside a living tissue.
+ <span class="muted small">(confirms)</span></span>
+      </li>
+      
+    </ul>
     
     <form class="study-finding-add-form" onsubmit="return _submitStudyFindingAdd(this)" style="display:flex;flex-direction:column;gap:8px;max-width:680px">
       <textarea name="statement" required rows="2" placeholder="What did this study show? (one sentence)"
@@ -1188,36 +1535,25 @@ h1.study-title .study-name>.ie-pencil{right:4px;top:6px}
     
 
     
+    
+    
+    
 
   </div>
 
   
   
-  <details class="overview-section"><summary class="overview-label">Limitations &amp; provenance</summary>
-
-    
-    
-    
-    <div class="conclusions-grid conclusions-synthesis">
-      <div class="conclusion-field">
-        <h3>Next steps <span class="muted small">(from discovery implications)</span></h3>
-        <p class="muted">No follow-up proposals recorded yet.</p>
-      </div>
-    </div>
-
-  </details>
-  
 
 </section>
 
 </main>
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main/workspace", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "96340b90621fc56698ce1f6249451c61f72daae9", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/96340b90621fc56698ce1f6249451c61f72daae9", "branch": "main", "lockfile": "uv.lock@6cb93b538332", "generated_at": "2026-11-23 19:01 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main/workspace", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "720f465225432244f0da05fd222f0f201e1f1ca7", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/720f465225432244f0da05fd222f0f201e1f1ca7", "branch": "main", "lockfile": "uv.lock@6cb93b538332", "generated_at": "2026-11-23 20:46 UTC"} };</script>
 <script src="/viva-multicell-blueprint/workbench/assets/data-source.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/backend-features.js"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/toast.js"></script>
 <script>
 window._studyName = "bounded-particles-vertex";
-window.__STUDY_INVESTIGATION__ = "particle-multicell-composition";  // owning investigation (feedback save routing)
+window.__STUDY_INVESTIGATION__ = "composition-atlas";  // owning investigation (feedback save routing)
 window._study = null;  // populated by _bootstrapStudy() in study-detail.js
 
 // Save handler for the Conditions → Model settings editable rows.
