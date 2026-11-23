@@ -273,22 +273,54 @@ class TriCoupledProcess(Process):
             vals.append(max(math.hypot(a[0]-b[0], a[1]-b[1]) for a in ps for b in ps))
         return float(np.mean(vals))
 
-    # ---- overlay viz (all three paradigms per cell) --------------------------
+    # ---- overlay viz: 3 type-coloured panels + a coupling overlay ------------
+    def _type_colors(self):
+        """Canonical cell-type -> colour map, EXACTLY as the stand-alone sim videos
+        build it: sorted type names, state_color(name, index) (Okabe-Ito)."""
+        from ..viz._common import state_color
+        tset = set()
+        for g in self._frames:
+            for b in ("vertex", "munk"):
+                tset |= {t for t in (g.get(b, {}).get("types", {}) or {}).values() if t}
+        types_sorted = sorted(tset)
+        return types_sorted, {t: state_color(t, i) for i, t in enumerate(types_sorted)}
+
+    @staticmethod
+    def _bid_type(g):
+        d = dict(g.get("vertex", {}).get("types", {}) or {})
+        for k, v in (g.get("munk", {}).get("types", {}) or {}).items():
+            d.setdefault(str(k), v)
+        return {str(k): v for k, v in d.items()}
+
     def _write_overlay(self):
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from matplotlib.patches import Polygon as MplPoly
+        from matplotlib.gridspec import GridSpec
         from matplotlib.colors import to_rgb
-        # render each frame's PNG exactly once (cached) — writing the overlay every
-        # step must stay O(n) total, not re-render all frames each call (O(n²)).
+        _, colors = self._type_colors()
+
+        def col(bt, bid):
+            return colors.get(bt.get(str(bid)), "#999999")
+
+        # render each frame once (cached) — writing every step stays O(n) total.
         cache = getattr(self, "_frame_imgs", None)
         if cache is None:
             cache = self._frame_imgs = []
         for g in self._frames[len(cache):]:
-            fig, ax = plt.subplots(figsize=(5.4, 5.4), dpi=150)
-            ax.set_xlim(0, self.W); ax.set_ylim(0, self.H); ax.set_aspect("equal")
-            ax.set_xticks([]); ax.set_yticks([])
+            bt = self._bid_type(g)
+            fig = plt.figure(figsize=(9.6, 6.4), dpi=128)
+            gs = GridSpec(2, 3, height_ratios=[1.0, 1.25], hspace=0.26, wspace=0.10)
+            axc, axv, axm = (fig.add_subplot(gs[0, k]) for k in range(3))
+            axo = fig.add_subplot(gs[1, 1])
+            for ax in (axc, axv, axm, axo):
+                ax.set_xlim(0, self.W); ax.set_ylim(0, self.H)
+                ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([])
+            for ax, ttl in ((axc, "CPM · voxel"), (axv, "Vertex · polygon"),
+                            (axm, "Center-based · disc"), (axo, "Coupled overlay")):
+                ax.set_title(ttl, fontsize=9.5, color="#333")
+            # CPM: type raster (voxels coloured by the cell's TYPE), on its panel + overlay
             lab = np.asarray(g.get("_cpm_labels", []), int)
             if lab.size >= self.nx * self.ny:
                 grid = lab[: self.nx * self.ny].reshape(self.ny, self.nx)
@@ -296,36 +328,43 @@ class TriCoupledProcess(Process):
                 for cpmid in np.unique(grid):
                     if cpmid == 0:
                         continue
-                    rgb[grid == cpmid] = to_rgb(_CPM_PAL[int(cpmid) % len(_CPM_PAL)])
-                ax.imshow(rgb, origin="lower", extent=[0, self.W, 0, self.H],
-                          interpolation="nearest", zorder=0)
-            for _, fp in (g.get("vertex", {}).get("footprints", {}) or {}).items():
+                    rgb[grid == cpmid] = to_rgb(col(bt, self._cpm_to_bid.get(int(cpmid))))
+                for ax in (axc, axo):
+                    ax.imshow(rgb, origin="lower", extent=[0, self.W, 0, self.H],
+                              interpolation="nearest", zorder=0)
+            # Vertex: type-filled polygons on its panel; dark outline on the overlay
+            for bid, fp in (g.get("vertex", {}).get("footprints", {}) or {}).items():
                 xy = fp.get("xy") if isinstance(fp, dict) else None
                 if xy and len(xy) >= 3:
-                    ax.add_patch(MplPoly(np.array(xy, float), closed=True, fill=False,
-                                         edgecolor="#111111", lw=1.7, zorder=3))
-            for _, fp in (g.get("munk", {}).get("footprints", {}) or {}).items():
+                    poly = np.array(xy, float)
+                    axv.add_patch(MplPoly(poly, closed=True, facecolor=(*to_rgb(col(bt, bid)), 0.9),
+                                          edgecolor="#28282899", lw=0.5, zorder=1))
+                    axo.add_patch(MplPoly(poly, closed=True, fill=False, edgecolor="#111111",
+                                          lw=1.3, zorder=3))
+            # Center-based: type-filled discs on its panel; dashed ring on the overlay
+            for bid, fp in (g.get("munk", {}).get("footprints", {}) or {}).items():
                 xy = fp.get("xy") if isinstance(fp, dict) else None
                 if xy and len(xy) >= 3:
-                    ax.add_patch(MplPoly(np.array(xy, float), closed=True, fill=False,
-                                         edgecolor="#7b2d8e", lw=1.4, zorder=3))
-            raw = io.BytesIO(); fig.savefig(raw, format="png", bbox_inches="tight", dpi=150)
+                    poly = np.array(xy, float)
+                    axm.add_patch(MplPoly(poly, closed=True, facecolor=(*to_rgb(col(bt, bid)), 0.9),
+                                          edgecolor="#28282899", lw=0.5, zorder=1))
+                    axo.add_patch(MplPoly(poly, closed=True, fill=False, edgecolor="#7b2d8e",
+                                          lw=1.0, ls=(0, (2, 1)), zorder=4))
+            raw = io.BytesIO(); fig.savefig(raw, format="png", bbox_inches="tight", dpi=128)
             plt.close(fig)
             cache.append("data:image/png;base64," + base64.b64encode(raw.getvalue()).decode())
-            # also keep a downsized RGB frame for the shareable GIF.
             from PIL import Image
             raw.seek(0)
             im = Image.open(raw).convert("RGB")
             w, h = im.size
-            if w > 480:
-                im = im.resize((480, int(h * 480 / w)), Image.LANCZOS)
+            if w > 640:
+                im = im.resize((640, int(h * 640 / w)), Image.LANCZOS)
             gcache = getattr(self, "_gif_frames", None)
             if gcache is None:
                 gcache = self._gif_frames = []
             gcache.append(im)
         imgs = cache
         frames_js = ",".join(json.dumps(u) for u in imgs)
-        # assemble the embedded, self-contained GIF (renders inline in Slack/email).
         gif_uri = ""
         gf = getattr(self, "_gif_frames", [])
         if gf:
@@ -333,17 +372,20 @@ class TriCoupledProcess(Process):
             gf[0].save(gbuf, format="GIF", save_all=True, append_images=gf[1:],
                        duration=200, loop=0, optimize=True)
             gif_uri = "data:image/gif;base64," + base64.b64encode(gbuf.getvalue()).decode()
+        # cell-type legend (same palette the stand-alone sims use)
+        types_sorted, colors2 = self._type_colors()
+        legend = "".join(
+            f'<span class="k"><span class="d" style="background:{colors2[t]}"></span>{t}</span>'
+            for t in types_sorted)
         self._out.parent.mkdir(parents=True, exist_ok=True)
         self._out.write_text(f"""<!doctype html><html><head><meta charset="utf-8"><title>Tri-coupled</title>
 <style>body{{font-family:-apple-system,sans-serif;margin:16px;background:#fff;color:#1b1b1f}}
-#img{{width:640px;height:auto;border:1px solid #ddd;border-radius:6px}}
+#img{{width:min(860px,100%);height:auto;border:1px solid #ddd;border-radius:6px}}
 .k{{display:inline-block;margin-right:14px;font-size:13px}}.d{{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:middle;margin-right:4px}}
 button{{padding:5px 14px;border:1px solid #ccc;border-radius:6px;background:#f6f6f8;cursor:pointer}}</style></head>
 <body><h2>Tri-coupled composite</h2>
-<p>One cell, three paradigms, shared id — a consensus system. <b>Vertex owns shape</b> (black): the CPM rasterizes it, so the <b>CPM (filled)</b> takes the vertex shape. <b>Munk owns position</b>: all three centroids converge to a munk-weighted consensus and the CPM is placed there. <b>CPM owns area</b>: it sizes the <b>center-based disc (purple)</b> + vertex area.</p>
-<p><span class="k"><span class="d" style="background:#2b6cb0"></span>CPM</span>
-<span class="k"><span class="d" style="background:#111"></span>Vertex</span>
-<span class="k"><span class="d" style="background:#7b2d8e"></span>Center-based</span></p>
+<p>The same cells rendered by all three mechanics paradigms, coloured by <b>cell type</b> (same palette as the stand-alone sims). <b>Vertex owns shape</b>, <b>munk owns position</b> (three-way consensus), <b>CPM owns area</b>. The <b>Coupled overlay</b> shows one set of cells with all three on top of each other: CPM fill, vertex outline, center-based ring.</p>
+<p><b>Cell types:</b> {legend}</p>
 <img id="img"><div style="margin-top:8px"><button id="play">Play</button>
 <input id="sl" type="range" min="0" max="{len(imgs)-1}" value="0" style="width:420px;vertical-align:middle">
 <a id="gif" href="{gif_uri}" download="tri-coupled.gif" style="margin-left:14px;padding:5px 14px;border:1px solid #ccc;border-radius:6px;background:#f6f6f8;text-decoration:none;color:inherit;font-size:14px">⬇ Download GIF</a></div>
