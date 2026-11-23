@@ -1,0 +1,36 @@
+schema_version: 4
+name: scene-model-mixed-formalism
+created: "2026-11-23"
+status: designed
+phase: Design
+simulation_status: not_run
+implementation_status: complete
+evaluation_status: not_evaluated
+gate_status: pending
+execution_status: pending
+verdict: pending
+design_status: drafted
+title: "Model-definition format: one scene, three cell types, three formalisms (ODE, Smoldyn particles, MaBoSS) sharing an extracellular field"
+kind: demonstration
+confidence: Investigating
+investigation: particle-multicell-composition
+
+composite: viva_multicell_blueprint.composites.scene_model.scene_model
+
+claim: >
+  A declarative scene (cells + types) bound to a per-type model registry compiles to one
+  composite in which metabolic cells run an SBML-style ODE, signalling cells run Smoldyn
+  particles and fate cells run a MaBoSS Boolean network, all coupled to a shared
+  extracellular field through typed membrane transport.
+
+experiment: >
+  Run the scene_model composite (workspace/scenes/mixed_formalism_demo.yaml, 5 cells,
+  3 types) for 12 steps. Each step advances tissue mechanics, every cell's own adapter,
+  membrane exchange with the field, and field diffusion.
+
+outcomes: >
+  The flipbook (viz/scene-model-flipbook.html) colours cells by formalism over the field
+  heatmap and draws the particle cells' molecules (qualitative; quantitative checks pending).
+
+notes: |
+  Regenerate with `python -m viva_multicell_blueprint.model_format.viz`.
