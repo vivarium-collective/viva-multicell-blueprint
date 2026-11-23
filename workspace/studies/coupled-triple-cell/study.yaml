@@ -1,0 +1,41 @@
+schema_version: 4
+name: coupled-triple-cell
+created: "2026-11-23"
+status: draft
+phase: Design
+simulation_status: not_run
+implementation_status: complete
+evaluation_status: not_evaluated
+gate_status: pending
+execution_status: planned
+verdict:
+design_status: drafted
+title: "Coupled cell: all three sub-cellular formalisms and all three coupling modes in one cell"
+kind: demonstration
+confidence: Investigating
+investigation: composition-atlas
+
+composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_triple_cell
+baseline:
+  - name: coupled-triple-cell
+    composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_triple_cell
+
+claim: >
+  A single cell can run all three sub-cellular formalisms at once — a Smoldyn particle sim,
+  an SBML-ODE metabolism and a MaBoSS fate network — coupled by all three modes
+  simultaneously: the particle count catalyses the metabolism (B), the metabolite pins the
+  fate input (A), and the fate output resets the metabolism (C).
+
+experiment: >
+  Run coupled_triple_cell (a small vertex tissue of three-formalism CoupledCells) for 36
+  steps. Record one cell's particle C, metabolite C, fate 'divide' and the live ODE rate
+  constant each step.
+
+outcomes: >
+  The time series (viz/coupled-triple-cell.html) shows the full chain: the confined particle
+  population holds a C level that sets the ODE rate; the ODE metabolite builds to threshold,
+  pins the fate input, fires 'divide', which resets the metabolism — a clean period-3 rhythm
+  driven by all three engines together. Computed live from real Smoldyn + tellurium + MaBoSS.
+
+notes: |
+  Regenerate with `python scripts/gen_atlas_viz.py coupled-triple-cell`.

@@ -1,0 +1,41 @@
+schema_version: 4
+name: coupled-fate-oscillator
+created: "2026-11-23"
+status: draft
+phase: Design
+simulation_status: not_run
+implementation_status: complete
+evaluation_status: not_evaluated
+gate_status: pending
+execution_status: planned
+verdict:
+design_status: drafted
+title: "Coupled cell: an ODE metabolism and a MaBoSS fate network form a metabolism↔fate oscillator"
+kind: demonstration
+confidence: Investigating
+investigation: composition-atlas
+
+composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_fate_oscillator
+baseline:
+  - name: coupled-fate-oscillator
+    composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_fate_oscillator
+
+claim: >
+  Two sub-cellular simulators of different formalisms — an SBML-ODE metabolism and a MaBoSS
+  Boolean fate network — can be coupled inside one cell in both directions (the ODE's
+  metabolite C pins the fate 'high_C' input, mode A; the fate 'divide' output resets the
+  metabolism, mode C) to produce a metabolism↔fate feedback oscillator that neither
+  formalism exhibits alone.
+
+experiment: >
+  Run coupled_fate_oscillator (a small vertex tissue of CoupledCells) for 40 steps. Record
+  one cell's metabolite C and fate 'divide' each step.
+
+outcomes: >
+  The time series (viz/coupled-fate-oscillator.html) shows a stable oscillation: C builds
+  over ~2 steps, crosses the threshold, pins high_C, the fate 'divide' fires, the division
+  resets the metabolism, and the cycle repeats (period ~3 steps). Computed live from real
+  tellurium + MaBoSS engines.
+
+notes: |
+  Regenerate with `python scripts/gen_atlas_viz.py coupled-fate-oscillator`.

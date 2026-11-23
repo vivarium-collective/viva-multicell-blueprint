@@ -1,0 +1,40 @@
+schema_version: 4
+name: coupled-particle-catalysis
+created: "2026-11-23"
+status: draft
+phase: Design
+simulation_status: not_run
+implementation_status: complete
+evaluation_status: not_evaluated
+gate_status: pending
+execution_status: planned
+verdict:
+design_status: drafted
+title: "Coupled cell: a Smoldyn particle population catalyses an ODE (particle count sets the ODE rate)"
+kind: demonstration
+confidence: Investigating
+investigation: composition-atlas
+
+composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_particle_catalysis
+baseline:
+  - name: coupled-particle-catalysis
+    composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_particle_catalysis
+
+claim: >
+  A Smoldyn particle simulator and an SBML-ODE can be coupled inside one cell so that the
+  particle population drives the ODE's kinetics (mode B): the live count of a particle
+  species sets the ODE's rate constant each step, so the ODE product accumulates faster as
+  the particle population builds — a cross-formalism catalysis no single engine expresses.
+
+experiment: >
+  Run coupled_particle_catalysis (a small vertex tissue of CoupledCells) for 30 steps.
+  Record one cell's particle C count and ODE product P each step.
+
+outcomes: >
+  The time series (viz/coupled-particle-catalysis.html) shows P accumulating with a rate
+  that tracks the particle C count: as the confined A+B→C population builds, the ODE's rate
+  constant rises and P accelerates (concave-up), versus a fixed-rate control that stays
+  linear. Computed live from real Smoldyn (via the 3.11 bridge) + tellurium.
+
+notes: |
+  Regenerate with `python scripts/gen_atlas_viz.py coupled-particle-catalysis`.

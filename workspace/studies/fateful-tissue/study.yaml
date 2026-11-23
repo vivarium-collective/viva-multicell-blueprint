@@ -1,0 +1,43 @@
+schema_version: 4
+name: fateful-tissue
+created: "2026-11-23"
+status: draft
+phase: Design
+simulation_status: not_run
+implementation_status: complete
+evaluation_status: not_evaluated
+gate_status: pending
+execution_status: planned
+verdict:
+design_status: drafted
+title: "Fateful tissue: a dividing tyssue whose divisions are decided by each cell's own metabolism→fate chain"
+kind: demonstration
+confidence: Investigating
+investigation: composition-atlas
+
+composite: viva_multicell_blueprint.composites.fateful_tissue.fateful_tissue
+baseline:
+  - name: fateful-tissue
+    composite: viva_multicell_blueprint.composites.fateful_tissue.fateful_tissue
+
+claim: >
+  Every scale this workspace can simulate composes into one system: a tyssue of dividing
+  cells, each running a Smoldyn particle sim confined to its moving polygon (split on
+  division) AND an ODE metabolism whose metabolite pins a MaBoSS fate network — and the fate
+  'divide' output DRIVES the tissue division. Cells grow as they metabolise (target area
+  tracks the metabolite), divide when their own fate fires, and daughters reset and regrow,
+  so the tissue sustains. Biology decides when the tissue divides.
+
+experiment: >
+  Run fateful_tissue (vertex backend) for 22 steps. Each step: advance every cell's confined
+  particles and coupled metabolism→fate; divide the cells whose fate raised 'divide'; split
+  the mother's particles into the daughters; grow each cell's target area with its metabolite.
+
+outcomes: >
+  The fate-coloured flipbook (viz/fateful-tissue.html) shows the tissue growing from 4 to
+  ~26 cells over ~22 fate-driven divisions, with particle counts conserved across each split
+  and cell fill reading the metabolism→fate state (green metabolising → amber building → red
+  dividing). Computed live from real tellurium + MaBoSS + Smoldyn.
+
+notes: |
+  Regenerate with `python scripts/gen_atlas_viz.py fateful-tissue`.

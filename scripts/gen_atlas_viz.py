@@ -1,0 +1,151 @@
+"""Generate the composition-atlas study visualizations.
+
+For the three CoupledCell subcellular composites, run the composite one step at a time and
+plot one representative cell's coupled sub-model dynamics as a self-contained time-series
+HTML. For the fateful_tissue crown, run it (it writes its own fate-coloured flipbook) and
+copy that into the study's viz dir.
+
+Usage:
+  PYTHONPATH=$(pwd) <venv>/bin/python scripts/gen_atlas_viz.py [study-slug ...]
+  (no args => all four)
+"""
+from __future__ import annotations
+
+import base64
+import io
+import shutil
+import sys
+from pathlib import Path
+
+from process_bigraph import Composite
+
+from viva_multicell_blueprint.core import build_core
+from viva_multicell_blueprint.composites.coupled_subcellular import (
+    coupled_fate_oscillator, coupled_particle_catalysis, coupled_triple_cell)
+from viva_multicell_blueprint.composites.fateful_tissue import fateful_tissue
+
+STUDIES = Path("workspace/studies")
+
+
+def _run_cell_series(gen, node_key: str, n_steps: int, keys: list[str]) -> dict[str, list[float]]:
+    """Run a scene-based composite one step at a time; collect one cell's amounts()[keys]."""
+    core = build_core()
+    comp = Composite({"state": gen(core=core)["state"]}, core=core)
+    proc = comp.state[node_key]["instance"]
+    sid = proc._cell_ids[0]
+    series: dict[str, list[float]] = {k: [] for k in keys}
+    for _ in range(n_steps):
+        comp.run(1)
+        am = proc._adapters[sid].amounts()
+        for k in keys:
+            series[k].append(float(am.get(k, 0.0)))
+    return series
+
+
+def _timeseries_html(out: Path, title: str, lead: str, steps, left, right,
+                     left_label: str, right_label: str):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(8.6, 4.6), dpi=150)
+    for (label, color, lw, ls), y in left:
+        ax.plot(steps, y, ls, color=color, lw=lw, label=label)
+    ax.set_xlabel("step"); ax.set_ylabel(left_label, color="#2e7d32")
+    ax.grid(alpha=0.2)
+    ax2 = ax.twinx()
+    for (label, color, lw, ls), y in right:
+        ax2.plot(steps, y, ls, color=color, lw=lw, label=label, marker="o", ms=3)
+    ax2.set_ylabel(right_label, color="#1565c0")
+    l1, la1 = ax.get_legend_handles_labels(); l2, la2 = ax2.get_legend_handles_labels()
+    ax.legend(l1 + l2, la1 + la2, loc="upper left", fontsize=8.5)
+    ax.set_title(title, fontsize=11)
+    raw = io.BytesIO(); fig.savefig(raw, format="png", bbox_inches="tight", dpi=150); plt.close(fig)
+    uri = "data:image/png;base64," + base64.b64encode(raw.getvalue()).decode()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(f"""<!doctype html><html><head><meta charset="utf-8"><title>{title}</title>
+<style>body{{font-family:-apple-system,sans-serif;margin:16px;max-width:960px;color:#1b1b1f}}
+img{{width:100%;border:1px solid #ddd;border-radius:6px}}</style></head>
+<body><h2>{title}</h2><p>{lead}</p><img src="{uri}"></body></html>""", encoding="utf-8")
+    print(f"wrote {out}")
+
+
+def gen_fate_oscillator():
+    s = _run_cell_series(coupled_fate_oscillator, "scene_model", 40, ["metab/C", "fate/divide"])
+    _timeseries_html(
+        STUDIES / "coupled-fate-oscillator/viz/coupled-fate-oscillator.html",
+        "Coupled cell — ODE metabolism ↔ MaBoSS fate oscillator",
+        "An SBML-ODE metabolism and a MaBoSS Boolean fate network coupled both ways (mode A: "
+        "metabolite C pins the fate <code>high_C</code> input; mode C: the fate "
+        "<code>divide</code> output resets the metabolism). C builds, crosses threshold, fate "
+        "fires, division resets the metabolism — a period-3 metabolism↔fate oscillator. Real "
+        "tellurium + MaBoSS.",
+        range(40),
+        [(("ODE metabolite C", "#2e7d32", 2.2, "-"), s["metab/C"])],
+        [(("MaBoSS fate: divide", "#d1495b", 1.4, "-"), s["fate/divide"])],
+        "C molecules (ODE)", "divide (Boolean activity)")
+
+
+def gen_particle_catalysis():
+    s = _run_cell_series(coupled_particle_catalysis, "scene_model", 30, ["sensor/C", "metab/P"])
+    _timeseries_html(
+        STUDIES / "coupled-particle-catalysis/viz/coupled-particle-catalysis.html",
+        "Coupled cell — Smoldyn particle population catalyses an ODE (mode B)",
+        "A Smoldyn particle sim (A+B→C, confined to the cell polygon) catalyses an ODE S→P: "
+        "the live particle C count sets the ODE rate constant each step. As the particle "
+        "population builds, the ODE product P accelerates (concave-up). Real Smoldyn (3.11 "
+        "bridge) + tellurium.",
+        range(30),
+        [(("ODE product P", "#2e7d32", 2.4, "-"), s["metab/P"])],
+        [(("particle C count (Smoldyn)", "#1565c0", 1.4, "-"), s["sensor/C"])],
+        "P molecules (ODE)", "C particles (Smoldyn)")
+
+
+def gen_triple_cell():
+    s = _run_cell_series(coupled_triple_cell, "scene_model", 36,
+                         ["sensor/C", "metab/C", "fate/divide"])
+    _timeseries_html(
+        STUDIES / "coupled-triple-cell/viz/coupled-triple-cell.html",
+        "Coupled cell — all three formalisms, all three modes",
+        "One cell running a Smoldyn particle sim, an SBML-ODE metabolism and a MaBoSS fate "
+        "network, coupled by all three modes: particles catalyse the metabolism (B), the "
+        "metabolite pins the fate input (A), the fate output resets the metabolism (C). Real "
+        "Smoldyn + tellurium + MaBoSS.",
+        range(36),
+        [(("particle sensor C", "#1565c0", 1.8, "-"), s["sensor/C"]),
+         (("ODE metabolite C", "#2e7d32", 2.2, "-"), s["metab/C"])],
+        [(("MaBoSS fate: divide", "#d1495b", 1.4, "-"), s["fate/divide"])],
+        "molecules", "divide (Boolean activity)")
+
+
+def gen_fateful_tissue():
+    core = build_core()
+    comp = Composite({"state": fateful_tissue(core=core)["state"]}, core=core)
+    comp.run(22)
+    src = Path("workspace/reports/assets/fateful_tissue.html")
+    dst = STUDIES / "fateful-tissue/viz/fateful-tissue.html"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
+    print(f"wrote {dst} (from {src})")
+
+
+GENERATORS = {
+    "coupled-fate-oscillator": gen_fate_oscillator,
+    "coupled-particle-catalysis": gen_particle_catalysis,
+    "coupled-triple-cell": gen_triple_cell,
+    "fateful-tissue": gen_fateful_tissue,
+}
+
+
+def main(argv):
+    names = argv or list(GENERATORS)
+    for name in names:
+        fn = GENERATORS.get(name)
+        if fn is None:
+            print(f"unknown study {name!r}; have {list(GENERATORS)}")
+            continue
+        print(f"== {name} ==")
+        fn()
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
