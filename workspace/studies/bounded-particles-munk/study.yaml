@@ -17,6 +17,10 @@ investigation: particle-multicell-composition
 
 composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
 backend: munk
+baseline:
+  - name: bounded-particles-munk
+    composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
+    params: {backend: munk}
 
 claim: >
   A Smoldyn particle sim composed with the munk backend keeps every cell's molecules

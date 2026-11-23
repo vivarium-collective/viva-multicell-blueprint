@@ -17,6 +17,10 @@ investigation: particle-multicell-composition
 
 composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
 backend: cpm
+baseline:
+  - name: bounded-particles-cpm
+    composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
+    params: {backend: cpm}
 
 claim: >
   A Smoldyn particle sim composed with the cpm backend keeps every cell's molecules

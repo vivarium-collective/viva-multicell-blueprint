@@ -17,6 +17,10 @@ investigation: particle-multicell-composition
 
 composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
 backend: vertex
+baseline:
+  - name: bounded-particles-vertex
+    composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
+    params: {backend: vertex}
 
 claim: >
   A Smoldyn particle sim composed with the vertex backend keeps every cell's molecules
