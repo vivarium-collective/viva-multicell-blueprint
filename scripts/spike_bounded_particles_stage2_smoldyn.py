@@ -155,18 +155,28 @@ def _render(render_frames, W, H):
     import matplotlib.pyplot as plt
     from matplotlib.patches import Polygon as MplPoly
     from PIL import Image
+    # one stable colour per cell id (assigned in first-appearance order), so particles
+    # can be tracked by which cell they belong to — and a division shows as a new colour.
+    _PAL = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b",
+            "#e377c2", "#17becf", "#bcbd22", "#7f7f7f", "#393b79", "#637939"]
+    cell_color, order = {}, []
+    for snapshot in render_frames:
+        for cid in snapshot:
+            if cid not in cell_color:
+                cell_color[cid] = _PAL[len(cell_color) % len(_PAL)]
+                order.append(cid)
     imgs, gif_frames = [], []
     for snapshot in render_frames:
         fig, ax = plt.subplots(figsize=(5.6, 5.6), dpi=140)
         ax.set_xlim(0, W); ax.set_ylim(0, H); ax.set_aspect("equal")
         ax.set_xticks([]); ax.set_yticks([])
         for cid, snap in snapshot.items():
+            cc = cell_color[cid]
             ax.add_patch(MplPoly(np.asarray(snap["poly"]), closed=True, fill=False,
-                                 edgecolor="#333", lw=1.4, zorder=1))
+                                 edgecolor=cc, lw=1.8, zorder=1))
             if snap["parts"]:
                 P = np.array([[p[1], p[2]] for p in snap["parts"]])
-                cols = [SPCOL[p[0]] for p in snap["parts"]]
-                ax.scatter(P[:, 0], P[:, 1], s=14, c=cols, zorder=2, edgecolors="none")
+                ax.scatter(P[:, 0], P[:, 1], s=13, c=cc, zorder=2, edgecolors="none")
         raw = io.BytesIO(); fig.savefig(raw, format="png", bbox_inches="tight", dpi=140)
         plt.close(fig)
         imgs.append("data:image/png;base64," + base64.b64encode(raw.getvalue()).decode())
@@ -181,8 +191,8 @@ def _render(render_frames, W, H):
                        duration=220, loop=0, optimize=True)
     gif_uri = "data:image/gif;base64," + base64.b64encode(gbuf.getvalue()).decode()
     frames_js = ",".join(json.dumps(u) for u in imgs)
-    legend = "".join(f'<span class="k"><span class="d" style="background:{SPCOL[s]}"></span>{s}</span>'
-                     for s in ("A", "B", "C"))
+    legend = "".join(f'<span class="k"><span class="d" style="background:{cell_color[c]}"></span>cell {c}</span>'
+                     for c in order)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(f"""<!doctype html><html><head><meta charset="utf-8"><title>Bounded particles</title>
 <style>body{{font-family:-apple-system,sans-serif;margin:16px;background:#fff;color:#1b1b1f}}
@@ -192,8 +202,9 @@ button{{padding:5px 14px;border:1px solid #ccc;border-radius:6px;background:#f6f
 <body><h2>Smoldyn particles bounded by tyssue cells</h2>
 <p>Each tyssue (vertex) cell is a moving polygon; a <b>Smoldyn</b> particle sim runs
 <b>inside each one</b>, reflecting off the cell boundary, with a reversible reaction
-<b>A + B ⇌ C</b>. When a cell divides, its molecules are partitioned into the two
-daughter cells. Particles: {legend}</p>
+<b>A + B ⇌ C</b>. Particles are <b>coloured by the cell they belong to</b> (matching the
+cell outline) so you can track them as cells move — when a cell divides, its molecules
+are partitioned into the two daughters, which get their own colours: {legend}</p>
 <img id="img"><div style="margin-top:8px"><button id="play">Play</button>
 <input id="sl" type="range" min="0" max="{len(imgs)-1}" value="0" style="width:420px;vertical-align:middle">
 <a href="{gif_uri}" download="bounded-particles.gif" style="margin-left:14px;padding:5px 14px;border:1px solid #ccc;border-radius:6px;background:#f6f6f8;text-decoration:none;color:inherit;font-size:14px">⬇ Download GIF</a></div>
