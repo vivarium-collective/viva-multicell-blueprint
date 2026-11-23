@@ -14,6 +14,25 @@ title: "Coupled cell: an ODE metabolism and a MaBoSS fate network form a metabol
 kind: demonstration
 confidence: Investigating
 investigation: composition-atlas
+report:
+  verdict: investigating
+
+behavior_tests:
+  - name: fate-oscillates
+    classification: primary
+    description: >
+      Over 24 steps the fate 'divide' node toggles across the 0.5 cutoff at least twice —
+      the metabolism↔fate loop oscillates rather than latching.
+    measure: {kind: count, field: fate_divide_transitions}
+    pass_if: {op: gte, value: 2}
+    pytest_node: tests/model_format/test_atlas_composites.py::test_fate_oscillator_oscillates
+    requires_simulation: 'true'
+    units: dimensionless
+
+limitations:
+  - The quantitative period/amplitude are not pinned to an acceptance band yet (only the
+    presence of oscillation is a committed test).
+  - MaBoSS mean-field istate adds ~5% noise and a one-step lag that sets the period.
 
 composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_fate_oscillator
 baseline:

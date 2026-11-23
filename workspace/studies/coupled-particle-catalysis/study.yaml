@@ -14,6 +14,26 @@ title: "Coupled cell: a Smoldyn particle population catalyses an ODE (particle c
 kind: demonstration
 confidence: Investigating
 investigation: composition-atlas
+report:
+  verdict: investigating
+
+behavior_tests:
+  - name: particle-count-sets-ode-rate
+    classification: primary
+    description: >
+      The ODE product P accumulates (monotone, final > 0) and the live ODE rate constant
+      kf0 equals base × the particle C count — the particle population drives the kinetics.
+    measure: {kind: comparison, field: ode_product_and_rate_vs_particle_count}
+    pass_if: {op: accumulates_and_rate_tracks_count}
+    pytest_node: tests/model_format/test_coupled_cell.py::test_mode_b_catalysis_rate_tracks_count
+    requires_simulation: 'true'
+    units: mixed
+
+limitations:
+  - The rate coupling is an empirical calibration (effective volume ~0.65×polygon area);
+    faithful near the calibrated regime, drifts outside it.
+  - The concave-up acceleration vs a fixed-rate control is shown in the viz but the
+    acceleration magnitude is not pinned to an acceptance band.
 
 composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_particle_catalysis
 baseline:

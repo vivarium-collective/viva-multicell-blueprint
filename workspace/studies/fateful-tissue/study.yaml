@@ -14,6 +14,35 @@ title: "Fateful tissue: a dividing tyssue whose divisions are decided by each ce
 kind: demonstration
 confidence: Investigating
 investigation: composition-atlas
+report:
+  verdict: investigating
+
+parent_studies:
+  - {study: coupled-triple-cell, condition: ran, relation: builds-on}
+  - {study: coupled-fate-oscillator, condition: ran, relation: builds-on}
+
+behavior_tests:
+  - name: fate-drives-division-sustained
+    classification: primary
+    description: >
+      Over 12 steps the tissue carries out at least one fate-driven division, the cell count
+      stays >= its initial value (the tissue grows rather than collapsing), and particles
+      survive the division splits (n_particles > 0).
+    measure: {kind: comparison, field: divisions_cells_particles}
+    pass_if: {op: divides_sustains_and_conserves}
+    pytest_node: tests/model_format/test_atlas_composites.py::test_fateful_tissue_fate_drives_division_and_conserves_particles
+    requires_simulation: 'true'
+    units: mixed
+
+limitations:
+  - >
+    Sustained growth is a TUNED regime — target area tracks the metabolite so daughters
+    regrow; without that coupling the vertex backend halves cells on division and the tissue
+    collapses. The growth is engineered, not emergent.
+  - Division is capped (max_divisions_per_step) and the divider is shuffled for tyssue
+    stability; the exact lineage tree is not a controlled observable.
+  - Particle conservation across splits is checked as 'particles survive' (n > 0), not yet as
+    an exact mother == sum(daughters) count band.
 
 composite: viva_multicell_blueprint.composites.fateful_tissue.fateful_tissue
 baseline:

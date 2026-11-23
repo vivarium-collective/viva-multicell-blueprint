@@ -65,6 +65,74 @@ description: |
       shape, munk owns position, CPM owns area) is the `tri_coupled` composite and its
       investigation.
 
+at_a_glance:
+  - study: coupled-fate-oscillator
+    role: >
+      Two formalisms, one cell. An ODE metabolism and a MaBoSS fate network coupled both
+      ways (A+C) form a metabolism↔fate feedback oscillator.
+  - study: coupled-particle-catalysis
+    role: >
+      A Smoldyn particle population catalyses an ODE (mode B) — the live particle count sets
+      the ODE rate, so the product accelerates as the population builds.
+  - study: coupled-triple-cell
+    role: >
+      All three sub-cellular formalisms and all three coupling modes in one cell: particles
+      catalyse the metabolism, the metabolite pins the fate, the fate resets the metabolism.
+  - study: fateful-tissue
+    role: >
+      The crown — a dividing tyssue whose divisions are decided by each cell's own
+      metabolism→fate chain, with confined particles that split on division.
+
+executive:
+  what_is_this: >
+    A curated showcase of composition across modelling paradigms, built on the
+    semantics⊥mechanics split (a model's chemistry/logic is separable from the solver that
+    runs it, and the split recurs at every scale). The CoupledCell adapter makes a cell whose
+    intracellular model is itself a coupled composite of sub-models — ODE, particle and
+    Boolean — wired by explicit coupling rules (mode A: a product threshold pins a Boolean
+    input; mode B: a particle count sets an ODE rate; mode C: a Boolean output resets a
+    reaction). Four composites exercise these: a metabolism↔fate oscillator, a particle→ODE
+    catalysis, an all-three-formalisms cell, and the full-stack fateful tissue where fate
+    drives division.
+  verdict: >
+    All four compositions run end-to-end against the real engines (tellurium, MaBoSS,
+    Smoldyn) and each shows the claimed behaviour: the oscillator holds a stable period-3
+    metabolism↔fate cycle; the catalysis product accelerates as the particle population
+    builds; the triple cell runs all three formalisms and all three modes at once; and the
+    fateful tissue grows sustainably (4→~26 cells) with every division decided by a cell's own
+    fate network and particle counts conserved across each split. The behaviour of each is
+    pinned by a committed test; quantitative acceptance thresholds (holdouts, bands) are the
+    next rigor step and are listed per study and in the limitations.
+  verdict_detail: >
+    Each composition's claim is backed by a committed behaviour test (a pytest node that runs
+    the real engines), so the demonstrations are rerunnable rather than narrated:
+    coupled-fate-oscillator asserts the fate 'divide' node toggles at least twice (oscillation,
+    not latch); coupled-particle-catalysis asserts the ODE product accumulates and the live rate
+    constant equals base times the particle count; coupled-triple-cell asserts all three
+    sub-adapters are live and emit state; fateful-tissue asserts at least one fate-driven
+    division, a non-collapsing cell count, and particles surviving the splits. What is NOT yet
+    done, and is the honest ceiling on confidence: no formal acceptance band or holdout is
+    registered, so each study's rolled-up verdict is 'investigating'; the quantitative shapes
+    (period, acceleration magnitude, exact mother-equals-sum-of-daughters conservation) are
+    shown in the visualizations but not gated.
+
+limitations:
+  - >
+    These are DEMONSTRATIONS, not hypothesis tests: each claim is pinned by a committed
+    behaviour test (a pytest node that runs the real engines), but no formal acceptance band
+    / holdout has been registered yet, so the rolled-up verdict is 'investigating', not
+    'accepted'.
+  - >
+    The MaBoSS fate uses a mean-field istate (independent per-node probabilities, ~5% noise);
+    the 0.5 cutoff on 'divide' has a one-step lag that sets the oscillator period.
+  - >
+    The particle→ODE rate coupling is an empirical calibration (effective volume ~0.65×area);
+    it is faithful near the calibrated regime and drifts outside it.
+  - >
+    The fateful tissue needs growth to sustain (target area tracks the metabolite): without it
+    the vertex backend halves cells on each division and the tissue collapses — so the
+    sustained growth is a tuned regime, not an emergent one.
+
 members:
   - coupled-fate-oscillator
   - coupled-particle-catalysis

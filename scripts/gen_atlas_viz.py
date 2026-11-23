@@ -87,15 +87,32 @@ def gen_fate_oscillator():
 
 def gen_particle_catalysis():
     s = _run_cell_series(coupled_particle_catalysis, "scene_model", 30, ["sensor/C", "metab/P"])
+    # fixed-rate CONTROL: the same ODE driven by the run-mean particle count (no coupling).
+    # The coupled P is concave-up and the control is linear — the SHAPE difference is the coupling.
+    from viva_multicell_blueprint.model_format.adapters.ode_tellurium import ODEAdapter
+    from viva_multicell_blueprint.model_format.registry import ModelSpec
+    c_mean = sum(s["sensor/C"]) / max(len(s["sensor/C"]), 1)
+    ode_src = {"species": {"S": 400.0, "P": 0.0},
+               "reactions": [{"subs": ["S"], "prds": ["P"], "kf": 0.0, "kb": 0.0}]}
+    ctl = ODEAdapter(ModelSpec(formalism="ode", source=ode_src, params={}, membrane={}),
+                     {"S": 400.0, "P": 0.0})
+    p_control = []
+    for _ in range(30):
+        ctl._rr["kf0"] = 0.001 * c_mean
+        ctl.step(1.0, {})
+        p_control.append(ctl.amounts().get("P", 0.0))
     _timeseries_html(
         STUDIES / "coupled-particle-catalysis/viz/coupled-particle-catalysis.html",
         "Coupled cell — Smoldyn particle population catalyses an ODE (mode B)",
         "A Smoldyn particle sim (A+B→C, confined to the cell polygon) catalyses an ODE S→P: "
         "the live particle C count sets the ODE rate constant each step. As the particle "
-        "population builds, the ODE product P accelerates (concave-up). Real Smoldyn (3.11 "
-        "bridge) + tellurium.",
+        "population builds, the coupled product P <b>accelerates</b> (concave-up), while a "
+        f"fixed-rate control (the same ODE driven by the run-mean count, {c_mean:.0f}) stays "
+        "linear — the shape difference <i>is</i> the coupling. Real Smoldyn (3.11 bridge) + "
+        "tellurium.",
         range(30),
-        [(("ODE product P", "#2e7d32", 2.4, "-"), s["metab/P"])],
+        [(("ODE product P — particle-coupled rate", "#2e7d32", 2.4, "-"), s["metab/P"]),
+         (("ODE product P — fixed-rate control", "#8a8a8a", 1.8, "--"), p_control)],
         [(("particle C count (Smoldyn)", "#1565c0", 1.4, "-"), s["sensor/C"])],
         "P molecules (ODE)", "C particles (Smoldyn)")
 

@@ -14,6 +14,31 @@ title: "Coupled cell: all three sub-cellular formalisms and all three coupling m
 kind: demonstration
 confidence: Investigating
 investigation: composition-atlas
+report:
+  verdict: investigating
+
+parent_studies:
+  - {study: coupled-fate-oscillator, condition: ran, relation: builds-on}
+  - {study: coupled-particle-catalysis, condition: ran, relation: builds-on}
+
+behavior_tests:
+  - name: all-three-formalisms-live
+    classification: primary
+    description: >
+      The cell holds three sub-adapters (particle sensor, ODE metab, Boolean fate), all
+      available, and after stepping reports species from all three (sensor/C, metab/C,
+      fate/divide) — all three formalisms run and are coupled in one cell.
+    measure: {kind: count, field: live_coupled_formalisms}
+    pass_if: {op: eq, value: 3}
+    pytest_node: tests/model_format/test_atlas_composites.py::test_triple_cell_runs_all_three_formalisms
+    requires_simulation: 'true'
+    units: count
+
+limitations:
+  - Combines the oscillator and catalysis motifs; it inherits both their calibration caveats
+    (empirical particle rate, MaBoSS mean-field lag).
+  - Only the co-running of all three formalisms is a committed test; the triple-coupled
+    rhythm's quantitative shape is shown in the viz but not pinned to a band.
 
 composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_triple_cell
 baseline:
