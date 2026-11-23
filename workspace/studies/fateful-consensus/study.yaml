@@ -48,7 +48,8 @@ variants:
   description: the published reference configuration (single baseline run)
 readouts:
 - name: committed_fraction
-  description: fraction of cells whose fate committed (divide>0.5) via the area→metabolism→fate chain
+  description: fraction of cells whose fate committed (divide>0.5) via the area→metabolism→fate 
+    chain
   store_path: committed_fraction
   units: fraction
   status: measured
@@ -148,7 +149,8 @@ runs:
       detail: 1 >= 0.5
       axis:
         id: area-drives-fate-commitment
-        label: "The cross-scale chain fires: area→metabolism→fate commits at least half the cells by the end of the run.\n"
+        label: "The cross-scale chain fires: area→metabolism→fate commits at least half the cells by the
+          end of the run.\n"
         verdict: within_tol
         value: 1.0
         meter: 1.0
@@ -176,7 +178,8 @@ runs:
       detail: 1.804 <= 6.0
       axis:
         id: consensus-holds-under-coupling
-        label: "The three-backend consensus stays tight (<=6um) even while the per-cell sub-cellular layer runs.\n"
+        label: "The three-backend consensus stays tight (<=6um) even while the per-cell sub-cellular layer
+          runs.\n"
         verdict: within_tol
         value: 1.803677
         meter: 0.8496935833333332
@@ -207,3 +210,5 @@ pipeline_gate:
     blocked_by: []
     evaluated_by: code
     diverges_from_authored: false
+claim: |
+  A tri-coupled consensus tissue can drive each cell's sub-cellular fate top-down: the CPM-owned cell AREA sets the cell's metabolic rate, the SBML-ODE metabolite builds and pins a MaBoSS fate input, and the fate commits the cell — so three tissue simulators and two sub-cellular simulators run as one composite with a live mechanics -> metabolism -> fate information flow across scales.
