@@ -703,6 +703,15 @@ if RERUN:
 else:
     print("RERUN=False — not re-simulating.")
 
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **subcellular grow/divide time-series**
+
+# subcellular grow/divide time-series
+_save_viz('subcellular-layer-grow-divide', 'subcellular_grow_divide_time-series', _render_one('html:subcellular-grow-divide.html', {'title': 'Per-cell ODE drives growth and division (cell count, size, S)'}, RUNS_DB, STUDY_YAML))
+
 # ### Acceptance criteria
 #
 # _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
