@@ -63,3 +63,14 @@ description: |
   a lineage/division event -- is simulator-agnostic; the same seam would bound any
   particle/agent engine (e.g. a Brownian-dynamics or an agent-based intracellular model)
   by the same cells.
+
+members:
+  - bounded-particles-cpm
+  - bounded-particles-vertex
+  - bounded-particles-munk
+  - scene-model-mixed-formalism
+studies:
+  - bounded-particles-cpm
+  - bounded-particles-vertex
+  - bounded-particles-munk
+  - scene-model-mixed-formalism
