@@ -93,6 +93,11 @@
   .flow-node[data-k=immune]{border-left-color:var(--immunec)} .flow-node[data-k=ode]{border-left-color:var(--odec)}
   .flow-node[data-k=mech]{border-left-color:var(--mechc)}
   .flow-arr{color:var(--muted);padding:0 8px;font-size:16px;align-self:center}
+  /* inline editable value inputs */
+  .ein{padding:3px 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);
+       font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px}
+  .ein:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}
+  .edit-note{font-size:11px;color:var(--muted);margin:2px 0 10px}
 </style>
 </head>
 <body>
@@ -112,6 +117,20 @@
     <p class="hint" id="tplhint"></p>
   </div>
 
+  <!-- ABOUT (always visible, above the view toggle) -->
+  <div class="card" id="about-card">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <label style="margin:0">About this blueprint</label>
+      <span class="comp-tag" id="about-ver"></span>
+    </div>
+    <div class="comp-tag" style="margin-top:10px">Summary <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· derived from the blueprint (recomputed as you edit)</span></div>
+    <div id="about-body" class="comp-what" style="padding:4px 0 0"></div>
+    <details id="about-prov-d" class="comp" data-k="domain" style="margin-top:12px;display:none">
+      <summary><span class="comp-title" style="font-size:14px">Provenance</span><span class="comp-tag">from the file header</span></summary>
+      <div class="comp-body"><pre id="about-prov" class="about-prov" style="border-top:0;margin:0;max-height:300px"></pre></div>
+    </details>
+  </div>
+
   <div class="tabs">
     <button class="tab sel" data-v="structured">Structured view</button>
     <button class="tab" data-v="yaml">Raw YAML</button>
@@ -120,19 +139,6 @@
   <!-- STRUCTURED VIEW -->
   <div id="view-structured">
     <div id="parse-err" class="parse-err" style="display:none"></div>
-
-    <div class="card" id="about-card">
-      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap">
-        <label style="margin:0">About this blueprint</label>
-        <span class="comp-tag" id="about-ver"></span>
-      </div>
-      <div class="comp-tag" style="margin-top:10px">Summary <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· derived from the blueprint (recomputed as you edit)</span></div>
-      <div id="about-body" class="comp-what" style="padding:4px 0 0"></div>
-      <details id="about-prov-d" class="comp" data-k="domain" style="margin-top:12px;display:none">
-        <summary><span class="comp-title" style="font-size:14px">Provenance</span><span class="comp-tag">from the file header</span></summary>
-        <div class="comp-body"><pre id="about-prov" class="about-prov" style="border-top:0;margin:0;max-height:300px"></pre></div>
-      </details>
-    </div>
 
     <div class="card">
       <label>Initial conditions <span class="muted" style="font-weight:400">— the starting layout the simulation begins from</span></label>
@@ -148,7 +154,7 @@
 
     <div class="card">
       <label>Model components <span class="muted" style="font-weight:400">— what the blueprint computes each step</span></label>
-      <p class="hint" style="margin-top:0">A blueprint compiles the same mechanism onto any mechanics engine. These are its moving parts; open one to see its parameters.</p>
+      <p class="hint" style="margin-top:0">A blueprint compiles the same mechanism onto any mechanics engine. These are its moving parts; open one to see its parameters. <b>Values in boxes are editable</b> — a change writes straight back into the YAML (the file's comments are preserved).</p>
       <div id="flow" class="flow"></div>
       <div id="components"></div>
     </div>
@@ -280,7 +286,36 @@ function typeColors(types){
   return out;
 }
 const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const escA = s => String(s).replace(/&/g,"&amp;").replace(/'/g,"&#39;").replace(/"/g,"&quot;");
 const fmt = v => (typeof v==="number" ? (Math.abs(v)<1e-3 && v!==0 ? v.toExponential(3) : +v.toFixed(4)) : v);
+const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+
+// ---- inline editing: render editable inputs that patch the YAML in place -----
+// Each input carries a JSON "anchor" describing how to locate its value in the
+// YAML text, so an edit updates ONLY that value and leaves comments/layout intact.
+function ein(value, anchor, kind){
+  const w = kind==="expr" ? "width:100%;min-width:260px" : "width:130px";
+  return `<input class="ein" type="text" value="${escA(value)}" data-a='${escA(JSON.stringify(anchor))}' style="${w}" spellcheck="false">`;
+}
+function applyPatch(text, a, nv){
+  try{
+    if(a.t==="kv"){                                   // unique `key: value`
+      const re = new RegExp("(\\b"+escRe(a.key)+"\\s*:\\s*)([^\\n#,}\\]]+)");
+      if(!re.test(text)) return null;
+      return text.replace(re, (m,p1)=> p1 + nv);
+    }
+    if(a.t==="scoped"){                               // key within a named block
+      const re = new RegExp("((?:name|a|b):\\s*"+escRe(a.scope)+"[\\s\\S]*?\\b"+escRe(a.key)+":\\s*)([^\\n#]+)");
+      if(!re.test(text)) return null;
+      return text.replace(re, (m,p1)=> p1 + nv);
+    }
+    if(a.t==="expr"){                                 // replace the exact old string
+      if(text.indexOf(a.old)<0) return null;
+      return text.replace(a.old, nv);
+    }
+  }catch(e){}
+  return null;
+}
 
 // ---- blueprint parsing ------------------------------------------------------
 function parseBlueprint(text){
@@ -426,7 +461,7 @@ function renderComponents(bp){
       const sec = (f.secretion||[]).map(s=>`<code>${esc(s.type)}</code>@${esc(fmt(s.rate))}`).join(", ")||"—";
       const upt = (f.uptake||[]).map(s=>`<code>${esc(s.type)}</code>@${esc(fmt(s.rate))}`).join(", ")||"—";
       return `<div style="margin-bottom:10px"><b>${esc(f.name)}</b>`+kvTable([
-        ["D (diffusion)", fmt(f.D)], ["decay", fmt(f.decay)],
+        ["D (diffusion)", ein(f.D, {t:"scoped",scope:f.name,key:"D"})], ["decay", ein(f.decay, {t:"scoped",scope:f.name,key:"decay"})],
         ["secreted by", sec], ["taken up by", upt],
         ["dynamics", f.dynamics?`dt ${esc(fmt(f.dynamics.dt))}, ${esc(String(f.dynamics.substeps))} substeps`:"—"],
       ])+`</div>`;
@@ -439,18 +474,25 @@ function renderComponents(bp){
   if((bp.rules||[]).length){
     const body = kvTable(bp.rules.map(r=>{
       const lbl = r.type==="transition" ? `${r.from} → ${r.to}` : (r.type==="kill" ? `kill ${r.target||r.to||""}` : (r.kind||r.type||"rule"));
-      return [lbl, `<span class="eq">${esc(r.rate_expr||r.rate||"")}</span>`];
+      const expr = r.rate_expr||r.rate||"";
+      return [lbl, ein(expr, {t:"expr", old:expr}, "expr")];
     }));
     out.push(comp("rules","cell-state rules","Rules",
-      "Per-cell state changes — transitions (H→I), killing, recovery — each fired at a rate given by an expression over fields and neighbours. This is the disease mechanism.",
-      `${bp.rules.length} rule${bp.rules.length===1?"":"s"}`, body));
+      "Per-cell state changes — transitions (H→I), killing, recovery — each fired at a rate given by an <b>expression</b> over fields and neighbours. These rate expressions ARE the cell-state equations — edit them directly.",
+      `${bp.rules.length} rule${bp.rules.length===1?"":"s"}`, body, true));
   }
   // Systemic ODE
   if(bp.systemic_ode){
-    const ode=bp.systemic_ode; const consts=ode.consts||ode.const||{};
+    const ode=bp.systemic_ode; const cp=ode.coupling||{}; const pr=ode.params||{};
+    const rows=[["model_ref", `<code>${esc(ode.model_ref||"—")}</code>`]];
+    Object.entries(cp).forEach(([k,v])=> rows.push(["coupling."+k, typeof v==="number"?ein(v,{t:"kv",key:k}):esc(String(v))]));
+    Object.entries(pr.hill_exponents||{}).forEach(([k,v])=> rows.push(["hill."+k, ein(v,{t:"kv",key:k})]));
+    const states=(pr.spatialized_states||[]).concat(pr.integrated_states||[]);
+    const chips = states.length?`<div class="comp-tag" style="margin-top:10px">states · ${states.length}</div><div style="margin-top:4px">${states.slice(0,28).map(s=>`<span class="chip">${esc(s)}</span>`).join("")}</div>`:"";
+    const note = `<div class="info" style="margin-top:8px">The full ODE system is the referenced <code>${esc(ode.model_ref||"model")}</code> model (Antimony/CVODE) — its equations live in that model, not inline. The knobs above are how it couples into the tissue; to change the <b>cell-state</b> equations, edit the Rules' <code>rate_expr</code>s above.</div>`;
     out.push(comp("ode","systemic ODE","Systemic ODE",
-      "A well-mixed compartment model running alongside the tissue (e.g. a Price-2015 immune ODE) — its state can modulate recruitment and rates.",
-      "", kvTable(Object.entries(consts).map(([k,v])=>[k, fmt(v)])) || "<div class='muted'>(declared)</div>"));
+      "A well-mixed compartment model running alongside the tissue (a Price-2015 immune ODE) — its state modulates recruitment and rates.",
+      ode.model_ref?("ref: "+ode.model_ref):"", kvTable(rows)+chips+note));
   }
   // Immune
   if(bp.immune){
@@ -464,8 +506,8 @@ function renderComponents(bp){
   if(mm){
     const c = mm.const||{};
     out.push(comp("mech","constants","Mechanics mapping & constants",
-      "The named constants the rule expressions reference (rate coefficients, thresholds). These are the knobs the biology is written in.",
-      `${Object.keys(c).length} constant(s)`, kvTable(Object.entries(c).map(([k,v])=>[k, fmt(v)]))));
+      "The named constants the rule expressions reference (rate coefficients, thresholds). These are the knobs the biology is written in — editable.",
+      `${Object.keys(c).length} constant(s)`, kvTable(Object.entries(c).map(([k,v])=>[k, ein(v,{t:"kv",key:k})])), true));
   }
   // Domain (always, last)
   const d=bp.domain||{};
@@ -502,6 +544,17 @@ $("#tpl").addEventListener("change", applyTemplate);
 // re-render structured view as the YAML is edited (debounced)
 let _t=null;
 $("#bp").addEventListener("input", ()=>{ clearTimeout(_t); _t=setTimeout(()=>render($("#bp").value), 300); });
+
+// inline editing: a change in a structured value patches the YAML in place.
+$("#components").addEventListener("change", (e)=>{
+  const inp = e.target.closest(".ein"); if(!inp) return;
+  let a; try{ a=JSON.parse(inp.dataset.a); }catch(err){ return; }
+  const patched = applyPatch($("#bp").value, a, inp.value.trim());
+  if(patched==null){ inp.style.borderColor="var(--err)"; inp.title="Could not locate this value in the YAML — edit it in the Raw YAML view."; return; }
+  const openKeys = [...document.querySelectorAll("#components .comp[open]")].map(d=>d.dataset.k);
+  $("#bp").value = patched; render(patched);
+  openKeys.forEach(k=>{ const d=document.querySelector('#components .comp[data-k="'+k+'"]'); if(d) d.open=true; });
+});
 
 applyTemplate();
 
