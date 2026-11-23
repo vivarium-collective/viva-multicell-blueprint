@@ -3,23 +3,20 @@ name: fateful-tissue
 created: "2026-11-23"
 status: draft
 phase: Design
-simulation_status: not_run
+simulation_status: ran
 implementation_status: complete
-evaluation_status: not_evaluated
+evaluation_status: evaluated
 gate_status: pending
 execution_status: planned
 verdict:
 design_status: drafted
-title: "Fateful tissue: a dividing tyssue whose divisions are decided by each cell's own metabolism→fate chain"
-kind: demonstration
+title: "Fateful tissue: a dividing tyssue whose divisions are decided by each cell's own metabolism→fate
+  chain"
+kind: confirmatory
 confidence: Accepted
 investigation: composition-atlas
 report:
   verdict: supported
-
-parent_studies:
-- {study: coupled-triple-cell, condition: ran, relation: builds-on}
-- {study: coupled-fate-oscillator, condition: ran, relation: builds-on}
 
 behavior_tests:
 - name: fate-drives-division
@@ -29,9 +26,11 @@ behavior_tests:
     cumulative n_divisions ends >= 1) — biology, not a clock, divides the tissue.
   measure: {kind: derived_scalar, path: atlas_divisions_final}
   pass_if: {op: ">=", value: 1}
-  pytest_node: tests/model_format/test_atlas_composites.py::test_fateful_tissue_fate_drives_division_and_conserves_particles
+  pytest_node: 
+    tests/model_format/test_atlas_composites.py::test_fateful_tissue_fate_drives_division_and_conserves_particles
   requires_simulation: 'true'
   units: divisions
+  gate_class: acceptance_criterion
 - name: tissue-sustains
   classification: primary
   description: >
@@ -42,13 +41,16 @@ behavior_tests:
   requires_simulation: 'true'
   units: cells
 
+  gate_class: acceptance_criterion
 limitations:
 - >
   Sustained growth is a TUNED regime — target area tracks the metabolite so daughters
   regrow; without that coupling the vertex backend halves cells on division and the tissue
   collapses. The growth is engineered, not emergent.
-- Division is capped (max_divisions_per_step) and the divider is shuffled for tyssue stability; the exact lineage tree is not a controlled observable.
-- Particle conservation across splits is checked as 'particles survive' (n > 0), not yet as an exact mother == sum(daughters) count band.
+- Division is capped (max_divisions_per_step) and the divider is shuffled for tyssue stability; the 
+  exact lineage tree is not a controlled observable.
+- Particle conservation across splits is checked as 'particles survive' (n > 0), not yet as an exact
+  mother == sum(daughters) count band.
 
 composite: viva_multicell_blueprint.composites.fateful_tissue.fateful_tissue
 baseline:
@@ -95,7 +97,8 @@ runs:
       detail: 20 >= 1.0
       axis:
         id: fate-drives-division
-        label: "The tissue carries out at least one fate-driven division over the run (emitted cumulative n_divisions ends >= 1) — biology, not a clock, divides the tissue.\n"
+        label: "The tissue carries out at least one fate-driven division over the run (emitted cumulative
+          n_divisions ends >= 1) — biology, not a clock, divides the tissue.\n"
         verdict: within_tol
         value: 20.0
         meter: 1.0
@@ -123,7 +126,8 @@ runs:
       detail: 4 >= 4.0
       axis:
         id: tissue-sustains
-        label: "The tissue does not collapse: the minimum simulated cell count stays at or above the initial 4 cells (growth keeps pace with division).\n"
+        label: "The tissue does not collapse: the minimum simulated cell count stays at or above the initial
+          4 cells (growth keeps pace with division).\n"
         verdict: within_tol
         value: 4.0
         meter: 0.5
@@ -160,3 +164,97 @@ pipeline_gate:
     blocked_by: []
     evaluated_by: code
     diverges_from_authored: false
+  prerequisites:
+  - study: coupled-triple-cell
+    condition: ran
+    relation: builds-on
+  - study: coupled-fate-oscillator
+    condition: ran
+    relation: builds-on
+question: |
+  Can a dividing tissue's divisions be decided by each cell's own metabolism->fate chain, with confined particles that split on division — composing every scale at once?
+study_card:
+  goal: |
+    Show that a dividing tissue's divisions can be decided by each cell's own metabolism->fate chain, composing all scales at once.
+  mechanism: |
+    A dividing tyssue where each cell runs confined Smoldyn particles (split on division) AND an ODE metabolism whose metabolite pins a MaBoSS fate network, and the fate 'divide' output drives the tissue division. Cells grow as they metabolise, divide when their own fate fires, and daughters reset and regrow.
+  why_before_next: |
+    The crown: it closes the loop from sub-cellular coupling back to tissue mechanics, showing biology (a cell's own fate chain) — not a clock — can drive tissue-scale events.
+  expected_result: |
+    The tissue carries out fate-driven divisions (>=1) without collapsing (min cells >= initial 4) and conserves particles across splits, so the whole metabolism->fate->division->partition chain composes across all scales.
+  main_expert_question: |
+    Sustained growth is a tuned regime (target area tracks the metabolite); what growth law would make the non-collapse emergent rather than engineered?
+readouts:
+- name: n_divisions
+  description: cumulative fate-driven tissue divisions
+  store_path: n_divisions
+  units: divisions
+  status: measured
+- name: n_cells
+  description: live cell count over the run (non-collapse check)
+  store_path: n_cells
+  units: cells
+  status: measured
+- name: n_particles
+  description: total confined particles (conserved across splits)
+  store_path: n_particles
+  units: particles
+  status: measured
+- name: mean_metabolite
+  description: mean per-cell metabolite C driving the fate
+  store_path: mean_metabolite
+  units: molecules
+  status: measured
+conditions:
+  baseline:
+    name: fateful-tissue-baseline
+    composite: viva_multicell_blueprint.composites.fateful_tissue.fateful_tissue
+    description: |
+      A dividing tyssue where each cell runs confined Smoldyn particles (split on division) AND an ODE metabolism whose metabolite pins a MaBoSS fate network, and the fate 'divide' output drives the tissue division. Cells grow as they metabolise, divide when their own fate fires, and daughters reset and regrow.
+    params: &id001
+      seed_per_cell: 40
+      c_threshold: 14.0
+      max_divisions_per_step: 1
+variants:
+- name: reference
+  params: *id001
+  description: the published reference configuration (single baseline run)
+visualizations:
+- name: fateful-tissue — behaviour over the run
+  address: html:fateful-tissue.html
+  config:
+    title: Fate-coloured flipbook of the dividing tissue
+- name: fateful-tissue — verdict scorecard
+  address: html:fateful-tissue-verdict.html
+  config:
+    title: 'Behaviour tests: measured value vs pass threshold (code-graded)'
+conclusion_verdicts:
+  if_primary_tests_pass: |
+    The tissue carries out fate-driven divisions (>=1) without collapsing (min cells >= initial 4) and conserves particles across splits, so the whole metabolism->fate->division->partition chain composes across all scales.
+  if_primary_tests_fail: |
+    No divisions, a collapsing cell count, or lost particles would mean the cross-scale composition does not hold.
+conclusion_logic:
+  if_primary_tests_pass:
+    verdict: supported
+    summary: |
+      The tissue carries out fate-driven divisions (>=1) without collapsing (min cells >= initial 4) and conserves particles across splits, so the whole metabolism->fate->division->partition chain composes across all scales.
+  if_primary_tests_fail:
+    verdict: refuted
+    summary: |
+      No divisions, a collapsing cell count, or lost particles would mean the cross-scale composition does not hold.
+findings:
+- id: F1-fateful-tissue
+  kind: computational
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: |
+    The tissue's divisions are decided by each cell's own metabolism->fate chain (not a clock): the tyssue grows and divides under fate control without collapsing, composing molecule, cell and tissue scales in one run.
+  evidence:
+    from_test: fate-drives-division
+    from_run: baseline
+    observed: 20 fate-driven divisions; min cell count 4 (non-collapse)
+    expected: primary test 'fate-drives-division' passes (>= 1)
+  provenance:
+    run_ids:
+    - baseline

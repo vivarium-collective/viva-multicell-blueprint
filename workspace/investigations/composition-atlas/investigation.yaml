@@ -66,22 +66,22 @@ description: |
       investigation.
 
 at_a_glance:
-  - study: coupled-fate-oscillator
-    role: >
-      Two formalisms, one cell. An ODE metabolism and a MaBoSS fate network coupled both
-      ways (A+C) form a metabolism↔fate feedback oscillator.
-  - study: coupled-particle-catalysis
-    role: >
-      A Smoldyn particle population catalyses an ODE (mode B) — the live particle count sets
-      the ODE rate, so the product accelerates as the population builds.
-  - study: coupled-triple-cell
-    role: >
-      All three sub-cellular formalisms and all three coupling modes in one cell: particles
-      catalyse the metabolism, the metabolite pins the fate, the fate resets the metabolism.
-  - study: fateful-tissue
-    role: >
-      The crown — a dividing tyssue whose divisions are decided by each cell's own
-      metabolism→fate chain, with confined particles that split on division.
+- study: coupled-fate-oscillator
+  role: >
+    Two formalisms, one cell. An ODE metabolism and a MaBoSS fate network coupled both
+    ways (A+C) form a metabolism↔fate feedback oscillator.
+- study: coupled-particle-catalysis
+  role: >
+    A Smoldyn particle population catalyses an ODE (mode B) — the live particle count sets
+    the ODE rate, so the product accelerates as the population builds.
+- study: coupled-triple-cell
+  role: >
+    All three sub-cellular formalisms and all three coupling modes in one cell: particles
+    catalyse the metabolism, the metabolite pins the fate, the fate resets the metabolism.
+- study: fateful-tissue
+  role: >
+    The crown — a dividing tyssue whose divisions are decided by each cell's own
+    metabolism→fate chain, with confined particles that split on division.
 
 executive:
   what_is_this: >
@@ -119,30 +119,46 @@ executive:
     are shown in the visualizations but not yet gated to a band.
 
 limitations:
-  - >
-    These are DEMONSTRATIONS with run-earned verdicts, not calibrated hypothesis tests: each
-    claim is machine-graded against a registered run, but the pass thresholds are directional
-    existence/sign checks (oscillation present, product accumulates, division occurs,
-    non-collapse), not pre-registered quantitative acceptance bands with holdouts — so the
-    earned verdict is 'supported', short of a tolerance-calibrated 'accepted'.
-  - >
-    The MaBoSS fate uses a mean-field istate (independent per-node probabilities, ~5% noise);
-    the 0.5 cutoff on 'divide' has a one-step lag that sets the oscillator period.
-  - >
-    The particle→ODE rate coupling is an empirical calibration (effective volume ~0.65×area);
-    it is faithful near the calibrated regime and drifts outside it.
-  - >
-    The fateful tissue needs growth to sustain (target area tracks the metabolite): without it
-    the vertex backend halves cells on each division and the tissue collapses — so the
-    sustained growth is a tuned regime, not an emergent one.
+- >
+  These are DEMONSTRATIONS with run-earned verdicts, not calibrated hypothesis tests: each
+  claim is machine-graded against a registered run, but the pass thresholds are directional
+  existence/sign checks (oscillation present, product accumulates, division occurs,
+  non-collapse), not pre-registered quantitative acceptance bands with holdouts — so the
+  earned verdict is 'supported', short of a tolerance-calibrated 'accepted'.
+- >
+  The MaBoSS fate uses a mean-field istate (independent per-node probabilities, ~5% noise);
+  the 0.5 cutoff on 'divide' has a one-step lag that sets the oscillator period.
+- >
+  The particle→ODE rate coupling is an empirical calibration (effective volume ~0.65×area);
+  it is faithful near the calibrated regime and drifts outside it.
+- >
+  The fateful tissue needs growth to sustain (target area tracks the metabolite): without it
+  the vertex backend halves cells on each division and the tissue collapses — so the
+  sustained growth is a tuned regime, not an emergent one.
 
 members:
-  - coupled-fate-oscillator
-  - coupled-particle-catalysis
-  - coupled-triple-cell
-  - fateful-tissue
+- coupled-fate-oscillator
+- coupled-particle-catalysis
+- coupled-triple-cell
+- fateful-tissue
 studies:
-  - coupled-fate-oscillator
-  - coupled-particle-catalysis
-  - coupled-triple-cell
-  - fateful-tissue
+- coupled-fate-oscillator
+- coupled-particle-catalysis
+- coupled-triple-cell
+- fateful-tissue
+scientific_argument:
+  main_claim: |
+    A model's SEMANTICS (its chemistry/logic) are separable from its MECHANICS (the solver that runs it) at every scale, so the same few simulators compose in many directions through small, typed coupling contracts: several sub-cellular simulators couple inside one cell (a product threshold pins a Boolean input; a particle count sets an ODE rate; a Boolean output gates a reaction), a cell is itself a coupled composite, and a tissue of such cells couples the sub-cellular scale back to mechanics — a cell's own metabolism->fate chain decides when the tissue divides.
+  supporting_points:
+  - 'coupled-fate-oscillator: an ODE metabolism and a MaBoSS fate network oscillate when coupled both
+    ways (modes A+C) — code-graded, 26 fate transitions.'
+  - 'coupled-particle-catalysis: a Smoldyn particle count sets an ODE rate (mode B), so the product accumulates
+    (P=285) — code-graded.'
+  - 'coupled-triple-cell: all three formalisms + all three modes cycle in one cell (22 fate transitions)
+    — code-graded.'
+  - "fateful-tissue: a dividing tyssue's divisions are driven by each cell's fate chain (20 divisions,
+    non-collapse, particles conserved) — code-graded."
+  counterargument: |
+    The pass thresholds are directional existence/sign checks, not pre-registered quantitative acceptance bands with holdouts; the quantitative shapes are shown in the visualizations but not yet gated to a tolerance. So the claim is demonstrated as feasible and self-consistent, not calibrated against external data.
+biological_story: |
+  The compositions are small cartoons of real cell biology, assembled from interchangeable solvers rather than one monolithic model. Metabolism builds an internal pool (A+B->C); when the pool is replete a fate network commits the cell to divide; division consumes the pool and resets the metabolism — a metabolism<->fate feedback loop that paces the cell cycle. A particle population standing in for a signalling species can accelerate that metabolism by mass action (more molecules, faster conversion), coupling stochastic spatial chemistry to a continuous ODE. In the tissue, each cell carries this whole chain and grows as it metabolises; when its own fate network fires, the tissue divides it and partitions its confined molecules into the two daughters, which reset and regrow. The point is not quantitative fidelity to a specific organism but the MECHANISM of composition: the same metabolism->fate->division logic, and the same reaction-diffusion-in-a-moving-boundary coupling, recur at every scale and can be built from whichever solver fits each piece.

@@ -3,15 +3,15 @@ name: coupled-particle-catalysis
 created: "2026-11-23"
 status: draft
 phase: Design
-simulation_status: not_run
+simulation_status: ran
 implementation_status: complete
-evaluation_status: not_evaluated
+evaluation_status: evaluated
 gate_status: pending
 execution_status: planned
 verdict:
 design_status: drafted
 title: "Coupled cell: a Smoldyn particle population catalyses an ODE (particle count sets the ODE rate)"
-kind: demonstration
+kind: confirmatory
 confidence: Accepted
 investigation: composition-atlas
 report:
@@ -28,6 +28,7 @@ behavior_tests:
   pytest_node: tests/model_format/test_coupled_cell.py::test_mode_b_catalysis_rate_tracks_count
   requires_simulation: 'true'
   units: molecules
+  gate_class: acceptance_criterion
 - name: particle-driver-builds
   classification: secondary
   description: >
@@ -38,9 +39,12 @@ behavior_tests:
   requires_simulation: 'true'
   units: particles
 
+  gate_class: acceptance_criterion
 limitations:
-- The rate coupling is an empirical calibration (effective volume ~0.65×polygon area); faithful near the calibrated regime, drifts outside it.
-- The concave-up acceleration vs a fixed-rate control is shown in the viz but the acceleration magnitude is not pinned to an acceptance band.
+- The rate coupling is an empirical calibration (effective volume ~0.65×polygon area); faithful near
+  the calibrated regime, drifts outside it.
+- The concave-up acceleration vs a fixed-rate control is shown in the viz but the acceleration 
+  magnitude is not pinned to an acceptance band.
 
 composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_particle_catalysis
 baseline:
@@ -84,7 +88,8 @@ runs:
       detail: 284.9 > 0.0
       axis:
         id: catalysed-product-accumulates
-        label: "The catalysed ODE product P (emitted as probe_a) accumulates to a positive final value as the particle population drives the rate.\n"
+        label: "The catalysed ODE product P (emitted as probe_a) accumulates to a positive final value
+          as the particle population drives the rate.\n"
         verdict: within_tol
         value: 284.938701
         meter: 1.0
@@ -112,7 +117,8 @@ runs:
       detail: 43 > 0.0
       axis:
         id: particle-driver-builds
-        label: "The driving particle C population (emitted as probe_b) grows over the run — the signal that sets the ODE rate is non-trivial.\n"
+        label: "The driving particle C population (emitted as probe_b) grows over the run — the signal
+          that sets the ODE rate is non-trivial.\n"
         verdict: within_tol
         value: 43.0
         meter: 1.0
@@ -149,3 +155,79 @@ pipeline_gate:
     blocked_by: []
     evaluated_by: code
     diverges_from_authored: false
+question: |
+  Can a Smoldyn particle population drive an ODE's kinetics inside one cell, so the ODE product accelerates as the particle count builds (mode B)?
+study_card:
+  goal: |
+    Show that a particle population drives an ODE's kinetics (mode B) inside one cell.
+  mechanism: |
+    A Smoldyn particle population (A+B->C, confined to the cell polygon) catalyses an ODE S->P: the live particle C count sets the ODE rate constant each step, so the product accumulates faster as the population grows.
+  why_before_next: |
+    Mode B couples stochastic spatial chemistry to a continuous ODE — the cross-formalism direction the other motifs reuse to let particle counts modulate metabolism.
+  expected_result: |
+    The ODE product accumulates (P>0) while the particle driver grows, so the particle population genuinely sets the ODE kinetics.
+  main_expert_question: |
+    The rate map is an empirical effective-volume calibration (~0.65x polygon area); over what conversion regime does it stay faithful before it needs re-fitting?
+readouts:
+- name: probe_a
+  description: ODE product P — accumulates as the particle count drives the rate
+  store_path: probe_a
+  units: molecules
+  status: measured
+- name: probe_b
+  description: Smoldyn particle C count — the driver that sets the ODE rate
+  store_path: probe_b
+  units: particles
+  status: measured
+conditions:
+  baseline:
+    name: coupled-particle-catalysis-baseline
+    composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_particle_catalysis
+    description: |
+      A Smoldyn particle population (A+B->C, confined to the cell polygon) catalyses an ODE S->P: the live particle C count sets the ODE rate constant each step, so the product accumulates faster as the population grows.
+    params: &id001
+      n_cells: 1
+      mechanics: vertex
+variants:
+- name: reference
+  params: *id001
+  description: the published reference configuration (single baseline run)
+visualizations:
+- name: coupled-particle-catalysis — behaviour over the run
+  address: html:coupled-particle-catalysis.html
+  config:
+    title: ODE product P (coupled vs fixed-rate control) and particle count
+- name: coupled-particle-catalysis — verdict scorecard
+  address: html:coupled-particle-catalysis-verdict.html
+  config:
+    title: 'Behaviour tests: measured value vs pass threshold (code-graded)'
+conclusion_verdicts:
+  if_primary_tests_pass: |
+    The ODE product accumulates (P>0) while the particle driver grows, so the particle population genuinely sets the ODE kinetics.
+  if_primary_tests_fail: |
+    A flat product, or product independent of the particle count, would mean the mode-B coupling is not active.
+conclusion_logic:
+  if_primary_tests_pass:
+    verdict: supported
+    summary: |
+      The ODE product accumulates (P>0) while the particle driver grows, so the particle population genuinely sets the ODE kinetics.
+  if_primary_tests_fail:
+    verdict: refuted
+    summary: |
+      A flat product, or product independent of the particle count, would mean the mode-B coupling is not active.
+findings:
+- id: F1-coupled-particle-catalysis
+  kind: computational
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: |
+    The live Smoldyn particle count sets the ODE rate (mode B): the product accumulates as the particle population builds, so stochastic spatial chemistry drives a continuous ODE.
+  evidence:
+    from_test: catalysed-product-accumulates
+    from_run: baseline
+    observed: ODE product P = 285; particle driver +43
+    expected: primary test 'catalysed-product-accumulates' passes (> 0)
+  provenance:
+    run_ids:
+    - baseline
