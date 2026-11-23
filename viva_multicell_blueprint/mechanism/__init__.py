@@ -14,6 +14,7 @@ from viva_multicell_blueprint.mechanism.counts import CellCountStep
 from viva_multicell_blueprint.mechanism.fateful_tissue import FatefulTissueProcess
 from viva_multicell_blueprint.mechanism.tri_coupled import TriCoupledProcess
 from viva_multicell_blueprint.mechanism.fateful_consensus import FatefulConsensusProcess
+from viva_multicell_blueprint.mechanism.particle_consensus import ParticleConsensusProcess
 from viva_multicell_blueprint.mechanism.fields import FieldProcess
 from viva_multicell_blueprint.mechanism.immune import ImmuneRecruitmentProcess
 from viva_multicell_blueprint.mechanism.rules import RulesProcess
@@ -26,6 +27,7 @@ __all__ = [
     "FatefulTissueProcess",
     "TriCoupledProcess",
     "FatefulConsensusProcess",
+    "ParticleConsensusProcess",
     "CellCountStep",
     "FieldProcess",
     "RulesProcess",

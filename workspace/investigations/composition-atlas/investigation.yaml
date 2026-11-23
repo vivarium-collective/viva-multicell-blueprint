@@ -95,6 +95,9 @@ at_a_glance:
 - study: fateful-consensus
   role: |
     The grand unification: the tri-coupled consensus tissue where each cell's CPM area drives an ODE metabolism -> MaBoSS fate -- three tissue + two sub-cellular simulators, one composite.
+- study: particles-in-consensus
+  role: |
+    Particle <-> multi-tissue: a Smoldyn sim confined inside each cell of the tri-coupled consensus tissue -- molecules bounded by a boundary three tissue simulators agree on (vertex shape, munk position, CPM area).
 executive:
   what_is_this: >
     A curated showcase of composition across modelling paradigms, built on the
@@ -159,6 +162,7 @@ members:
 - scene-model-mixed-formalism
 - tri-coupled-consensus
 - fateful-consensus
+- particles-in-consensus
 studies:
 - coupled-fate-oscillator
 - coupled-particle-catalysis
@@ -170,6 +174,7 @@ studies:
 - scene-model-mixed-formalism
 - tri-coupled-consensus
 - fateful-consensus
+- particles-in-consensus
 scientific_argument:
   main_claim: |
     A model's SEMANTICS (its chemistry/logic) are separable from its MECHANICS (the solver that runs it) at every scale, so the same few simulators compose in many directions through small, typed coupling contracts: several sub-cellular simulators couple inside one cell (a product threshold pins a Boolean input; a particle count sets an ODE rate; a Boolean output gates a reaction), a cell is itself a coupled composite, and a tissue of such cells couples the sub-cellular scale back to mechanics — a cell's own metabolism->fate chain decides when the tissue divides.
