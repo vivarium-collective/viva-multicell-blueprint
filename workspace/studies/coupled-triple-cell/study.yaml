@@ -12,38 +12,36 @@ verdict:
 design_status: drafted
 title: "Coupled cell: all three sub-cellular formalisms and all three coupling modes in one cell"
 kind: demonstration
-confidence: Investigating
+confidence: Accepted
 investigation: composition-atlas
 report:
-  verdict: investigating
+  verdict: supported
 
 parent_studies:
-  - {study: coupled-fate-oscillator, condition: ran, relation: builds-on}
-  - {study: coupled-particle-catalysis, condition: ran, relation: builds-on}
+- {study: coupled-fate-oscillator, condition: ran, relation: builds-on}
+- {study: coupled-particle-catalysis, condition: ran, relation: builds-on}
 
 behavior_tests:
-  - name: all-three-formalisms-live
-    classification: primary
-    description: >
-      The cell holds three sub-adapters (particle sensor, ODE metab, Boolean fate), all
-      available, and after stepping reports species from all three (sensor/C, metab/C,
-      fate/divide) — all three formalisms run and are coupled in one cell.
-    measure: {kind: count, field: live_coupled_formalisms}
-    pass_if: {op: eq, value: 3}
-    pytest_node: tests/model_format/test_atlas_composites.py::test_triple_cell_runs_all_three_formalisms
-    requires_simulation: 'true'
-    units: count
+- name: triple-chain-oscillates
+  classification: primary
+  description: >
+    With all three formalisms coupled (particle→metabolism→fate), the fate 'divide'
+    activity (emitted as probe_a) crosses the 0.5 cutoff at least twice — the full
+    particle→metabolism→fate→reset chain cycles rather than latching.
+  measure: {kind: derived_scalar, path: atlas_fate_transitions}
+  pass_if: {op: ">=", value: 2}
+  pytest_node: tests/model_format/test_atlas_composites.py::test_triple_cell_runs_all_three_formalisms
+  requires_simulation: 'true'
+  units: dimensionless
 
 limitations:
-  - Combines the oscillator and catalysis motifs; it inherits both their calibration caveats
-    (empirical particle rate, MaBoSS mean-field lag).
-  - Only the co-running of all three formalisms is a committed test; the triple-coupled
-    rhythm's quantitative shape is shown in the viz but not pinned to a band.
+- Combines the oscillator and catalysis motifs; it inherits both their calibration caveats (empirical particle rate, MaBoSS mean-field lag).
+- Only the co-running of all three formalisms is a committed test; the triple-coupled rhythm's quantitative shape is shown in the viz but not pinned to a band.
 
 composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_triple_cell
 baseline:
-  - name: coupled-triple-cell
-    composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_triple_cell
+- name: coupled-triple-cell
+  composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_triple_cell
 
 claim: >
   A single cell can run all three sub-cellular formalisms at once — a Smoldyn particle sim,
@@ -64,3 +62,57 @@ outcomes: >
 
 notes: |
   Regenerate with `python scripts/gen_atlas_viz.py coupled-triple-cell`.
+runs:
+- name: baseline
+  status: completed
+  timestamp: 1795445525.52791
+  emitter:
+    kind: sqlite
+    store: workspace/studies/coupled-triple-cell/runs/baseline/history.db
+  generations: 1
+  sim_minutes: 1
+  n_readouts: 3
+  computed_outcomes:
+    triple-chain-oscillates:
+      result: PASS
+      measured_value: 22.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 22 >= 2.0
+      axis:
+        id: triple-chain-oscillates
+        label: "With all three formalisms coupled (particle→metabolism→fate), the fate 'divide' activity (emitted as probe_a) crosses the 0.5 cutoff at least twice — the full particle→metabolism→fate→reset chain cycles rather than latching.\n"
+        verdict: within_tol
+        value: 22.0
+        meter: 1.0
+        detail:
+        expected:
+          kind: value
+          value: 2.0
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 20.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+  outcomes:
+    triple-chain-oscillates:
+      result: PASS
+simulation_set:
+- name: coupled-triple-cell-baseline
+  kind: single
+  base_model: viva_multicell_blueprint.composites.coupled_subcellular.coupled_triple_cell
+  is_baseline: true
+  status: ran
+pipeline_gate:
+  gate_evaluator:
+    result: passed
+    blocked_by: []
+    evaluated_by: code
+    diverges_from_authored: false

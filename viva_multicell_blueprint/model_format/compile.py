@@ -141,6 +141,10 @@ class SceneModelProcess(Process):
         "mechanics": {"_type": "string", "_default": "vertex"},
         "extracellular": "quote",
         "intracellular_overrides": "quote",
+        # optional probes: species names (namespaced, e.g. "fate/divide") read from the
+        # FIRST cell each step and emitted as probe_a / probe_b float observables, so a
+        # run's coupling signal is persisted for behavior-test grading.
+        "probe": "quote",
     }
 
     def __init__(self, config=None, core=None):
@@ -150,6 +154,7 @@ class SceneModelProcess(Process):
         overrides = self.config.get("intracellular_overrides") or {}
         self._scene = scene
         self._bound = bind(scene, registry)  # raises UnboundCellType for an unknown type
+        self._probe = list(self.config.get("probe") or [])  # species read from the first cell
         self._backend_name = self.config.get("mechanics") or "vertex"
         self._cell_ids = sorted(scene.cells)
         # deterministic scene id (str) -> mechanics id (str "1".."N") in sorted order
@@ -270,7 +275,17 @@ class SceneModelProcess(Process):
         return {}
 
     def outputs(self):
-        return {"n_cells": "overwrite[integer]", "total_molecules": "overwrite[float]"}
+        return {"n_cells": "overwrite[integer]", "total_molecules": "overwrite[float]",
+                "probe_a": "overwrite[float]", "probe_b": "overwrite[float]"}
+
+    def _probe_values(self) -> tuple[float, float]:
+        """Read the configured probe species from the first cell (0.0 if absent)."""
+        if not self._cell_ids:
+            return 0.0, 0.0
+        am = self._last_amounts.get(self._cell_ids[0], {})
+        vals = [float(am.get(sp, 0.0)) for sp in self._probe[:2]]
+        vals += [0.0] * (2 - len(vals))
+        return vals[0], vals[1]
 
     def update(self, inputs, interval=1):
         self._advance_mechanics()
@@ -305,7 +320,9 @@ class SceneModelProcess(Process):
         if self._field is not None:
             self._field.diffuse()
         self._last_amounts = {sid: self._adapters[sid].amounts() for sid in self._cell_ids}
-        return {"n_cells": len(self._cell_ids), "total_molecules": float(total)}
+        probe_a, probe_b = self._probe_values()
+        return {"n_cells": len(self._cell_ids), "total_molecules": float(total),
+                "probe_a": probe_a, "probe_b": probe_b}
 
 
 def compile_scene(
@@ -315,6 +332,7 @@ def compile_scene(
     mechanics: str = "vertex",
     extracellular: FieldExtracellular | None = None,
     intracellular_overrides: dict[str, str] | None = None,
+    probe: list[str] | None = None,
 ) -> dict:
     """Assemble ``scene`` + ``registry`` into one runnable composite document.
 
@@ -359,12 +377,16 @@ def compile_scene(
                 "mechanics": mechanics,
                 "extracellular": field,
                 "intracellular_overrides": dict(intracellular_overrides or {}),
+                "probe": list(probe or []),
             },
             "inputs": {},
-            "outputs": {"n_cells": ["n_cells"], "total_molecules": ["total_molecules"]},
+            "outputs": {"n_cells": ["n_cells"], "total_molecules": ["total_molecules"],
+                        "probe_a": ["probe_a"], "probe_b": ["probe_b"]},
         },
         "n_cells": 0,
         "total_molecules": 0.0,
+        "probe_a": 0.0,
+        "probe_b": 0.0,
     }}
 
 

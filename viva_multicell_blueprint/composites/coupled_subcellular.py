@@ -126,7 +126,8 @@ def _grid_scene(cell_type: str, n: int, spacing: float = 12.0) -> Scene:
 def coupled_fate_oscillator(core=None, n_cells: int = 4, mechanics: str = "vertex") -> dict:
     scene = _grid_scene("coupled_cell", int(n_cells))
     registry = Registry({"coupled_cell": ModelSpec(formalism="coupled", source=_OSC_SOURCE)})
-    return compile_scene(scene, registry, mechanics=str(mechanics))
+    return compile_scene(scene, registry, mechanics=str(mechanics),
+                         probe=["fate/divide", "metab/C"])
 
 
 @composite_generator(
@@ -149,7 +150,8 @@ def coupled_fate_oscillator(core=None, n_cells: int = 4, mechanics: str = "verte
 def coupled_particle_catalysis(core=None, n_cells: int = 3, mechanics: str = "vertex") -> dict:
     scene = _grid_scene("coupled_cell", int(n_cells))
     registry = Registry({"coupled_cell": ModelSpec(formalism="coupled", source=_CAT_SOURCE)})
-    return compile_scene(scene, registry, mechanics=str(mechanics))
+    return compile_scene(scene, registry, mechanics=str(mechanics),
+                         probe=["metab/P", "sensor/C"])
 
 
 @composite_generator(
@@ -172,4 +174,5 @@ def coupled_particle_catalysis(core=None, n_cells: int = 3, mechanics: str = "ve
 def coupled_triple_cell(core=None, n_cells: int = 2, mechanics: str = "vertex") -> dict:
     scene = _grid_scene("coupled_cell", int(n_cells))
     registry = Registry({"coupled_cell": ModelSpec(formalism="coupled", source=_TRIPLE_SOURCE)})
-    return compile_scene(scene, registry, mechanics=str(mechanics))
+    return compile_scene(scene, registry, mechanics=str(mechanics),
+                         probe=["fate/divide", "metab/C"])

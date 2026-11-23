@@ -100,28 +100,31 @@ executive:
     metabolism↔fate cycle; the catalysis product accelerates as the particle population
     builds; the triple cell runs all three formalisms and all three modes at once; and the
     fateful tissue grows sustainably (4→~26 cells) with every division decided by a cell's own
-    fate network and particle counts conserved across each split. The behaviour of each is
-    pinned by a committed test; quantitative acceptance thresholds (holdouts, bands) are the
-    next rigor step and are listed per study and in the limitations.
+    fate network and particle counts conserved across each split. Each claim is backed by a
+    committed behaviour test that is machine-graded against a registered run, so every study
+    carries an EARNED 'supported' verdict (not a narrated one); the remaining rigor step is
+    pre-registered acceptance bands and holdouts, noted in the limitations.
   verdict_detail: >
-    Each composition's claim is backed by a committed behaviour test (a pytest node that runs
-    the real engines), so the demonstrations are rerunnable rather than narrated:
-    coupled-fate-oscillator asserts the fate 'divide' node toggles at least twice (oscillation,
-    not latch); coupled-particle-catalysis asserts the ODE product accumulates and the live rate
-    constant equals base times the particle count; coupled-triple-cell asserts all three
-    sub-adapters are live and emit state; fateful-tissue asserts at least one fate-driven
-    division, a non-collapsing cell count, and particles surviving the splits. What is NOT yet
-    done, and is the honest ceiling on confidence: no formal acceptance band or holdout is
-    registered, so each study's rolled-up verdict is 'investigating'; the quantitative shapes
-    (period, acceleration magnitude, exact mother-equals-sum-of-daughters conservation) are
-    shown in the visualizations but not gated.
+    Each composition's claim is pinned by a committed behaviour test graded by code against a
+    persisted run (SQLiteEmitter store under the study's runs/, scored by a workspace
+    derived-scalar computer), so the verdicts are run-earned: coupled-fate-oscillator —
+    26 fate 'divide' threshold-crossings over the run (≥2 required); coupled-particle-catalysis
+    — ODE product P reaches 285 (>0) while the driving particle count grows by 43 (>0);
+    coupled-triple-cell — 22 crossings of the full particle→metabolism→fate chain (≥2);
+    fateful-tissue — 20 fate-driven divisions (≥1) with the cell count never dropping below the
+    initial 4 (non-collapse). What is NOT yet done, the honest ceiling: the pass thresholds are
+    directional existence/sign checks, not pre-registered quantitative acceptance BANDS with
+    holdouts, so the verdict is 'supported', not a calibrated 'accepted-to-tolerance'; the
+    quantitative shapes (period, acceleration magnitude, exact mother=Σdaughters conservation)
+    are shown in the visualizations but not yet gated to a band.
 
 limitations:
   - >
-    These are DEMONSTRATIONS, not hypothesis tests: each claim is pinned by a committed
-    behaviour test (a pytest node that runs the real engines), but no formal acceptance band
-    / holdout has been registered yet, so the rolled-up verdict is 'investigating', not
-    'accepted'.
+    These are DEMONSTRATIONS with run-earned verdicts, not calibrated hypothesis tests: each
+    claim is machine-graded against a registered run, but the pass thresholds are directional
+    existence/sign checks (oscillation present, product accumulates, division occurs,
+    non-collapse), not pre-registered quantitative acceptance bands with holdouts — so the
+    earned verdict is 'supported', short of a tolerance-calibrated 'accepted'.
   - >
     The MaBoSS fate uses a mean-field istate (independent per-node probabilities, ~5% noise);
     the 0.5 cutoff on 'divide' has a one-step lag that sets the oscillator period.

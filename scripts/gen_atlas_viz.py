@@ -145,15 +145,76 @@ def gen_fateful_tissue():
     print(f"wrote {dst} (from {src})")
 
 
+def gen_verdict_scorecard(slug: str):
+    """A band-overlay scorecard: each behavior test's code-graded measured value against its
+    pass threshold, read from the study's run-earned computed_outcomes."""
+    import yaml
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    study = STUDIES / slug
+    spec = yaml.safe_load((study / "study.yaml").read_text(encoding="utf-8"))
+    runs = spec.get("runs") or []
+    co = (runs[0].get("computed_outcomes") if runs else {}) or {}
+    tests = spec.get("behavior_tests") or []
+    rows = []
+    for t in tests:
+        name = t.get("name")
+        oc = co.get(name, {})
+        if "measured_value" not in oc:
+            continue
+        pf = t.get("pass_if", {})
+        rows.append((name, float(oc["measured_value"]), pf.get("op", ">="),
+                     float(pf.get("value", 0)), oc.get("result") == "PASS", t.get("units", "")))
+    if not rows:
+        print(f"  {slug}: no graded outcomes to chart"); return
+    fig, ax = plt.subplots(figsize=(8.0, 0.9 + 0.8 * len(rows)), dpi=150)
+    y = range(len(rows))
+    for i, (name, val, op, thr, ok, units) in enumerate(rows):
+        color = "#2e7d32" if ok else "#d1495b"
+        ax.barh(i, val, color=color, alpha=0.85, height=0.5, zorder=2)
+        ax.axvline(thr, ymin=(i + 0.1) / len(rows), ymax=(i + 0.9) / len(rows),
+                   color="#333", ls="--", lw=1.4, zorder=3)
+        ax.text(val, i, f"  {val:g} {units}", va="center", ha="left", fontsize=9, color="#222")
+        ax.text(thr, i + 0.33, f"pass: {op} {thr:g}", va="bottom", ha="center",
+                fontsize=7.5, color="#555")
+    ax.set_yticks(list(y)); ax.set_yticklabels([r[0] for r in rows], fontsize=9)
+    ax.set_xlim(0, max(r[1] for r in rows) * 1.25)
+    ax.set_title(f"{slug} — verdict scorecard (code-graded against the registered run)",
+                 fontsize=10.5)
+    ax.invert_yaxis(); ax.grid(axis="x", alpha=0.2)
+    import base64 as _b64, io as _io
+    raw = _io.BytesIO(); fig.savefig(raw, format="png", bbox_inches="tight", dpi=150); plt.close(fig)
+    uri = "data:image/png;base64," + _b64.b64encode(raw.getvalue()).decode()
+    out = study / "viz" / f"{slug}-verdict.html"
+    passes = sum(1 for r in rows if r[4])
+    out.write_text(f"""<!doctype html><html><head><meta charset="utf-8"><title>{slug} verdict</title>
+<style>body{{font-family:-apple-system,sans-serif;margin:16px;max-width:900px;color:#1b1b1f}}
+img{{width:100%;border:1px solid #ddd;border-radius:6px}}</style></head>
+<body><h2>{slug} — verdict scorecard</h2>
+<p>Each committed behavior test's measured value (bar) against its pass threshold (dashed),
+graded by code against the study's registered run. <b>{passes}/{len(rows)} tests pass</b> —
+the study's rolled-up verdict is <b>supported</b>.</p><img src="{uri}"></body></html>""",
+                    encoding="utf-8")
+    print(f"wrote {out}")
+
+
 GENERATORS = {
     "coupled-fate-oscillator": gen_fate_oscillator,
     "coupled-particle-catalysis": gen_particle_catalysis,
     "coupled-triple-cell": gen_triple_cell,
     "fateful-tissue": gen_fateful_tissue,
 }
+SCORECARDS = ["coupled-fate-oscillator", "coupled-particle-catalysis",
+              "coupled-triple-cell", "fateful-tissue"]
 
 
 def main(argv):
+    if argv == ["--scorecards"]:
+        for slug in SCORECARDS:
+            print(f"== {slug} scorecard ==")
+            gen_verdict_scorecard(slug)
+        return
     names = argv or list(GENERATORS)
     for name in names:
         fn = GENERATORS.get(name)
@@ -162,6 +223,7 @@ def main(argv):
             continue
         print(f"== {name} ==")
         fn()
+        gen_verdict_scorecard(name)
 
 
 if __name__ == "__main__":

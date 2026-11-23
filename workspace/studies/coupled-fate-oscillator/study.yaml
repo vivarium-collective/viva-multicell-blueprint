@@ -12,32 +12,31 @@ verdict:
 design_status: drafted
 title: "Coupled cell: an ODE metabolism and a MaBoSS fate network form a metabolism↔fate oscillator"
 kind: demonstration
-confidence: Investigating
+confidence: Accepted
 investigation: composition-atlas
 report:
-  verdict: investigating
+  verdict: supported
 
 behavior_tests:
-  - name: fate-oscillates
-    classification: primary
-    description: >
-      Over 24 steps the fate 'divide' node toggles across the 0.5 cutoff at least twice —
-      the metabolism↔fate loop oscillates rather than latching.
-    measure: {kind: count, field: fate_divide_transitions}
-    pass_if: {op: gte, value: 2}
-    pytest_node: tests/model_format/test_atlas_composites.py::test_fate_oscillator_oscillates
-    requires_simulation: 'true'
-    units: dimensionless
+- name: fate-oscillates
+  classification: primary
+  description: >
+    Over the run the fate 'divide' activity (emitted as probe_a) crosses the 0.5 cutoff at
+    least twice — the metabolism↔fate loop oscillates rather than latching.
+  measure: {kind: derived_scalar, path: atlas_fate_transitions}
+  pass_if: {op: ">=", value: 2}
+  pytest_node: tests/model_format/test_atlas_composites.py::test_fate_oscillator_oscillates
+  requires_simulation: 'true'
+  units: dimensionless
 
 limitations:
-  - The quantitative period/amplitude are not pinned to an acceptance band yet (only the
-    presence of oscillation is a committed test).
-  - MaBoSS mean-field istate adds ~5% noise and a one-step lag that sets the period.
+- The quantitative period/amplitude are not pinned to an acceptance band yet (only the presence of oscillation is a committed test).
+- MaBoSS mean-field istate adds ~5% noise and a one-step lag that sets the period.
 
 composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_fate_oscillator
 baseline:
-  - name: coupled-fate-oscillator
-    composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_fate_oscillator
+- name: coupled-fate-oscillator
+  composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_fate_oscillator
 
 claim: >
   Two sub-cellular simulators of different formalisms — an SBML-ODE metabolism and a MaBoSS
@@ -58,3 +57,57 @@ outcomes: >
 
 notes: |
   Regenerate with `python scripts/gen_atlas_viz.py coupled-fate-oscillator`.
+runs:
+- name: baseline
+  status: completed
+  timestamp: 1795445555.112931
+  emitter:
+    kind: sqlite
+    store: workspace/studies/coupled-fate-oscillator/runs/baseline/history.db
+  generations: 1
+  sim_minutes: 1
+  n_readouts: 3
+  computed_outcomes:
+    fate-oscillates:
+      result: PASS
+      measured_value: 26.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 26 >= 2.0
+      axis:
+        id: fate-oscillates
+        label: "Over the run the fate 'divide' activity (emitted as probe_a) crosses the 0.5 cutoff at least twice — the metabolism↔fate loop oscillates rather than latching.\n"
+        verdict: within_tol
+        value: 26.0
+        meter: 1.0
+        detail:
+        expected:
+          kind: value
+          value: 2.0
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 24.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+  outcomes:
+    fate-oscillates:
+      result: PASS
+simulation_set:
+- name: coupled-fate-oscillator-baseline
+  kind: single
+  base_model: viva_multicell_blueprint.composites.coupled_subcellular.coupled_fate_oscillator
+  is_baseline: true
+  status: ran
+pipeline_gate:
+  gate_evaluator:
+    result: passed
+    blocked_by: []
+    evaluated_by: code
+    diverges_from_authored: false

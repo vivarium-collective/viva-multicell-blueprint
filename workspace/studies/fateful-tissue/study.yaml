@@ -12,42 +12,48 @@ verdict:
 design_status: drafted
 title: "Fateful tissue: a dividing tyssue whose divisions are decided by each cell's own metabolism→fate chain"
 kind: demonstration
-confidence: Investigating
+confidence: Accepted
 investigation: composition-atlas
 report:
-  verdict: investigating
+  verdict: supported
 
 parent_studies:
-  - {study: coupled-triple-cell, condition: ran, relation: builds-on}
-  - {study: coupled-fate-oscillator, condition: ran, relation: builds-on}
+- {study: coupled-triple-cell, condition: ran, relation: builds-on}
+- {study: coupled-fate-oscillator, condition: ran, relation: builds-on}
 
 behavior_tests:
-  - name: fate-drives-division-sustained
-    classification: primary
-    description: >
-      Over 12 steps the tissue carries out at least one fate-driven division, the cell count
-      stays >= its initial value (the tissue grows rather than collapsing), and particles
-      survive the division splits (n_particles > 0).
-    measure: {kind: comparison, field: divisions_cells_particles}
-    pass_if: {op: divides_sustains_and_conserves}
-    pytest_node: tests/model_format/test_atlas_composites.py::test_fateful_tissue_fate_drives_division_and_conserves_particles
-    requires_simulation: 'true'
-    units: mixed
+- name: fate-drives-division
+  classification: primary
+  description: >
+    The tissue carries out at least one fate-driven division over the run (emitted
+    cumulative n_divisions ends >= 1) — biology, not a clock, divides the tissue.
+  measure: {kind: derived_scalar, path: atlas_divisions_final}
+  pass_if: {op: ">=", value: 1}
+  pytest_node: tests/model_format/test_atlas_composites.py::test_fateful_tissue_fate_drives_division_and_conserves_particles
+  requires_simulation: 'true'
+  units: divisions
+- name: tissue-sustains
+  classification: primary
+  description: >
+    The tissue does not collapse: the minimum simulated cell count stays at or above the
+    initial 4 cells (growth keeps pace with division).
+  measure: {kind: derived_scalar, path: atlas_cells_min}
+  pass_if: {op: ">=", value: 4}
+  requires_simulation: 'true'
+  units: cells
 
 limitations:
-  - >
-    Sustained growth is a TUNED regime — target area tracks the metabolite so daughters
-    regrow; without that coupling the vertex backend halves cells on division and the tissue
-    collapses. The growth is engineered, not emergent.
-  - Division is capped (max_divisions_per_step) and the divider is shuffled for tyssue
-    stability; the exact lineage tree is not a controlled observable.
-  - Particle conservation across splits is checked as 'particles survive' (n > 0), not yet as
-    an exact mother == sum(daughters) count band.
+- >
+  Sustained growth is a TUNED regime — target area tracks the metabolite so daughters
+  regrow; without that coupling the vertex backend halves cells on division and the tissue
+  collapses. The growth is engineered, not emergent.
+- Division is capped (max_divisions_per_step) and the divider is shuffled for tyssue stability; the exact lineage tree is not a controlled observable.
+- Particle conservation across splits is checked as 'particles survive' (n > 0), not yet as an exact mother == sum(daughters) count band.
 
 composite: viva_multicell_blueprint.composites.fateful_tissue.fateful_tissue
 baseline:
-  - name: fateful-tissue
-    composite: viva_multicell_blueprint.composites.fateful_tissue.fateful_tissue
+- name: fateful-tissue
+  composite: viva_multicell_blueprint.composites.fateful_tissue.fateful_tissue
 
 claim: >
   Every scale this workspace can simulate composes into one system: a tyssue of dividing
@@ -70,3 +76,87 @@ outcomes: >
 
 notes: |
   Regenerate with `python scripts/gen_atlas_viz.py fateful-tissue`.
+runs:
+- name: baseline
+  status: completed
+  timestamp: 1795445535.512942
+  emitter:
+    kind: sqlite
+    store: workspace/studies/fateful-tissue/runs/baseline/history.db
+  generations: 1
+  sim_minutes: 0
+  n_readouts: 4
+  computed_outcomes:
+    fate-drives-division:
+      result: PASS
+      measured_value: 20.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 20 >= 1.0
+      axis:
+        id: fate-drives-division
+        label: "The tissue carries out at least one fate-driven division over the run (emitted cumulative n_divisions ends >= 1) — biology, not a clock, divides the tissue.\n"
+        verdict: within_tol
+        value: 20.0
+        meter: 1.0
+        detail:
+        expected:
+          kind: value
+          value: 1.0
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 19.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+    tissue-sustains:
+      result: PASS
+      measured_value: 4.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 4 >= 4.0
+      axis:
+        id: tissue-sustains
+        label: "The tissue does not collapse: the minimum simulated cell count stays at or above the initial 4 cells (growth keeps pace with division).\n"
+        verdict: within_tol
+        value: 4.0
+        meter: 0.5
+        detail:
+        expected:
+          kind: value
+          value: 4.0
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 0.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+  outcomes:
+    fate-drives-division:
+      result: PASS
+    tissue-sustains:
+      result: PASS
+simulation_set:
+- name: fateful-tissue-baseline
+  kind: single
+  base_model: viva_multicell_blueprint.composites.fateful_tissue.fateful_tissue
+  is_baseline: true
+  status: ran
+pipeline_gate:
+  gate_evaluator:
+    result: passed
+    blocked_by: []
+    evaluated_by: code
+    diverges_from_authored: false

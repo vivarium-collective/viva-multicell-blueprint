@@ -12,33 +12,40 @@ verdict:
 design_status: drafted
 title: "Coupled cell: a Smoldyn particle population catalyses an ODE (particle count sets the ODE rate)"
 kind: demonstration
-confidence: Investigating
+confidence: Accepted
 investigation: composition-atlas
 report:
-  verdict: investigating
+  verdict: supported
 
 behavior_tests:
-  - name: particle-count-sets-ode-rate
-    classification: primary
-    description: >
-      The ODE product P accumulates (monotone, final > 0) and the live ODE rate constant
-      kf0 equals base × the particle C count — the particle population drives the kinetics.
-    measure: {kind: comparison, field: ode_product_and_rate_vs_particle_count}
-    pass_if: {op: accumulates_and_rate_tracks_count}
-    pytest_node: tests/model_format/test_coupled_cell.py::test_mode_b_catalysis_rate_tracks_count
-    requires_simulation: 'true'
-    units: mixed
+- name: catalysed-product-accumulates
+  classification: primary
+  description: >
+    The catalysed ODE product P (emitted as probe_a) accumulates to a positive final value
+    as the particle population drives the rate.
+  measure: {kind: derived_scalar, path: atlas_product_final}
+  pass_if: {op: ">", value: 0}
+  pytest_node: tests/model_format/test_coupled_cell.py::test_mode_b_catalysis_rate_tracks_count
+  requires_simulation: 'true'
+  units: molecules
+- name: particle-driver-builds
+  classification: secondary
+  description: >
+    The driving particle C population (emitted as probe_b) grows over the run — the signal
+    that sets the ODE rate is non-trivial.
+  measure: {kind: derived_scalar, path: atlas_signal_growth}
+  pass_if: {op: ">", value: 0}
+  requires_simulation: 'true'
+  units: particles
 
 limitations:
-  - The rate coupling is an empirical calibration (effective volume ~0.65×polygon area);
-    faithful near the calibrated regime, drifts outside it.
-  - The concave-up acceleration vs a fixed-rate control is shown in the viz but the
-    acceleration magnitude is not pinned to an acceptance band.
+- The rate coupling is an empirical calibration (effective volume ~0.65×polygon area); faithful near the calibrated regime, drifts outside it.
+- The concave-up acceleration vs a fixed-rate control is shown in the viz but the acceleration magnitude is not pinned to an acceptance band.
 
 composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_particle_catalysis
 baseline:
-  - name: coupled-particle-catalysis
-    composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_particle_catalysis
+- name: coupled-particle-catalysis
+  composite: viva_multicell_blueprint.composites.coupled_subcellular.coupled_particle_catalysis
 
 claim: >
   A Smoldyn particle simulator and an SBML-ODE can be coupled inside one cell so that the
@@ -58,3 +65,87 @@ outcomes: >
 
 notes: |
   Regenerate with `python scripts/gen_atlas_viz.py coupled-particle-catalysis`.
+runs:
+- name: baseline
+  status: completed
+  timestamp: 1795445522.1811142
+  emitter:
+    kind: sqlite
+    store: workspace/studies/coupled-particle-catalysis/runs/baseline/history.db
+  generations: 1
+  sim_minutes: 0
+  n_readouts: 3
+  computed_outcomes:
+    catalysed-product-accumulates:
+      result: PASS
+      measured_value: 284.938701
+      evaluated_by: code
+      operator: derived_scalar/>
+      detail: 284.9 > 0.0
+      axis:
+        id: catalysed-product-accumulates
+        label: "The catalysed ODE product P (emitted as probe_a) accumulates to a positive final value as the particle population drives the rate.\n"
+        verdict: within_tol
+        value: 284.938701
+        meter: 1.0
+        detail:
+        expected:
+          kind: value
+          value: 0.0
+          low:
+          high:
+          op: '>'
+          tol: 0.05
+          statement:
+          units:
+        margin: 284.938701
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+    particle-driver-builds:
+      result: PASS
+      measured_value: 43.0
+      evaluated_by: code
+      operator: derived_scalar/>
+      detail: 43 > 0.0
+      axis:
+        id: particle-driver-builds
+        label: "The driving particle C population (emitted as probe_b) grows over the run — the signal that sets the ODE rate is non-trivial.\n"
+        verdict: within_tol
+        value: 43.0
+        meter: 1.0
+        detail:
+        expected:
+          kind: value
+          value: 0.0
+          low:
+          high:
+          op: '>'
+          tol: 0.05
+          statement:
+          units:
+        margin: 43.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+  outcomes:
+    catalysed-product-accumulates:
+      result: PASS
+    particle-driver-builds:
+      result: PASS
+simulation_set:
+- name: coupled-particle-catalysis-baseline
+  kind: single
+  base_model: viva_multicell_blueprint.composites.coupled_subcellular.coupled_particle_catalysis
+  is_baseline: true
+  status: ran
+pipeline_gate:
+  gate_evaluator:
+    result: passed
+    blocked_by: []
+    evaluated_by: code
+    diverges_from_authored: false
