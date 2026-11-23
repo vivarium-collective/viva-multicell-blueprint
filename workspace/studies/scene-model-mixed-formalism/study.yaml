@@ -1,14 +1,14 @@
 schema_version: 4
 name: scene-model-mixed-formalism
 created: "2026-11-23"
-status: designed
+status: draft
 phase: Design
 simulation_status: not_run
 implementation_status: complete
 evaluation_status: not_evaluated
 gate_status: pending
-execution_status: pending
-verdict: pending
+execution_status: planned
+verdict:
 design_status: drafted
 title: "Model-definition format: one scene, three cell types, three formalisms (ODE, Smoldyn particles, MaBoSS) sharing an extracellular field"
 kind: demonstration
@@ -16,6 +16,9 @@ confidence: Investigating
 investigation: particle-multicell-composition
 
 composite: viva_multicell_blueprint.composites.scene_model.scene_model
+baseline:
+  - name: scene-model-mixed-formalism
+    composite: viva_multicell_blueprint.composites.scene_model.scene_model
 
 claim: >
   A declarative scene (cells + types) bound to a per-type model registry compiles to one
