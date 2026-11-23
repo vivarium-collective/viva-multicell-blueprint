@@ -28,9 +28,9 @@ _BNET = {"X": "!Y", "Y": "X"}
 def demo_registry() -> Registry:
     """metabolic -> ODE, signalling -> particle, fate -> Boolean (MaBoSS)."""
     return Registry({
-        "metabolic": ModelSpec(formalism="ode", source=_NET,
+        "metabolic": ModelSpec(formalism="ode", source=dict(_NET),
                                membrane={"C": Transport("cross", 0.1)}),
-        "signalling": ModelSpec(formalism="particle", source=_NET),
+        "signalling": ModelSpec(formalism="particle", source=dict(_NET)),
         "fate": ModelSpec(formalism="maboss", source=_BNET),
     })
 

@@ -39,3 +39,18 @@ def test_three_cell_types_use_their_declared_formalisms():
     assert isinstance(proc._adapters["s1"], ParticleAdapter)
     assert isinstance(proc._adapters["f1"], BooleanAdapter)
     assert proc._adapters["m1"].available(), "ODE cell must be exercised"
+    assert proc._adapters["s1"].available(), "particle (Smoldyn) engine must be live"
+    assert proc._adapters["f1"].available(), "Boolean (MaBoSS) engine must be live"
+
+
+def test_all_three_engines_actually_step_and_produce_state():
+    comp = _build()
+    proc = comp.state["scene_model"]["instance"]
+    comp.run(2.0)
+    amts = proc._last_amounts
+    assert amts["m1"] and amts["m1"]["C"] > 0.0  # ODE reacted
+    assert amts["s1"] and set(amts["s1"]) >= {"A", "B", "C"}  # particle counts
+    assert amts["f1"] and set(amts["f1"]) == {"X", "Y"}  # MaBoSS node activities
+    # MaBoSS actually stepped: f1 started X=1,Y=0 and !Y/X dynamics move it off the init
+    assert all(0.0 <= v <= 1.0 for v in amts["f1"].values())
+    assert amts["f1"] != {"X": 1.0, "Y": 0.0}
