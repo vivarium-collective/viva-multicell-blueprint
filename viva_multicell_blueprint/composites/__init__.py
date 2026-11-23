@@ -9,6 +9,7 @@ rules slot).
 from .sego import sego_crossparadigm, sego_crossparadigm_large
 from .pipeline import blueprint_pipeline
 from .grammar_demo import grammar_rules_demo
+from .tri_coupled import tri_coupled
 
 __all__ = ["sego_crossparadigm", "sego_crossparadigm_large", "grammar_rules_demo",
-           "blueprint_pipeline"]
+           "blueprint_pipeline", "tri_coupled"]

@@ -85,7 +85,8 @@
           <div class="engine sel" data-e="cpm" id="eng-cpm">CPM<small>Cellular Potts (voxel)</small></div>
           <div class="engine" data-e="vertex" id="eng-vertex">Vertex<small>tyssue (polygon)</small></div>
           <div class="engine" data-e="munk" id="eng-munk">Center-based<small>pymunk (disc)</small></div>
-          <div class="engine" data-e="all" id="eng-all">All three<small>CPM + vertex + center-based</small></div>
+          <div class="engine" data-e="all" id="eng-all">All three<small>CPM + vertex + center-based (independent)</small></div>
+          <div class="engine" data-e="tri" id="eng-tri">Tri-coupled<small>one coupled composite: shape·position·area</small></div>
         </div>
       </div>
       <div>
@@ -108,6 +109,7 @@
 
 <script>
 const COMPOSITE = "viva_multicell_blueprint.composites.pipeline.blueprint_pipeline";
+const TRI_COMPOSITE = "viva_multicell_blueprint.composites.tri_coupled.tri_coupled";
 // The page is served at <base>/assets/blueprint_studio.html; the API lives at
 // <base>/api/... - derive it so POSTs don't resolve under /assets/ (405) and so
 // a reverse-proxy base path is honored.
@@ -223,7 +225,23 @@ $("#download").addEventListener("click", () => {
   a.click(); URL.revokeObjectURL(a.href);
 });
 
-async function pollRun(runId, el, eng, videoOut){
+// Per-engine job: the stand-alone modules run blueprint_pipeline with a backend
+// override + a spatial-playback video; "tri" runs the coupled tri_coupled composite
+// and its output is the 3-paradigm overlay HTML it writes to assets/<overlay_out>.html.
+function jobFor(eng, overridesBase){
+  if(eng==="tri"){
+    const out = `studio_tri_${Date.now()}`;
+    return {composite: TRI_COMPOSITE, emit_paths:["consensus_spread"],
+      overrides:{...overridesBase, overlay_out: out, munk_squish: 0.8},
+      art:{href:`${out}.html`, label:"▶ View tri-coupled overlay ↗", dlname:"tri-coupled-overlay.html"}};
+  }
+  const out = `studio_${Date.now()}_${eng}`;
+  return {composite: COMPOSITE, emit_paths:["cell_counts"],
+    overrides:{...overridesBase, backend: eng, video_out: out},
+    art:{href:`_studio_runs/${out}.html`, label:"▶ View video ↗", dlname:`${eng}-playback.html`}};
+}
+
+async function pollRun(runId, el, eng, art){
   for(let i=0;i<120;i++){
     await new Promise(r=>setTimeout(r,2500));
     try{
@@ -233,11 +251,10 @@ async function pollRun(runId, el, eng, videoOut){
       if(st && /complete|done|finished|success/.test(st)){
         el.className="result ok";
         const dl = `${API}/simulation-run-download?run_id=${encodeURIComponent(runId)}`;
-        const vid = videoOut ? `_studio_runs/${encodeURIComponent(videoOut)}.html` : null;
         el.innerHTML = `✓ <b>${eng}</b> run complete <span class="muted">(${runId})</span>`
           + `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">`
-          + (vid ? `<a class="btn-mini" href="${vid}" target="_blank" rel="noopener">▶ View video ↗</a>` : "")
-          + (vid ? `<a class="btn-mini" href="${vid}" download="${eng}-playback.html">Download video ⬇</a>` : "")
+          + (art ? `<a class="btn-mini" href="${art.href}" target="_blank" rel="noopener">${art.label}</a>` : "")
+          + (art ? `<a class="btn-mini" href="${art.href}" download="${art.dlname}">Download ⬇</a>` : "")
           + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">View results ↗</a>`
           + `<a class="btn-mini" href="${dl}" download>Download results ⬇</a>`
           + `</div>`;
@@ -258,23 +275,18 @@ async function startRun(eng, steps, overridesBase, tpl){
   const el = document.createElement("div"); el.className="result";
   el.innerHTML = `⏳ <b>${eng}</b> — starting (${steps} steps)…`;
   $("#status").appendChild(el);
-  // unique output name so the recorder writes a per-run spatial video we can open.
-  const videoOut = `studio_${Date.now()}_${eng}`;
+  const job = jobFor(eng, overridesBase);
   try{
     const resp = await fetch(`${API}/composite-test-run`, {
       method:"POST", headers:{"content-type":"application/json"},
-      // emit_paths: cell-population counts — a well-shaped scalar observable the
-      // xarray emitter can persist (the full state has empty-list stores → zarr 0-chunk).
-      // video_out: record a spatial-playback video to /assets/_studio_runs/<name>.html.
-      body: JSON.stringify({id: COMPOSITE, steps,
-                            overrides:{...overridesBase, backend:eng, video_out:videoOut},
-                            emit_paths:["cell_counts"], label:`blueprint-studio ${eng} ${tpl}`}),
+      body: JSON.stringify({id: job.composite, steps, overrides: job.overrides,
+                            emit_paths: job.emit_paths, label:`blueprint-studio ${eng} ${tpl}`}),
     });
     const data = await resp.json().catch(()=>({}));
     if(!resp.ok){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${data.error||resp.statusText}`; return; }
     const runId = data.run_id || data.simulation_id || data.database_id || data.id || "(started)";
     el.innerHTML = `⏳ <b>${eng}</b> — running… <span class="muted">(${runId})</span>`;
-    return {runId, el, eng, videoOut};
+    return {runId, el, eng, art: job.art};
   }catch(e){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${e}`; }
 }
 
@@ -290,11 +302,13 @@ $("#run").addEventListener("click", async () => {
   // launch all requested engines (concurrently), then poll each to completion
   const started = [];
   for(const eng of engines){ const r = await startRun(eng, steps, overridesBase, tpl); if(r) started.push(r); }
-  await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng, r.videoOut)));
+  await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng, r.art)));
   // results footer: where the population charts live
   const foot = document.createElement("div"); foot.className="result"; foot.style.marginTop="12px";
-  foot.innerHTML = `📊 Each run records a spatial playback <b>video</b> (buttons above) and its `
-    + `population charts are in the <a href="${SPA}/#simulations" target="_blank">Simulations DB</a>.`;
+  foot.innerHTML = engine==="tri"
+    ? `🔗 The <b>tri-coupled</b> run writes a 3-paradigm overlay (button above); its scalars are in the <a href="${SPA}/#simulations" target="_blank">Simulations DB</a>.`
+    : `📊 Each run records a spatial playback <b>video</b> (buttons above) and its `
+      + `population charts are in the <a href="${SPA}/#simulations" target="_blank">Simulations DB</a>.`;
   $("#status").appendChild(foot);
   $("#run").disabled = false;
 });

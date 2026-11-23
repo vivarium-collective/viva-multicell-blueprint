@@ -110,7 +110,7 @@ class TriCoupledProcess(Process):
     """Three coupled mechanics paradigms on one shared cell set (see module docstring)."""
 
     config_schema = {
-        "blueprint": "any",            # dict / path / inline YAML
+        "blueprint": "string",         # path / inline YAML (a dict is also accepted at runtime)
         "cpm_res": {"_type": "integer", "_default": 3},     # voxels per µm
         "cpm_temp": {"_type": "float", "_default": 1.0},
         "cpm_mcs": {"_type": "integer", "_default": 1},
@@ -177,7 +177,9 @@ class TriCoupledProcess(Process):
         return {}
 
     def outputs(self):
-        return {"consensus_spread": "float", "n_cells": "integer"}
+        # overwrite (not the default additive apply) so the store holds the latest
+        # per-step value, not the running sum across steps.
+        return {"consensus_spread": "overwrite[float]", "n_cells": "overwrite[integer]"}
 
     def _cpm_world(self, labels, seed):
         spec = {
@@ -261,8 +263,12 @@ class TriCoupledProcess(Process):
         import matplotlib.pyplot as plt
         from matplotlib.patches import Polygon as MplPoly
         from matplotlib.colors import to_rgb
-        imgs = []
-        for g in self._frames:
+        # render each frame's PNG exactly once (cached) — writing the overlay every
+        # step must stay O(n) total, not re-render all frames each call (O(n²)).
+        cache = getattr(self, "_frame_imgs", None)
+        if cache is None:
+            cache = self._frame_imgs = []
+        for g in self._frames[len(cache):]:
             fig, ax = plt.subplots(figsize=(5.4, 5.4), dpi=150)
             ax.set_xlim(0, self.W); ax.set_ylim(0, self.H); ax.set_aspect("equal")
             ax.set_xticks([]); ax.set_yticks([])
@@ -288,7 +294,8 @@ class TriCoupledProcess(Process):
                                          edgecolor="#7b2d8e", lw=1.4, zorder=3))
             raw = io.BytesIO(); fig.savefig(raw, format="png", bbox_inches="tight", dpi=150)
             plt.close(fig)
-            imgs.append("data:image/png;base64," + base64.b64encode(raw.getvalue()).decode())
+            cache.append("data:image/png;base64," + base64.b64encode(raw.getvalue()).decode())
+        imgs = cache
         frames_js = ",".join(json.dumps(u) for u in imgs)
         self._out.parent.mkdir(parents=True, exist_ok=True)
         self._out.write_text(f"""<!doctype html><html><head><meta charset="utf-8"><title>Tri-coupled</title>
