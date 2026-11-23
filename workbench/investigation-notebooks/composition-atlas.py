@@ -307,7 +307,7 @@ else:
 #
 # _Results are shown by the figures below, produced by the run above._
 
-# **coupled-fate-oscillator — behaviour over the run**
+# **coupled-fate-oscillator — internal-state flipbook**
 
 def _save_viz(study, slug, html):
     d = REPO / 'reports/notebooks/figures' / study
@@ -316,6 +316,11 @@ def _save_viz(study, slug, html):
     out.write_text(html, encoding='utf-8')
     print('  wrote', out)
 
+
+# coupled-fate-oscillator — internal-state flipbook
+_save_viz('coupled-fate-oscillator', 'coupled-fate-oscillator_internal-state_flipbook', _render_one('html:coupled-fate-oscillator-flipbook.html', {'title': "The cell's molecule pools + fate state animating over the run"}, RUNS_DB, STUDY_YAML))
+
+# **coupled-fate-oscillator — behaviour over the run**
 
 # coupled-fate-oscillator — behaviour over the run
 _save_viz('coupled-fate-oscillator', 'coupled-fate-oscillator_behaviour_over_the_run', _render_one('html:coupled-fate-oscillator.html', {'title': "Metabolite C and fate 'divide' over the run"}, RUNS_DB, STUDY_YAML))
@@ -395,6 +400,11 @@ else:
 # ### Visualizations
 #
 # _Results are shown by the figures below, produced by the run above._
+
+# **coupled-particle-catalysis — internal-state flipbook**
+
+# coupled-particle-catalysis — internal-state flipbook
+_save_viz('coupled-particle-catalysis', 'coupled-particle-catalysis_internal-state_flipbook', _render_one('html:coupled-particle-catalysis-flipbook.html', {'title': "The cell's molecule pools + fate state animating over the run"}, RUNS_DB, STUDY_YAML))
 
 # **coupled-particle-catalysis — behaviour over the run**
 
@@ -477,6 +487,11 @@ else:
 # ### Visualizations
 #
 # _Results are shown by the figures below, produced by the run above._
+
+# **coupled-triple-cell — internal-state flipbook**
+
+# coupled-triple-cell — internal-state flipbook
+_save_viz('coupled-triple-cell', 'coupled-triple-cell_internal-state_flipbook', _render_one('html:coupled-triple-cell-flipbook.html', {'title': "The cell's molecule pools + fate state animating over the run"}, RUNS_DB, STUDY_YAML))
 
 # **coupled-triple-cell — behaviour over the run**
 
@@ -918,3 +933,311 @@ _save_viz('scene-model-mixed-formalism', 'scene-model-mixed-formalism_verdict_sc
 # | --- | --- | --- |
 # | scene-compiles-to-five-cells _(primary)_ | kind=derived_scalar path=atlas_cells_min | op >= value 5 |
 # | mixed-formalism-produces-state _(primary)_ | kind=derived_scalar path=atlas_total_molecules_final | op > value 0 |
+
+# ## Study: Tri-coupled consensus: CPM, vertex and center-based mechanics on one shared cell set (`tri-coupled-consensus`)
+#
+# **Question.** Can three mechanics paradigms — Cellular Potts (voxel), vertex (polygon) and center-based (disc) — run ONE shared cell set, coupled into a consensus where vertex owns shape, munk owns position and CPM owns area?
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `viva_multicell_blueprint.composites.tri_coupled.tri_coupled` | `viva_multicell_blueprint.composites.tri_coupled.tri_coupled` | 12 | — |
+#
+# Declared parameter sets (`study.yaml` variants):
+#
+# - **reference** — `cpm_res=3`, `munk_squish=0.8`
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.tri_coupled.tri_coupled`**
+#
+# All three mechanics paradigms on one shared cell set, coupled into a consensus: CPM (voxel) owns area, vertex (polygon) owns shape, munk (center-based disc) owns position. Writes an overlay of all three per cell to reports/assets/<overlay_out>.html.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_tri_coupled_tri_coupled = {
+    'blueprint'  : '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/tri_coupled_patch.yaml',   # a path to a YAML file, inline YAML text, or a dict
+    'cpm_res'    : 3,   # CPM lattice resolution (voxels per µm)
+    'cpm_temp'   : 1.0,   # CPM Metropolis temperature (lower = crisper shape match)
+    'munk_squish': 0.8,   # center-based oblong-under-crowding (0 = rigid circle)
+    'overlay_out': 'tri_coupled',   # overlay written to reports/assets/<overlay_out>.html
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: tri-coupled-consensus ===
+STUDY = 'tri-coupled-consensus'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# Reproduce the recorded run(s). STEPS = composite steps.
+STEPS_viva_multicell_blueprint_composites_tri_coupled_tri_coupled = 12
+INTERVAL_viva_multicell_blueprint_composites_tri_coupled_tri_coupled = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_tri_coupled_tri_coupled if 'ov_viva_multicell_blueprint_composites_tri_coupled_tri_coupled' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_tri_coupled_tri_coupled = materialize_composite('viva_multicell_blueprint.composites.tri_coupled.tri_coupled', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_tri_coupled_tri_coupled['state']}, core=core)
+            _comp.run(STEPS_viva_multicell_blueprint_composites_tri_coupled_tri_coupled)
+        print('ran', 'viva_multicell_blueprint.composites.tri_coupled.tri_coupled', f'(viva_multicell_blueprint.composites.tri_coupled.tri_coupled) for', STEPS_viva_multicell_blueprint_composites_tri_coupled_tri_coupled, 'steps')
+    except Exception as _e:
+        print(f"viva_multicell_blueprint.composites.tri_coupled.tri_coupled not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **tri-coupled-consensus — consensus flipbook**
+
+# tri-coupled-consensus — consensus flipbook
+_save_viz('tri-coupled-consensus', 'tri-coupled-consensus_consensus_flipbook', _render_one('html:tri-coupled-consensus.html', {'title': 'Tri-coupled consensus: CPM, vertex and center-based mechanics on one shared cell set'}, RUNS_DB, STUDY_YAML))
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | three-backends-stay-coupled _(primary)_ | kind=derived_scalar path=atlas_spread_max | op <= value 6.0 |
+# | cell-set-persists _(primary)_ | kind=derived_scalar path=atlas_cells_min | op >= value 8 |
+
+# ## Study: Fateful consensus: a tri-coupled tissue where cell area drives each cell's metabolism→fate (`fateful-consensus`)
+#
+# **Question.** Can a tri-coupled consensus tissue drive each cell's sub-cellular fate — the CPM-owned AREA setting the metabolic rate, the metabolite pinning a MaBoSS fate input, the fate committing the cell — so three tissue + two sub-cellular simulators run as one composite?
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus` | `viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus` | 12 | — |
+#
+# Declared parameter sets (`study.yaml` variants):
+#
+# - **reference** — `munk_squish=0.8`
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus`**
+#
+# Grand unification: a tri-coupled consensus tissue (CPM owns area, vertex owns shape, munk owns position) where every cell runs an SBML-ODE metabolism whose metabolite pins a MaBoSS fate network — and each cell's CPM AREA sets its metabolic rate, so tissue mechanics drives sub-cellular fate. Three tissue + two sub-cellular simulators in one composite; writes a fate-coloured consensus flipbook to reports/assets/<overlay_out>.html.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_fateful_consensus_fateful_consensus = {
+    'blueprint'  : '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/tri_coupled_patch.yaml',   # a path to a YAML file, inline YAML text, or a dict
+    'munk_squish': 0.8,   # center-based oblong-under-crowding (0 = rigid circle)
+    'overlay_out': 'fateful_consensus',   # consensus overlay written to reports/assets/<overlay_out>.html
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: fateful-consensus ===
+STUDY = 'fateful-consensus'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# Reproduce the recorded run(s). STEPS = composite steps.
+STEPS_viva_multicell_blueprint_composites_fateful_consensus_fateful_consensus = 12
+INTERVAL_viva_multicell_blueprint_composites_fateful_consensus_fateful_consensus = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_fateful_consensus_fateful_consensus if 'ov_viva_multicell_blueprint_composites_fateful_consensus_fateful_consensus' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_fateful_consensus_fateful_consensus = materialize_composite('viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_fateful_consensus_fateful_consensus['state']}, core=core)
+            _comp.run(STEPS_viva_multicell_blueprint_composites_fateful_consensus_fateful_consensus)
+        print('ran', 'viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus', f'(viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus) for', STEPS_viva_multicell_blueprint_composites_fateful_consensus_fateful_consensus, 'steps')
+    except Exception as _e:
+        print(f"viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **fateful-consensus — consensus flipbook**
+
+# fateful-consensus — consensus flipbook
+_save_viz('fateful-consensus', 'fateful-consensus_consensus_flipbook', _render_one('html:fateful-consensus.html', {'title': "Fateful consensus: a tri-coupled tissue where cell area drives each cell's metabolism→fate"}, RUNS_DB, STUDY_YAML))
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | area-drives-fate-commitment _(primary)_ | kind=derived_scalar path=atlas_committed_final | op >= value 0.5 |
+# | consensus-holds-under-coupling _(primary)_ | kind=derived_scalar path=atlas_spread_max | op <= value 6.0 |
+
+# ## Study: Particles in a consensus tissue: Smoldyn molecules bounded by a boundary three tissue simulators agree on (`particles-in-consensus`)
+#
+# **Question.** Can a Smoldyn particle sim be confined inside each cell of a tri-coupled consensus tissue, bounded by a boundary whose shape is vertex, position is the munk consensus and area is CPM?
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `viva_multicell_blueprint.composites.particle_consensus.particle_consensus` | `viva_multicell_blueprint.composites.particle_consensus.particle_consensus` | 14 | — |
+#
+# Declared parameter sets (`study.yaml` variants):
+#
+# - **reference** — `seed_per_cell=50`, `munk_squish=0.8`
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.particle_consensus.particle_consensus`**
+#
+# Smoldyn particles confined inside a tri-coupled consensus tissue: each cell runs an A+B<->C particle sim bounded by a boundary three tissue simulators agree on (vertex shape, munk-consensus position, CPM area). Writes a flipbook to reports/assets/<overlay_out>.html.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_particle_consensus_particle_consensus = {
+    'blueprint'    : '/home/runner/work/viva-multicell-blueprint/viva-multicell-blueprint/workspace/blueprints/tri_coupled_patch.yaml',   # a path to a YAML file, inline YAML text, or a dict
+    'seed_per_cell': 50,   # molecules (A+B) seeded per cell
+    'munk_squish'  : 0.8,   # center-based oblong-under-crowding
+    'overlay_out'  : 'particle_consensus',   # flipbook written to reports/assets/<overlay_out>.html
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: particles-in-consensus ===
+STUDY = 'particles-in-consensus'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# Reproduce the recorded run(s). STEPS = composite steps.
+STEPS_viva_multicell_blueprint_composites_particle_consensus_particle_consensus = 14
+INTERVAL_viva_multicell_blueprint_composites_particle_consensus_particle_consensus = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_particle_consensus_particle_consensus if 'ov_viva_multicell_blueprint_composites_particle_consensus_particle_consensus' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_particle_consensus_particle_consensus = materialize_composite('viva_multicell_blueprint.composites.particle_consensus.particle_consensus', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_particle_consensus_particle_consensus['state']}, core=core)
+            _comp.run(STEPS_viva_multicell_blueprint_composites_particle_consensus_particle_consensus)
+        print('ran', 'viva_multicell_blueprint.composites.particle_consensus.particle_consensus', f'(viva_multicell_blueprint.composites.particle_consensus.particle_consensus) for', STEPS_viva_multicell_blueprint_composites_particle_consensus_particle_consensus, 'steps')
+    except Exception as _e:
+        print(f"viva_multicell_blueprint.composites.particle_consensus.particle_consensus not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **particles-in-consensus — consensus flipbook**
+
+# particles-in-consensus — consensus flipbook
+_save_viz('particles-in-consensus', 'particles-in-consensus_consensus_flipbook', _render_one('html:particles-in-consensus.html', {'title': 'Particles in a consensus tissue: Smoldyn molecules bounded by a boundary three tissue simulators agree on'}, RUNS_DB, STUDY_YAML))
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | molecules-confined-to-consensus _(primary)_ | kind=derived_scalar path=atlas_confined_min | op >= value 0.9 |
+# | consensus-holds-with-particles _(primary)_ | kind=derived_scalar path=atlas_spread_max | op <= value 6.0 |
+
+# ## Study: Heterotypic tissue regions: a vertex epithelium on a munk mesenchyme, coupled at an interface (`heterotypic-regions`)
+#
+# **Question.** Can one tissue be composed of two compartments simulated by DIFFERENT mechanics -- a vertex epithelium sitting on a center-based munk mesenchyme -- coupled at their interface?
+
+# ### Parameters
+#
+# | simulation | composite | steps | params |
+# | --- | --- | --- | --- |
+# | `viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions` | `viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions` | 16 | — |
+#
+# Declared parameter sets (`study.yaml` variants):
+#
+# - **reference** — `extent=30`, `n_epi=6`, `n_mes=10`
+
+# ### The model & its parameters
+#
+# Each composite is a process-bigraph *document* — named processes wired by `inputs`/`outputs` ports over shared stores. Below, each composite shows what it does, then a **parameter cell** with its tunable knobs (the current default and what each one means). Edit any value, then re-run the **Run** section to rebuild and re-simulate with your changes.
+
+# **The model — `viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions`**
+#
+# Two tissue types, two physics: a vertex-simulated epithelium (sheet) sitting on a center-based munk mesenchyme (loose cells), coupled at their interface — the epithelium's basal edge is a reflective floor the mesenchyme presses up against. Writes a flipbook to reports/assets/<overlay_out>.html.
+
+# === Parameters — edit any value, then re-run from the Run cell below ===
+# Each entry is the composite's current default; the comment explains it.
+ov_viva_multicell_blueprint_composites_heterotypic_regions_heterotypic_regions = {
+    'extent'     : 30,   # square domain size (um)
+    'n_epi'      : 6,   # epithelial cells (vertex row)
+    'n_mes'      : 10,   # mesenchymal cells (munk cluster)
+    'overlay_out': 'heterotypic_regions',   # flipbook written to reports/assets/<overlay_out>.html
+}
+
+# ### Run
+#
+# _Set `STEPS`, then run. Each composite is built live from its (edited) spec above and run; a composite whose module processes aren't implemented yet reports the error instead of crashing. Set `RERUN = False` to skip re-simulating._
+
+# === Study: heterotypic-regions ===
+STUDY = 'heterotypic-regions'
+STUDY_DIR = REPO / 'workspace/studies' / STUDY
+STUDY_YAML = str(STUDY_DIR / "study.yaml")
+RUNS_DB = str(STUDY_DIR / "runs.db")
+
+# Reproduce the recorded run(s). STEPS = composite steps.
+STEPS_viva_multicell_blueprint_composites_heterotypic_regions_heterotypic_regions = 16
+INTERVAL_viva_multicell_blueprint_composites_heterotypic_regions_heterotypic_regions = 1.0
+
+if RERUN:
+    from process_bigraph import Composite
+    try:
+        with quiet():  # keep per-step stdout out of the notebook
+            _ov = ov_viva_multicell_blueprint_composites_heterotypic_regions_heterotypic_regions if 'ov_viva_multicell_blueprint_composites_heterotypic_regions_heterotypic_regions' in dir() else None  # edits from the panel cell, if any
+            spec_viva_multicell_blueprint_composites_heterotypic_regions_heterotypic_regions = materialize_composite('viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions', _ov)
+            _comp = Composite({'state': spec_viva_multicell_blueprint_composites_heterotypic_regions_heterotypic_regions['state']}, core=core)
+            _comp.run(STEPS_viva_multicell_blueprint_composites_heterotypic_regions_heterotypic_regions)
+        print('ran', 'viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions', f'(viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions) for', STEPS_viva_multicell_blueprint_composites_heterotypic_regions_heterotypic_regions, 'steps')
+    except Exception as _e:
+        print(f"viva_multicell_blueprint.composites.heterotypic_regions.heterotypic_regions not runnable yet: {type(_e).__name__}: {_e}")
+else:
+    print("RERUN=False — not re-simulating.")
+
+# ### Visualizations
+#
+# _Results are shown by the figures below, produced by the run above._
+
+# **heterotypic-regions — consensus flipbook**
+
+# heterotypic-regions — consensus flipbook
+_save_viz('heterotypic-regions', 'heterotypic-regions_consensus_flipbook', _render_one('html:heterotypic-regions.html', {'title': 'Heterotypic tissue regions: a vertex epithelium on a munk mesenchyme, coupled at an interface'}, RUNS_DB, STUDY_YAML))
+
+# ### Acceptance criteria
+#
+# _Pre-registered checks (criteria/thresholds only — run the cells above to evaluate them)._
+#
+# | test | measures | passes if |
+# | --- | --- | --- |
+# | both-tissues-coexist _(primary)_ | kind=derived_scalar path=atlas_cells_min | op >= value 16 |
+# | interface-holds _(primary)_ | kind=derived_scalar path=atlas_breaches_max | op <= value 4 |
