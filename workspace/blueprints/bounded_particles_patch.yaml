@@ -1,0 +1,15 @@
+# A small tyssue patch for the `bounded_particles` composite demo: a handful of
+# epithelial cells that move + divide, each confining its own Smoldyn particle sim.
+blueprint_version: "1.0"
+domain:
+  extent_um: [30, 30]
+  grid_resolution_um: 1
+  boundary: noflux
+cell_types:
+  - {name: A, target_size: 30}
+adhesion:
+  - {a: A, b: A, strength: 5}
+  - {a: A, b: medium, strength: 20}
+initial_state:
+  kind: blocks
+  block: {type: A, origin: [10, 10], shape: [2, 2], spacing: 6, size: 30}
