@@ -1,0 +1,44 @@
+schema_version: 4
+name: bounded-particles-in-tissue
+created: "2026-11-22"
+status: designed
+phase: Design
+simulation_status: not_run
+implementation_status: complete
+evaluation_status: not_evaluated
+gate_status: pending
+execution_status: pending
+verdict: pending
+design_status: drafted
+title: "Smoldyn particles bounded by tyssue cells: confinement, conservation across division, reaction equilibrium"
+kind: demonstration
+confidence: Investigating
+investigation: particle-multicell-composition
+
+composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
+
+claim: >
+  A Smoldyn particle sim composed with the tyssue (vertex) backend keeps every cell's
+  molecules strictly inside that cell's moving polygon, conserves molecule count when a
+  cell divides (each molecule inherited by exactly one daughter, by containment), and
+  lets the reversible reaction A+B<->C reach its equilibrium inside the living tissue.
+
+experiment: >
+  Run the `bounded_particles` composite on a small tyssue patch (~4 epithelial cells,
+  seed_per_cell molecules of A and B) for ~20 steps with one scheduled division
+  (divide_every). Each step: advance the tissue (cells move/deform; one cell divides),
+  then advance each cell's confined Smoldyn sim. Record per step, per cell: molecule
+  positions + counts (A/B/C). Checks: (1) CONFINEMENT -- every molecule lies inside its
+  cell's polygon each step; (2) CONSERVATION -- at the division step, the mother's
+  molecule count equals the sum over its two daughters (no molecule lost or duplicated);
+  (3) REACTION -- A+B<->C relaxes toward the equilibrium set by kf/kb inside each cell.
+
+outcomes: >
+  (pending run) The overlay (cell-coloured flipbook + GIF) is the qualitative artifact;
+  the confinement / conservation / reaction checks are the quantitative ones.
+
+notes: |
+  Smoldyn runs via `SmoldynRunner` (in-process on Linux 3.12, 3.11 subprocess bridge on
+  macOS). This study is the first demonstration for the `particle-multicell-composition`
+  investigation; later studies can add reactions coupled to cell state, or swap Smoldyn
+  for another particle engine behind the same per-cell-boundary contract.
