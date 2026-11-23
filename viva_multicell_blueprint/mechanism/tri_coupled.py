@@ -43,6 +43,25 @@ _CPM_PAL = ["#2b6cb0", "#3182ce", "#4a90d9", "#2c5282", "#1f6feb", "#5a9bd4",
             "#c7761b", "#dd8a2a", "#b5651d", "#e0982e", "#2e7d32", "#3f9142"]
 
 
+def _resolve_blueprint(src):
+    """Resolve the blueprint config to a Blueprint: a Blueprint, a dict, a path to a
+    YAML file, or INLINE YAML text (what the Blueprint Studio posts from its editor)."""
+    if isinstance(src, Blueprint):
+        return src
+    if isinstance(src, dict):
+        return Blueprint.from_dict(src)
+    import yaml
+    from pathlib import Path
+    text = str(src)
+    p = Path(text)
+    if len(text) < 512 and p.exists():          # a path (guard against huge inline text)
+        return Blueprint.load(p)
+    doc = yaml.safe_load(text)                   # inline YAML
+    if not isinstance(doc, dict):
+        raise ValueError("blueprint must be a path, inline YAML mapping, or dict")
+    return Blueprint.from_dict(doc)
+
+
 def _emit(inst):
     try:
         return inst._emit() or {}
@@ -123,9 +142,7 @@ class TriCoupledProcess(Process):
         super().__init__(config, core)
         import viva_cpm.schema as cpm_schema
         self._cpm_schema = cpm_schema
-        bp_src = self.config.get("blueprint")
-        bp = bp_src if isinstance(bp_src, Blueprint) else Blueprint.from_dict(bp_src) \
-            if isinstance(bp_src, dict) else Blueprint.load(bp_src)
+        bp = _resolve_blueprint(self.config.get("blueprint"))
         self._bp_dict = {
             "domain": dict(bp.domain), "cell_types": [dict(c) for c in bp.cell_types],
             "adhesion": [dict(a) for a in (bp.adhesion or [])],
