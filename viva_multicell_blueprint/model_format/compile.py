@@ -33,6 +33,7 @@ from process_bigraph import Process
 
 from .adapters.base import IntracellularAdapter
 from .adapters.boolean_maboss import BooleanAdapter
+from .adapters.coupled import CoupledCell
 from .adapters.ode_tellurium import ODEAdapter
 from .adapters.particle_smoldyn import ParticleAdapter
 from .binding import bind
@@ -47,6 +48,7 @@ _ADAPTER_BY_FORMALISM: dict[str, type[IntracellularAdapter]] = {
     "ode": ODEAdapter, "sbml": ODEAdapter, "tellurium": ODEAdapter,
     "particle": ParticleAdapter, "particles": ParticleAdapter, "smoldyn": ParticleAdapter,
     "boolean": BooleanAdapter, "bool": BooleanAdapter, "maboss": BooleanAdapter,
+    "coupled": CoupledCell, "coupled_cell": CoupledCell,
 }
 
 
@@ -284,9 +286,11 @@ class SceneModelProcess(Process):
             uptake: dict[str, Any] = (
                 membrane_apply({}, cell_pos, self._field, membrane_spec)
                 if membrane_spec else {})
+            # inject the cell polygon unconditionally: a ParticleAdapter (or a
+            # CoupledCell holding a particle sub-model) confines to it; ODE/Boolean
+            # adapters ignore the key.
             step_inputs = dict(uptake)
-            if isinstance(adapter, ParticleAdapter):
-                step_inputs["polygon"] = fp.get(sid)
+            step_inputs["polygon"] = fp.get(sid)
 
             adapter.step(dt, step_inputs)
 
