@@ -129,19 +129,6 @@
   </div>
 
   <!-- ABOUT (always visible, above the view toggle) -->
-  <div class="card" id="about-card">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <label style="margin:0">About this blueprint</label>
-      <span class="comp-tag" id="about-ver"></span>
-    </div>
-    <div class="comp-tag" style="margin-top:10px">Summary <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· derived from the blueprint (recomputed as you edit)</span></div>
-    <div id="about-body" class="comp-what" style="padding:4px 0 0"></div>
-    <details id="about-prov-d" class="comp" data-k="domain" style="margin-top:12px;display:none">
-      <summary><span class="comp-title" style="font-size:14px">Provenance</span><span class="comp-tag">from the file header</span></summary>
-      <div class="comp-body"><pre id="about-prov" class="about-prov" style="border-top:0;margin:0;max-height:300px"></pre></div>
-    </details>
-  </div>
-
   <div class="tabs">
     <button class="tab sel" data-v="structured">Structured view</button>
     <button class="tab" data-v="yaml">Raw YAML</button>
@@ -392,29 +379,9 @@ function render(text){
   catch(e){ $("#parse-err").style.display="block"; $("#parse-err").textContent = "Could not parse the blueprint YAML: "+e.message; return; }
   $("#parse-err").style.display="none";
   if(!bp || typeof bp!=="object"){ return; }
-  renderAbout(bp, text);
   renderInitial(bp);
   renderFlow(bp);
   renderComponents(bp);
-}
-
-function renderAbout(bp, text){
-  $("#about-ver").textContent = bp.blueprint_version ? ("v"+bp.blueprint_version) : "";
-  const d = bp.domain||{};
-  const ext = d.extent_um ? `${d.extent_um[0]}×${d.extent_um[1]} µm` : "—";
-  const nTypes = (bp.cell_types||[]).length;
-  const parts = [];
-  parts.push(`A backend-neutral multicell blueprint on a <b>${esc(ext)}</b> patch (${esc(String(d.grid_resolution_um??1))} µm/site, ${esc(String(d.boundary||"noflux"))} boundary) with <b>${nTypes}</b> cell type${nTypes===1?"":"s"}.`);
-  const has = [];
-  if((bp.fields||[]).length) has.push(`${bp.fields.length} reaction–diffusion field${bp.fields.length===1?"":"s"}`);
-  if((bp.rules||[]).length) has.push(`${bp.rules.length} cell-state rule${bp.rules.length===1?"":"s"}`);
-  if(bp.systemic_ode) has.push("a systemic ODE");
-  if(bp.immune) has.push("immune recruitment");
-  parts.push(has.length ? ("It couples "+has.join(", ")+".") : "It is mechanics-only (no fields or rules).");
-  $("#about-body").innerHTML = parts.join(" ");
-  const prov = provenanceComment(text);
-  const pd = $("#about-prov-d");
-  if(prov){ pd.style.display="block"; $("#about-prov").textContent = prov; } else pd.style.display="none";
 }
 
 // ---- initial conditions: SVG preview computed from the blueprint ------------

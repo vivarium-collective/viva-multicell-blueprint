@@ -312,8 +312,27 @@ class TriCoupledProcess(Process):
             raw = io.BytesIO(); fig.savefig(raw, format="png", bbox_inches="tight", dpi=150)
             plt.close(fig)
             cache.append("data:image/png;base64," + base64.b64encode(raw.getvalue()).decode())
+            # also keep a downsized RGB frame for the shareable GIF.
+            from PIL import Image
+            raw.seek(0)
+            im = Image.open(raw).convert("RGB")
+            w, h = im.size
+            if w > 480:
+                im = im.resize((480, int(h * 480 / w)), Image.LANCZOS)
+            gcache = getattr(self, "_gif_frames", None)
+            if gcache is None:
+                gcache = self._gif_frames = []
+            gcache.append(im)
         imgs = cache
         frames_js = ",".join(json.dumps(u) for u in imgs)
+        # assemble the embedded, self-contained GIF (renders inline in Slack/email).
+        gif_uri = ""
+        gf = getattr(self, "_gif_frames", [])
+        if gf:
+            gbuf = io.BytesIO()
+            gf[0].save(gbuf, format="GIF", save_all=True, append_images=gf[1:],
+                       duration=200, loop=0, optimize=True)
+            gif_uri = "data:image/gif;base64," + base64.b64encode(gbuf.getvalue()).decode()
         self._out.parent.mkdir(parents=True, exist_ok=True)
         self._out.write_text(f"""<!doctype html><html><head><meta charset="utf-8"><title>Tri-coupled</title>
 <style>body{{font-family:-apple-system,sans-serif;margin:16px;background:#fff;color:#1b1b1f}}
@@ -326,7 +345,9 @@ button{{padding:5px 14px;border:1px solid #ccc;border-radius:6px;background:#f6f
 <span class="k"><span class="d" style="background:#111"></span>Vertex</span>
 <span class="k"><span class="d" style="background:#7b2d8e"></span>Center-based</span></p>
 <img id="img"><div style="margin-top:8px"><button id="play">Play</button>
-<input id="sl" type="range" min="0" max="{len(imgs)-1}" value="0" style="width:420px;vertical-align:middle"></div>
+<input id="sl" type="range" min="0" max="{len(imgs)-1}" value="0" style="width:420px;vertical-align:middle">
+<a id="gif" href="{gif_uri}" download="tri-coupled.gif" style="margin-left:14px;padding:5px 14px;border:1px solid #ccc;border-radius:6px;background:#f6f6f8;text-decoration:none;color:inherit;font-size:14px">⬇ Download GIF</a></div>
+<p class="k" style="color:#777;font-size:12px">The GIF above is embedded in this page — it plays inline when shared on Slack or email. The flipbook (Play) is interactive only in a browser.</p>
 <script>var F=[{frames_js}],i=0,t=null,im=document.getElementById('img'),sl=document.getElementById('sl'),b=document.getElementById('play');
 function show(k){{i=((k%F.length)+F.length)%F.length;im.src=F[i];sl.value=i;}}
 sl.oninput=e=>{{stop();show(+e.target.value);}};function stop(){{if(t){{clearInterval(t);t=null;b.textContent='Play';}}}}
