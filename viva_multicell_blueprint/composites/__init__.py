@@ -10,6 +10,7 @@ from .sego import sego_crossparadigm, sego_crossparadigm_large
 from .pipeline import blueprint_pipeline
 from .grammar_demo import grammar_rules_demo
 from .bounded_particles import bounded_particles
+from .scene_model import scene_model
 
 __all__ = ["sego_crossparadigm", "sego_crossparadigm_large", "grammar_rules_demo",
-           "blueprint_pipeline", "bounded_particles"]
+           "blueprint_pipeline", "bounded_particles", "scene_model"]

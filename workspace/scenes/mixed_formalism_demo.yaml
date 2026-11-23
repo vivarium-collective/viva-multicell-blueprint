@@ -1,0 +1,12 @@
+# Three cell types, three formalisms, one shared field.
+#   metabolic  -> SBML/ODE   (A+B<->C, C leaks into the shared field)
+#   signalling -> particle   (Smoldyn, same A+B<->C)
+#   fate       -> Boolean    (MaBoSS, tiny bnet)
+domain:
+  extent_um: [40.0, 30.0]
+cells:
+  m1: {type: metabolic,  position: [10.0, 10.0], molecule_levels: {A: 4.0, B: 4.0, C: 0.0}}
+  m2: {type: metabolic,  position: [10.0, 22.0], molecule_levels: {A: 6.0, B: 2.0, C: 0.0}}
+  s1: {type: signalling, position: [22.0, 15.0], molecule_levels: {A: 4.0, B: 4.0, C: 0.0}}
+  f1: {type: fate,       position: [32.0, 10.0], molecule_levels: {X: 1.0, Y: 0.0}}
+  f2: {type: fate,       position: [32.0, 22.0], molecule_levels: {X: 0.0, Y: 1.0}}
