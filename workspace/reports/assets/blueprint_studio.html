@@ -4,10 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Blueprint Studio</title>
+<!-- js-yaml: parse the backend-neutral blueprint for the structured view. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
 <style>
   :root{
     --bg:#ffffff; --fg:#1b1b1f; --muted:#5b5b66; --line:#e3e3ea; --card:#f7f7fb;
     --cpm:#0072B2; --vertex:#D55E00; --munk:#CC79A7; --accent:#2e7d32; --accentbg:#eaf5ec; --err:#b3261e; --code:#f0f0f5;
+    --fieldc:#1f9e89; --rulec:#8d58d6; --odec:#c7761b; --immunec:#b3306e; --mechc:#2b6cb0;
   }
   :root:not([data-theme="light"]){ @media (prefers-color-scheme: dark){
     :root{ --bg:#16161a; --fg:#ececf1; --muted:#a0a0ad; --line:#2c2c34; --card:#1e1e24;
@@ -16,14 +19,14 @@
   :root[data-theme="dark"]{ --bg:#16161a; --fg:#ececf1; --muted:#a0a0ad; --line:#2c2c34; --card:#1e1e24; --accentbg:#16301b; --code:#1e1e24; }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:860px;margin:0 auto;padding:28px 16px 64px}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 16px 64px}
   h1{font-size:22px;margin:0 0 4px}
   .sub{color:var(--muted);margin:0 0 22px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
   label{display:block;font-weight:600;margin:0 0 6px;font-size:13px}
   select,input[type=number],textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;
     background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit}
-  textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;min-height:260px;white-space:pre;resize:vertical}
+  textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;min-height:300px;white-space:pre;resize:vertical}
   .row{display:flex;gap:16px;flex-wrap:wrap}
   .row>div{flex:1;min-width:160px}
   .engines{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap}
@@ -46,12 +49,56 @@
   a{color:var(--cpm)}
   .hint{color:var(--muted);font-size:12px;margin-top:6px}
   .muted{color:var(--muted)}
+  /* View toggle */
+  .tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:14px}
+  .tab{padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;background:var(--bg);color:var(--muted);border:0;border-right:1px solid var(--line)}
+  .tab:last-child{border-right:0}
+  .tab.sel{background:var(--accent);color:#fff}
+  /* Component cards */
+  .comp{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;background:var(--bg);margin-bottom:12px;overflow:hidden}
+  .comp>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .comp>summary::-webkit-details-marker{display:none}
+  .comp>summary::before{content:"▸";color:var(--muted);font-size:12px}
+  .comp[open]>summary::before{content:"▾"}
+  .comp-title{font-weight:700;font-size:15px}
+  .comp-tag{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  .comp-count{margin-left:auto;font-size:12px;color:var(--muted)}
+  .comp-what{padding:0 14px 6px;color:var(--muted);font-size:13px;line-height:1.5}
+  .comp-body{padding:0 14px 14px}
+  .comp[data-k=fields]{border-left-color:var(--fieldc)} .comp[data-k=rules]{border-left-color:var(--rulec)}
+  .comp[data-k=ode]{border-left-color:var(--odec)} .comp[data-k=immune]{border-left-color:var(--immunec)}
+  .comp[data-k=mech]{border-left-color:var(--mechc)} .comp[data-k=cells]{border-left-color:var(--accent)}
+  .comp[data-k=domain]{border-left-color:var(--muted)}
+  table.kv{width:100%;border-collapse:collapse;font-size:13px}
+  table.kv td{padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.kv td:first-child{color:var(--muted);white-space:nowrap;width:1%;font-family:ui-monospace,monospace;font-size:12px}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0;background:var(--card)}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .ic-wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .ic-svg{flex:0 0 auto}
+  .ic-side{flex:1;min-width:200px}
+  .ic-legend{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+  .info{font-size:12px;color:var(--muted);background:var(--code);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px}
+  .about-prov{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:120px;overflow:auto;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+  .parse-err{color:var(--err);font-size:13px;padding:10px 12px;border:1px solid var(--err);border-radius:8px;background:color-mix(in srgb,var(--err) 8%,transparent)}
+  .eq{font-family:ui-monospace,monospace;font-size:12px;background:var(--code);padding:2px 6px;border-radius:4px}
+  /* How-a-step-works flow strip */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:4px 0 16px}
+  .flow-step{display:flex;align-items:center;gap:8px}
+  .flow-node{border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:7px 11px;background:var(--bg);min-width:0}
+  .flow-node b{display:block;font-size:12.5px}
+  .flow-node small{color:var(--muted);font-size:11px}
+  .flow-node[data-k=init]{border-left-color:var(--accent)} .flow-node[data-k=fields]{border-left-color:var(--fieldc)}
+  .flow-node[data-k=rules]{border-left-color:var(--rulec)} .flow-node[data-k=fates]{border-left-color:var(--immunec)}
+  .flow-node[data-k=immune]{border-left-color:var(--immunec)} .flow-node[data-k=ode]{border-left-color:var(--odec)}
+  .flow-node[data-k=mech]{border-left-color:var(--mechc)}
+  .flow-arr{color:var(--muted);padding:0 8px;font-size:16px;align-self:center}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Blueprint Studio</h1>
-  <p class="sub">Fill in a backend-neutral blueprint, pick the mechanics engine, and run it. Results land in the Simulations DB.</p>
+  <p class="sub">A backend-neutral blueprint — its initial conditions and model components, laid out to read and poke at. Pick a mechanics engine and run it; results land in the Simulations DB.</p>
 
   <div class="card">
     <label for="tpl">Start from</label>
@@ -65,18 +112,64 @@
     <p class="hint" id="tplhint"></p>
   </div>
 
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <label for="bp" style="margin:0">Blueprint (YAML)</label>
-      <div style="display:flex;gap:8px">
-        <button class="btn-mini" id="copy">Copy spec</button>
-        <button class="btn-mini" id="download">Download .yaml</button>
-      </div>
-    </div>
-    <textarea id="bp" spellcheck="false" style="margin-top:8px"></textarea>
-    <p class="hint">Edit freely. Backend/run parameters (<code>tension_scale</code>, <code>rules_seed</code>) are not part of the canonical blueprint — set the engine below.</p>
+  <div class="tabs">
+    <button class="tab sel" data-v="structured">Structured view</button>
+    <button class="tab" data-v="yaml">Raw YAML</button>
   </div>
 
+  <!-- STRUCTURED VIEW -->
+  <div id="view-structured">
+    <div id="parse-err" class="parse-err" style="display:none"></div>
+
+    <div class="card" id="about-card">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <label style="margin:0">About this blueprint</label>
+        <span class="comp-tag" id="about-ver"></span>
+      </div>
+      <div class="comp-tag" style="margin-top:10px">Summary <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· derived from the blueprint (recomputed as you edit)</span></div>
+      <div id="about-body" class="comp-what" style="padding:4px 0 0"></div>
+      <details id="about-prov-d" class="comp" data-k="domain" style="margin-top:12px;display:none">
+        <summary><span class="comp-title" style="font-size:14px">Provenance</span><span class="comp-tag">from the file header</span></summary>
+        <div class="comp-body"><pre id="about-prov" class="about-prov" style="border-top:0;margin:0;max-height:300px"></pre></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <label>Initial conditions <span class="muted" style="font-weight:400">— the starting layout the simulation begins from</span></label>
+      <div class="ic-wrap">
+        <div class="ic-svg" id="ic-svg"></div>
+        <div class="ic-side">
+          <div class="ic-legend" id="ic-legend"></div>
+          <div id="ic-desc" class="comp-what" style="padding:0"></div>
+          <div class="info" id="ic-info"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Model components <span class="muted" style="font-weight:400">— what the blueprint computes each step</span></label>
+      <p class="hint" style="margin-top:0">A blueprint compiles the same mechanism onto any mechanics engine. These are its moving parts; open one to see its parameters.</p>
+      <div id="flow" class="flow"></div>
+      <div id="components"></div>
+    </div>
+  </div>
+
+  <!-- RAW YAML VIEW -->
+  <div id="view-yaml" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <label for="bp" style="margin:0">Blueprint (YAML)</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn-mini" id="copy">Copy spec</button>
+          <button class="btn-mini" id="download">Download .yaml</button>
+        </div>
+      </div>
+      <textarea id="bp" spellcheck="false" style="margin-top:8px"></textarea>
+      <p class="hint">Edit freely — the Structured view updates as you type. Backend/run parameters (<code>tension_scale</code>, <code>rules_seed</code>) are not part of the canonical blueprint — set the engine below.</p>
+    </div>
+  </div>
+
+  <!-- RUN -->
   <div class="card">
     <div class="row">
       <div>
@@ -108,11 +201,8 @@
 
 <script>
 const COMPOSITE = "viva_multicell_blueprint.composites.pipeline.blueprint_pipeline";
-// The page is served at <base>/assets/blueprint_studio.html; the API lives at
-// <base>/api/... - derive it so POSTs don't resolve under /assets/ (405) and so
-// a reverse-proxy base path is honored.
 const API = location.pathname.replace(/\/assets\/blueprint_studio\.html$/, "") + "/api";
-const SPA = API.replace(/\/api$/, "");   // the workbench root (for #simulations)
+const SPA = API.replace(/\/api$/, "");
 const TEMPLATES = {
   default: {readonly:false, fetch:"sego_blueprint.yaml",
     hint:"The committed Sego 2022 flu-lung blueprint (loaded below). Edit and run it, or pick a smaller template.",
@@ -177,6 +267,225 @@ initial_state:
 const $ = s => document.querySelector(s);
 let engine = "cpm";
 
+// ---- cell-type colours (stable per blueprint, with sensible defaults) -------
+const KNOWN_COLORS = {H:"#2b6cb0", I:"#c7761b", D:"#333333", M:"#CC79A7",
+  NK:"#5aa9e6", CD8:"#b3306e", A:"#2e7d32", B:"#D55E00", medium:"#cccccc"};
+const PALETTE = ["#2b6cb0","#c7761b","#2e7d32","#CC79A7","#5aa9e6","#b3306e","#D55E00","#1f9e89","#8d58d6","#777777"];
+function typeColors(types){
+  const out={}; let i=0;
+  (types||[]).forEach(t=>{
+    const base=String(t).split("_")[0];
+    out[t] = KNOWN_COLORS[t] || KNOWN_COLORS[base] || PALETTE[i%PALETTE.length]; i++;
+  });
+  return out;
+}
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmt = v => (typeof v==="number" ? (Math.abs(v)<1e-3 && v!==0 ? v.toExponential(3) : +v.toFixed(4)) : v);
+
+// ---- blueprint parsing ------------------------------------------------------
+function parseBlueprint(text){
+  // Strip backend/run keys that aren't canonical; js-yaml handles the rest.
+  return window.jsyaml ? window.jsyaml.load(text) : null;
+}
+function provenanceComment(text){
+  const lines = text.split("\n"); const out=[];
+  for(const ln of lines){ if(/^\s*#/.test(ln)) out.push(ln.replace(/^\s*#\s?/,"")); else if(ln.trim()==="") { if(out.length) break; } else break; }
+  return out.join("\n").trim();
+}
+
+function render(text){
+  let bp;
+  try{ bp = parseBlueprint(text); }
+  catch(e){ $("#parse-err").style.display="block"; $("#parse-err").textContent = "Could not parse the blueprint YAML: "+e.message; return; }
+  $("#parse-err").style.display="none";
+  if(!bp || typeof bp!=="object"){ return; }
+  renderAbout(bp, text);
+  renderInitial(bp);
+  renderFlow(bp);
+  renderComponents(bp);
+}
+
+function renderAbout(bp, text){
+  $("#about-ver").textContent = bp.blueprint_version ? ("v"+bp.blueprint_version) : "";
+  const d = bp.domain||{};
+  const ext = d.extent_um ? `${d.extent_um[0]}×${d.extent_um[1]} µm` : "—";
+  const nTypes = (bp.cell_types||[]).length;
+  const parts = [];
+  parts.push(`A backend-neutral multicell blueprint on a <b>${esc(ext)}</b> patch (${esc(String(d.grid_resolution_um??1))} µm/site, ${esc(String(d.boundary||"noflux"))} boundary) with <b>${nTypes}</b> cell type${nTypes===1?"":"s"}.`);
+  const has = [];
+  if((bp.fields||[]).length) has.push(`${bp.fields.length} reaction–diffusion field${bp.fields.length===1?"":"s"}`);
+  if((bp.rules||[]).length) has.push(`${bp.rules.length} cell-state rule${bp.rules.length===1?"":"s"}`);
+  if(bp.systemic_ode) has.push("a systemic ODE");
+  if(bp.immune) has.push("immune recruitment");
+  parts.push(has.length ? ("It couples "+has.join(", ")+".") : "It is mechanics-only (no fields or rules).");
+  $("#about-body").innerHTML = parts.join(" ");
+  const prov = provenanceComment(text);
+  const pd = $("#about-prov-d");
+  if(prov){ pd.style.display="block"; $("#about-prov").textContent = prov; } else pd.style.display="none";
+}
+
+// ---- initial conditions: SVG preview computed from the blueprint ------------
+function cellsFromInitial(bp){
+  const is = bp.initial_state||{}; const cells=[];
+  const emit = (blk, type)=>{
+    if(!blk) return;
+    const [ox,oy]=blk.origin||[0,0]; const [nx,ny]=blk.shape||[1,1];
+    const sp = blk.spacing || 5;
+    for(let i=0;i<nx;i++) for(let j=0;j<ny;j++) cells.push({x:ox+i*sp, y:oy+j*sp, type: blk.type||type});
+  };
+  emit(is.block);
+  (is.extra_blocks||[]).forEach(b=>emit(b));
+  // infected_seed: flip a fraction of the main-block cells to the seed type.
+  const seed = is.infected_seed;
+  if(seed && seed.fraction){
+    const main = cells.filter(c=>c.type===(is.block&&is.block.type));
+    const n = Math.round(main.length*seed.fraction);
+    for(let k=0;k<n && k<main.length;k++) main[k].type = seed.type;
+  }
+  return cells;
+}
+function renderInitial(bp){
+  const d = bp.domain||{}; const ext = d.extent_um||[50,50];
+  const W=ext[0], H=ext[1];
+  const cells = cellsFromInitial(bp);
+  const types = (bp.cell_types||[]).map(t=>t.name);
+  const colors = typeColors(types.concat(cells.map(c=>c.type)).filter((v,i,a)=>a.indexOf(v)===i));
+  const S=320, pad=8, sc=(S-2*pad)/Math.max(W,H);
+  const r = Math.max(3, Math.min(10, (cells.length>1 ? (sc* (minSpacing(cells)||5) *0.42) : 8)));
+  let svg = `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" role="img" aria-label="initial cell layout">`;
+  svg += `<rect x="${pad}" y="${pad}" width="${S-2*pad}" height="${S-2*pad}" fill="var(--bg)" stroke="var(--line)"/>`;
+  // y flips so origin is bottom-left (matches the sim's coordinate sense)
+  for(const c of cells){
+    const cx = pad + c.x*sc, cy = S - pad - c.y*sc;
+    svg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${colors[c.type]||"#999"}" fill-opacity="0.85" stroke="rgba(0,0,0,.25)" stroke-width="0.5"/>`;
+  }
+  svg += `</svg>`;
+  $("#ic-svg").innerHTML = cells.length ? svg : `<div class="muted" style="width:320px;text-align:center;padding:40px 0">No <code>initial_state</code> blocks to preview.</div>`;
+  // legend
+  const counts={}; cells.forEach(c=>counts[c.type]=(counts[c.type]||0)+1);
+  $("#ic-legend").innerHTML = Object.keys(counts).map(t=>
+    `<span class="chip"><span class="dot" style="background:${colors[t]||"#999"}"></span>${esc(t)} <span class="muted">· ${counts[t]}</span></span>`).join("");
+  // description
+  const is = bp.initial_state||{};
+  const desc=[];
+  desc.push(`<b>${cells.length}</b> cells placed on a ${esc(W+"×"+H)} µm patch.`);
+  if(is.block) desc.push(`Main block: <code>${esc(is.block.type)}</code> ${esc((is.block.shape||[]).join("×"))} at origin ${esc(JSON.stringify(is.block.origin||[]))}, spacing ${esc(String(is.block.spacing))}.`);
+  if((is.extra_blocks||[]).length) desc.push(`${is.extra_blocks.length} extra block(s).`);
+  if(is.infected_seed) desc.push(`Seeded: <b>${Math.round((is.infected_seed.fraction||0)*100)}%</b> flipped to <code>${esc(is.infected_seed.type)}</code> (seed ${esc(String(is.infected_seed.seed??0))}).`);
+  $("#ic-desc").innerHTML = desc.join(" ");
+  $("#ic-info").innerHTML = "This preview is computed from <code>domain</code> + <code>initial_state</code> directly in your browser — it is the same starting state every engine is handed, before any dynamics run.";
+}
+function minSpacing(cells){ return cells.reduce((m,c)=>c.spacing?Math.min(m,c.spacing):m, 5); }
+
+// ---- model components --------------------------------------------------------
+// "How a step works" — a mechanism-flow strip derived from what the blueprint has.
+function renderFlow(bp){
+  const n=[];
+  const nCells = cellsFromInitial(bp).length;
+  n.push({k:"init", t:"Initial state", s:`${nCells} cells placed`});
+  if((bp.fields||[]).length) n.push({k:"fields", t:"Fields diffuse", s:bp.fields.map(f=>f.name).join(", ")});
+  if((bp.rules||[]).length){
+    n.push({k:"rules", t:"Rules fire", s:`${bp.rules.length} rate expr${bp.rules.length===1?"":"s"}`});
+    n.push({k:"fates", t:"Cell fates change", s:"transitions · death"});
+  }
+  if(bp.systemic_ode) n.push({k:"ode", t:"Systemic ODE", s:"well-mixed compartment"});
+  if(bp.immune) n.push({k:"immune", t:"Immune recruited", s:"onto the patch"});
+  n.push({k:"mech", t:"Mechanics moves cells", s:"CPM · vertex · center-based"});
+  const strip = n.map((x,i)=>`<div class="flow-step">${i>0?'<span class="flow-arr">→</span>':''}`
+    + `<div class="flow-node" data-k="${x.k}"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div></div>`).join("");
+  $("#flow").innerHTML = `<div style="width:100%;color:var(--muted);font-size:12px;margin-bottom:8px">How one coupled step runs — the same mechanism on every engine:</div>` + strip;
+}
+
+function comp(k, tag, title, what, countTxt, bodyHtml, open){
+  return `<details class="comp" data-k="${k}"${open?" open":""}>`
+    + `<summary><span class="comp-title">${esc(title)}</span><span class="comp-tag">${esc(tag)}</span>`
+    + (countTxt?`<span class="comp-count">${esc(countTxt)}</span>`:"") + `</summary>`
+    + (what?`<div class="comp-what">${what}</div>`:"")
+    + (bodyHtml?`<div class="comp-body">${bodyHtml}</div>`:"")
+    + `</details>`;
+}
+function kvTable(rows){ return `<table class="kv">`+rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v}</td></tr>`).join("")+`</table>`; }
+
+function renderComponents(bp){
+  const out=[]; const types=(bp.cell_types||[]); const colors=typeColors(types.map(t=>t.name));
+  // Cell types & adhesion
+  if(types.length){
+    const chips = types.map(t=>`<span class="chip"><span class="dot" style="background:${colors[t.name]||"#999"}"></span><code>${esc(t.name)}</code> <span class="muted">· target ${esc(String(t.target_size??"—"))}</span></span>`).join("");
+    let adh="";
+    if((bp.adhesion||[]).length){
+      adh = `<div style="margin-top:10px"><div class="comp-tag">adhesion (contact energies)</div>`
+        + kvTable(bp.adhesion.map(a=>[`${a.a} ↔ ${a.b}`, `strength <b>${esc(fmt(a.strength))}</b>`])) + `</div>`;
+    }
+    out.push(comp("cells","cell types","Cell types & adhesion",
+      "The agents on the sheet and how strongly each pair sticks. Adhesion drives sorting and tissue shape — identical on every engine.",
+      `${types.length} type${types.length===1?"":"s"}`, chips+adh, true));
+  }
+  // Fields
+  if((bp.fields||[]).length){
+    const body = bp.fields.map(f=>{
+      const sec = (f.secretion||[]).map(s=>`<code>${esc(s.type)}</code>@${esc(fmt(s.rate))}`).join(", ")||"—";
+      const upt = (f.uptake||[]).map(s=>`<code>${esc(s.type)}</code>@${esc(fmt(s.rate))}`).join(", ")||"—";
+      return `<div style="margin-bottom:10px"><b>${esc(f.name)}</b>`+kvTable([
+        ["D (diffusion)", fmt(f.D)], ["decay", fmt(f.decay)],
+        ["secreted by", sec], ["taken up by", upt],
+        ["dynamics", f.dynamics?`dt ${esc(fmt(f.dynamics.dt))}, ${esc(String(f.dynamics.substeps))} substeps`:"—"],
+      ])+`</div>`;
+    }).join("");
+    out.push(comp("fields","reaction–diffusion","Fields",
+      "Chemical fields on the shared grid — they diffuse, decay, are secreted/taken up by cells, and feed the rules below. Think virus, cytokines, chemokine.",
+      `${bp.fields.length}: ${bp.fields.map(f=>f.name).join(", ")}`, body));
+  }
+  // Rules
+  if((bp.rules||[]).length){
+    const body = kvTable(bp.rules.map(r=>{
+      const lbl = r.type==="transition" ? `${r.from} → ${r.to}` : (r.type==="kill" ? `kill ${r.target||r.to||""}` : (r.kind||r.type||"rule"));
+      return [lbl, `<span class="eq">${esc(r.rate_expr||r.rate||"")}</span>`];
+    }));
+    out.push(comp("rules","cell-state rules","Rules",
+      "Per-cell state changes — transitions (H→I), killing, recovery — each fired at a rate given by an expression over fields and neighbours. This is the disease mechanism.",
+      `${bp.rules.length} rule${bp.rules.length===1?"":"s"}`, body));
+  }
+  // Systemic ODE
+  if(bp.systemic_ode){
+    const ode=bp.systemic_ode; const consts=ode.consts||ode.const||{};
+    out.push(comp("ode","systemic ODE","Systemic ODE",
+      "A well-mixed compartment model running alongside the tissue (e.g. a Price-2015 immune ODE) — its state can modulate recruitment and rates.",
+      "", kvTable(Object.entries(consts).map(([k,v])=>[k, fmt(v)])) || "<div class='muted'>(declared)</div>"));
+  }
+  // Immune
+  if(bp.immune){
+    const im=bp.immune; const t=im.types||im.cell_types||[];
+    out.push(comp("immune","recruitment","Immune recruitment",
+      "Immune cells (NK, CD8, macrophage…) are recruited onto the patch over time and act through the rules — killing infected cells.",
+      Array.isArray(t)?`${t.length} type(s)`:"", kvTable(Object.entries(im).filter(([k])=>k!=="types").map(([k,v])=>[k, typeof v==="object"?esc(JSON.stringify(v)):fmt(v)]))));
+  }
+  // Mechanics mapping
+  const mm = bp.mechanics_mapping || (bp.const?{const:bp.const}:null);
+  if(mm){
+    const c = mm.const||{};
+    out.push(comp("mech","constants","Mechanics mapping & constants",
+      "The named constants the rule expressions reference (rate coefficients, thresholds). These are the knobs the biology is written in.",
+      `${Object.keys(c).length} constant(s)`, kvTable(Object.entries(c).map(([k,v])=>[k, fmt(v)]))));
+  }
+  // Domain (always, last)
+  const d=bp.domain||{};
+  out.push(comp("domain","grid","Domain",
+    "The simulation patch every component shares.", "",
+    kvTable([["extent_um", esc(JSON.stringify(d.extent_um||[]))], ["grid_resolution_um", esc(String(d.grid_resolution_um??1))], ["boundary", esc(String(d.boundary||"noflux"))]])));
+  $("#components").innerHTML = out.join("") || "<div class='muted'>No components parsed.</div>";
+}
+
+// ---- view toggle ------------------------------------------------------------
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("sel"));
+  t.classList.add("sel");
+  const v=t.dataset.v;
+  $("#view-structured").style.display = v==="structured"?"":"none";
+  $("#view-yaml").style.display = v==="yaml"?"":"none";
+  if(v==="structured") render($("#bp").value);
+}));
+
+// ---- templates --------------------------------------------------------------
 async function applyTemplate(){
   const t = TEMPLATES[$("#tpl").value];
   $("#bp").value = t.yaml;
@@ -186,18 +495,18 @@ async function applyTemplate(){
     try{ const r = await fetch(t.fetch); if(r.ok) $("#bp").value = await r.text(); }
     catch(e){ $("#bp").value = "# could not load the Sego blueprint ("+e+")\n"; }
   }
+  render($("#bp").value);
 }
 $("#tpl").addEventListener("change", applyTemplate);
+
+// re-render structured view as the YAML is edited (debounced)
+let _t=null;
+$("#bp").addEventListener("input", ()=>{ clearTimeout(_t); _t=setTimeout(()=>render($("#bp").value), 300); });
+
 applyTemplate();
 
-// Detect a missing backend (the published static snapshot has no /api). If the
-// run endpoint isn't reachable, show the read-only banner and disable Run so the
-// page is honest instead of failing on click.
 (async function checkBackend(){
-  try{
-    const r = await fetch(`${API}/analysis-viewers`, {method:"GET"});
-    if(r.ok) return;                       // live server — Run stays enabled
-  }catch(e){ /* unreachable */ }
+  try{ const r = await fetch(`${API}/analysis-viewers`, {method:"GET"}); if(r.ok) return; }catch(e){}
   $("#nobackend").style.display = "block";
   const run = $("#run"); run.disabled = true; run.textContent = "Run (live server only)";
 })();
@@ -209,7 +518,6 @@ document.querySelectorAll(".engine").forEach(el => el.addEventListener("click", 
 
 function setStatus(msg, cls){ const s=$("#status"); s.className="show "+(cls||""); s.innerHTML=msg; }
 
-// --- Copy / Download the spec -------------------------------------------------
 $("#copy").addEventListener("click", async () => {
   try{ await navigator.clipboard.writeText($("#bp").value); $("#copy").textContent="Copied ✓";
        setTimeout(()=>$("#copy").textContent="Copy spec",1200); }
@@ -248,7 +556,7 @@ async function pollRun(runId, el, eng, videoOut){
         return false;
       }
       if(st) el.innerHTML = `⏳ <b>${eng}</b> — ${st}… <span class="muted">(${runId})</span>`;
-    }catch(e){ /* keep polling */ }
+    }catch(e){}
   }
   el.innerHTML = `⏳ <b>${eng}</b> still running — follow it in the <a href="#simulations">Simulations DB</a>.`;
   return false;
@@ -258,14 +566,10 @@ async function startRun(eng, steps, overridesBase, tpl){
   const el = document.createElement("div"); el.className="result";
   el.innerHTML = `⏳ <b>${eng}</b> — starting (${steps} steps)…`;
   $("#status").appendChild(el);
-  // unique output name so the recorder writes a per-run spatial video we can open.
   const videoOut = `studio_${Date.now()}_${eng}`;
   try{
     const resp = await fetch(`${API}/composite-test-run`, {
       method:"POST", headers:{"content-type":"application/json"},
-      // emit_paths: cell-population counts — a well-shaped scalar observable the
-      // xarray emitter can persist (the full state has empty-list stores → zarr 0-chunk).
-      // video_out: record a spatial-playback video to /assets/_studio_runs/<name>.html.
       body: JSON.stringify({id: COMPOSITE, steps,
                             overrides:{...overridesBase, backend:eng, video_out:videoOut},
                             emit_paths:["cell_counts"], label:`blueprint-studio ${eng} ${tpl}`}),
@@ -287,11 +591,9 @@ $("#run").addEventListener("click", async () => {
   if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = $("#bp").value;
   $("#run").disabled = true;
   $("#status").className = "show"; $("#status").innerHTML = "";
-  // launch all requested engines (concurrently), then poll each to completion
   const started = [];
   for(const eng of engines){ const r = await startRun(eng, steps, overridesBase, tpl); if(r) started.push(r); }
   await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng, r.videoOut)));
-  // results footer: where the population charts live
   const foot = document.createElement("div"); foot.className="result"; foot.style.marginTop="12px";
   foot.innerHTML = `📊 Each run records a spatial playback <b>video</b> (buttons above) and its `
     + `population charts are in the <a href="${SPA}/#simulations" target="_blank">Simulations DB</a>.`;
