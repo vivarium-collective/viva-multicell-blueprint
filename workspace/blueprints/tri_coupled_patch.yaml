@@ -1,0 +1,23 @@
+# A small two-type patch for the `tri_coupled` composite demo: a 24×24 µm tissue
+# where all three mechanics paradigms (CPM voxel / vertex polygon / munk disc)
+# represent the same handful of cells, kept small so the consensus coupling is
+# tight and visually legible.
+blueprint_version: "1.0"
+domain:
+  extent_um: [24, 24]
+  grid_resolution_um: 1
+  boundary: noflux
+cell_types:
+  - {name: A, target_size: 16}
+  - {name: B, target_size: 16}
+adhesion:
+  - {a: A, b: A, strength: 4}
+  - {a: B, b: B, strength: 4}
+  - {a: A, b: B, strength: 12}
+  - {a: A, b: medium, strength: 16}
+  - {a: B, b: medium, strength: 16}
+initial_state:
+  kind: blocks
+  block: {type: A, origin: [6, 6], shape: [3, 3], spacing: 4, size: 16}
+  extra_blocks:
+    - {type: B, origin: [8, 8], shape: [2, 2], spacing: 4, size: 16}

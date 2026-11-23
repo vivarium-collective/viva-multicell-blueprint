@@ -9,7 +9,13 @@ BACKEND_COLORS = {"cpm": "#0072B2", "vertex": "#D55E00", "munk": "#CC79A7"}   # 
 
 # Okabe-Ito based; H blue, I orange, D dark grey, immune green.
 STATE_COLORS = {"H": "#0072B2", "I": "#E69F00", "D": "#444444", "immune": "#009E73"}
-_FALLBACK = ["#CC79A7", "#56B4E9", "#F0E442", "#999999"]
+# Colours for types without a semantic entry above (e.g. the immune subtypes
+# M/NK/CD8 and their latent pools). Paul Tol's colourblind-safe 'muted' qualitative
+# palette, ordered most-distinct-first and chosen to stay clear of the STATE_COLORS
+# hues, so a 9+-type model (SEGO immune cast) no longer collides. Shared by every
+# spatial render — the stand-alone sim videos and the tri-coupled panels alike.
+_FALLBACK = ["#CC6677", "#DDCC77", "#AA4499", "#44AA99", "#882255", "#88CCEE",
+             "#999933", "#332288", "#661100", "#6699CC", "#117733", "#999999"]
 
 
 def state_color(t, k=0):
