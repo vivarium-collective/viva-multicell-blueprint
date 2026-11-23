@@ -318,6 +318,11 @@ class MunkBackend(MechanicsBackend):
         # (d2b) per-cell motility: a random kick scaled by each cell's motility.
         self._apply_motility()
 
+        # (d2c) cross-paradigm NUDGE (tri-coupled composite): spring each cell's
+        #       center toward an externally-supplied target centroid (e.g. its
+        #       vertex twin's centroid). cell_id -> [x, y]. Opt-in; absent -> no-op.
+        self._apply_nudge(inputs.get("nudge"))
+
         # (d3) clamp every cell's speed before integrating: the stability guarantee so
         #      no injected drive or stiff collision can blow positions up.
         self._clamp_speeds()
@@ -406,6 +411,22 @@ class MunkBackend(MechanicsBackend):
             vx, vy = agent["velocity"]
             kick = float(m) * self._motility_gain
             agent["velocity"] = (vx + kick * math.cos(th), vy + kick * math.sin(th))
+
+    def _apply_nudge(self, targets) -> None:
+        """Spring each cell's center toward an external target centroid (tri-coupled
+        composite: the vertex-centroid ↔ munk-center tug). Velocity injection, so it
+        rides the same clamp/integrator as motility/chemotaxis."""
+        gain = getattr(self, "_nudge_gain", 0.3)
+        for bid, tgt in (targets or {}).items():
+            agent = self._agents.get(str(bid))
+            if agent is None or not tgt:
+                continue
+            loc = agent.get("location") or agent.get("position")
+            if not loc:
+                continue
+            vx, vy = agent["velocity"]
+            agent["velocity"] = (vx + gain * (float(tgt[0]) - float(loc[0])),
+                                 vy + gain * (float(tgt[1]) - float(loc[1])))
 
     def _pair_adhesivity(self, mi: str, mj: str) -> float:
         """Matrix adhesivity for the pair, with per-cell overrides applied: each
