@@ -67,6 +67,7 @@ def _rand_in_poly(poly, n, rng):
 class BoundedParticlesProcess(Process):
     config_schema = {
         "blueprint": "string",
+        "backend": {"_type": "string", "_default": "vertex"},   # cpm | vertex | munk
         "n_steps_hint": {"_type": "integer", "_default": 20},
         "seed_per_cell": {"_type": "integer", "_default": 60},    # total A+B seeded per cell
         "divide_every": {"_type": "integer", "_default": 8},       # 0 = never; else divide one cell every N steps
@@ -82,8 +83,14 @@ class BoundedParticlesProcess(Process):
         self.W, self.H = float(ext[0]), float(ext[1])
         from process_bigraph import Composite
         c = core or build_core()
-        doc = _compile(bp, backend="vertex")
-        self._vertex = Composite({"state": doc["state"]}, core=c).state["mechanics"]["instance"]
+        self._backend = str(self.config.get("backend", "vertex"))
+        doc = _compile(bp, backend=self._backend)
+        self._mech = Composite({"state": doc["state"]}, core=c).state["mechanics"]["instance"]
+        if self._backend == "munk":                 # oblong footprints read better under crowding
+            try:
+                self._mech._squish = 0.6
+            except Exception:
+                pass
         self._runner = SmoldynRunner(spec=None)
         self._particles = {}       # cid -> [[species, x, y], ...]
         self._cell_color = {}
@@ -101,17 +108,28 @@ class BoundedParticlesProcess(Process):
 
     def _emit(self):
         try:
-            return self._vertex._emit() or {}
+            return self._mech._emit() or {}
         except Exception:
             return {}
 
     @staticmethod
     def _footprints(g):
+        from ..particles.smoldyn_cell import occupancy_outline
         out = {}
         for bid, fp in (g.get("footprints", {}) or {}).items():
-            xy = fp.get("xy") if isinstance(fp, dict) else None
-            if xy and len(xy) >= 3:
-                out[str(bid)] = [[float(x), float(y)] for x, y in xy]
+            if not isinstance(fp, dict):
+                continue
+            xy = fp.get("xy")
+            if not xy:
+                continue
+            # CPM footprints are a list of occupied voxels, not an ordered boundary —
+            # trace the true cell outline; vertex/munk already give ordered polygons.
+            if fp.get("kind") == "occupancy":
+                poly = occupancy_outline(xy)
+            else:
+                poly = [[float(x), float(y)] for x, y in xy] if len(xy) >= 3 else None
+            if poly and len(poly) >= 3:
+                out[str(bid)] = poly
         return out
 
     def inputs(self):
@@ -134,7 +152,7 @@ class BoundedParticlesProcess(Process):
         if self._divide_every and self._step > 0 and self._step % self._divide_every == 0 and live:
             inp["divisions"] = [live[0]]
         try:
-            self._vertex.update(inp, 1.0)
+            self._mech.update(inp, 1.0)
         except Exception:
             pass
         g = self._emit()
@@ -187,25 +205,41 @@ class BoundedParticlesProcess(Process):
         from matplotlib.patches import Polygon as MplPoly
         from PIL import Image
         cache, gcache = self._frame_imgs, self._gif_frames
-        for snapshot in self._frames[len(cache):]:
-            fig, ax = plt.subplots(figsize=(5.6, 5.6), dpi=140)
+        base = len(cache)
+        for j, snapshot in enumerate(self._frames[base:]):
+            step_idx = base + j
+            fig, ax = plt.subplots(figsize=(6.4, 6.4), dpi=150)
             ax.set_xlim(0, self.W); ax.set_ylim(0, self.H); ax.set_aspect("equal")
             ax.set_xticks([]); ax.set_yticks([])
+            ax.set_facecolor("#fbfbfd")
+            for sp in ax.spines.values():
+                sp.set_edgecolor("#e3e3ea")
+            npart = 0
             for cid, snap in snapshot.items():
                 cc = self._color(cid)
-                ax.add_patch(MplPoly(np.asarray(snap["poly"]), closed=True, fill=False,
-                                     edgecolor=cc, lw=1.8, zorder=1))
+                poly = np.asarray(snap["poly"])
+                ax.add_patch(MplPoly(poly, closed=True, facecolor=cc, alpha=0.09,
+                                     edgecolor="none", zorder=0))          # subtle cell region
+                ax.add_patch(MplPoly(poly, closed=True, fill=False,
+                                     edgecolor=cc, lw=2.1, zorder=1))       # crisp boundary
                 if snap["parts"]:
                     P = np.array([[p[1], p[2]] for p in snap["parts"]])
-                    ax.scatter(P[:, 0], P[:, 1], s=13, c=cc, zorder=2, edgecolors="none")
-            raw = io.BytesIO(); fig.savefig(raw, format="png", bbox_inches="tight", dpi=140)
+                    ax.scatter(P[:, 0], P[:, 1], s=17, c=cc, zorder=2,
+                               edgecolors="white", linewidths=0.4)          # molecules
+                    npart += len(snap["parts"])
+            ax.text(0.015, 0.985,
+                    f"Smoldyn in {self._backend}  ·  step {step_idx}  ·  "
+                    f"{len(snapshot)} cells  ·  {npart} molecules",
+                    transform=ax.transAxes, va="top", ha="left", fontsize=9.5, color="#333",
+                    bbox=dict(boxstyle="round,pad=0.35", fc="white", ec="#ddd", alpha=0.9))
+            raw = io.BytesIO(); fig.savefig(raw, format="png", bbox_inches="tight", dpi=150)
             plt.close(fig)
             cache.append("data:image/png;base64," + base64.b64encode(raw.getvalue()).decode())
             raw.seek(0)
             im = Image.open(raw).convert("RGB")
             w, h = im.size
-            if w > 560:
-                im = im.resize((560, int(h * 560 / w)), Image.LANCZOS)
+            if w > 620:
+                im = im.resize((620, int(h * 620 / w)), Image.LANCZOS)
             gcache.append(im)
         frames_js = ",".join(json.dumps(u) for u in cache)
         gif_uri = ""
@@ -222,9 +256,9 @@ class BoundedParticlesProcess(Process):
 #img{{width:min(640px,100%);height:auto;border:1px solid #ddd;border-radius:6px}}
 .k{{display:inline-block;margin-right:14px;font-size:13px}}.d{{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:4px}}
 button{{padding:5px 14px;border:1px solid #ccc;border-radius:6px;background:#f6f6f8;cursor:pointer}}</style></head>
-<body><h2>Smoldyn particles bounded by tyssue cells</h2>
-<p>A particle simulator composed with a multicellular one: each tyssue (vertex) cell is a
-moving polygon, and a <b>Smoldyn</b> sim runs <b>inside each one</b> — particles reflect off
+<body><h2>Smoldyn particles bounded by {self._backend} cells</h2>
+<p>A particle simulator composed with a multicellular one: each <b>{self._backend}</b> cell is a
+moving boundary, and a <b>Smoldyn</b> sim runs <b>inside each one</b> — particles reflect off
 the cell boundary and react (A + B ⇌ C). Particles are <b>coloured by their cell</b> (matching
 the outline); on division a cell's molecules split into the two daughters. {legend}</p>
 <img id="img"><div style="margin-top:8px"><button id="play">Play</button>

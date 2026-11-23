@@ -44,12 +44,22 @@ description: |
   (CI, most external users) and through a resolved 3.11 interpreter on macOS, so the same
   composite is reproducible everywhere.
 
-  **Studies.**
-    1. bounded-particles-in-tissue -- the composite runs; molecules stay inside their
-       cell (confinement check), counts are conserved across a division (split check),
-       and the reaction reaches its expected equilibrium inside a moving tissue.
+  **Three substrates, one coupling.** The SAME `bounded_particles` composite runs the
+  particle coupling on all three multicellular backends -- so Smoldyn is composed with CPM,
+  vertex and center-based mechanics identically, and the result is comparable across
+  paradigms. Each backend reports a per-cell boundary (CPM: an outline traced from the
+  voxel occupancy; vertex: junction-tension polygons; munk: discs) and a lineage/division
+  event; the coupling is otherwise unchanged.
+
+  **Studies** (parallel demonstrations, one per substrate):
+    1. bounded-particles-cpm    -- particles bounded by CPM voxel cells.
+    2. bounded-particles-vertex -- particles bounded by tyssue (vertex) polygons.
+    3. bounded-particles-munk   -- particles bounded by center-based discs.
+  Each runs the composite, checks that molecules stay inside their cell (confinement),
+  that counts are conserved across a division (split), and that A+B<->C reaches
+  equilibrium inside the moving tissue; each displays a cell-coloured flipbook overlay.
 
   **Generalises beyond Smoldyn.** The coupling contract -- a per-cell dynamic boundary +
   a lineage/division event -- is simulator-agnostic; the same seam would bound any
   particle/agent engine (e.g. a Brownian-dynamics or an agent-based intracellular model)
-  by the same tyssue cells.
+  by the same cells.

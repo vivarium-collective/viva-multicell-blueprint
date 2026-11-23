@@ -33,6 +33,8 @@ _PATCH = Path(__file__).resolve().parents[2] / "workspace" / "blueprints" / "bou
     parameters={
         "blueprint": {"type": "string", "default": str(_PATCH),
                       "description": "a path to a YAML file, inline YAML text, or a dict"},
+        "backend": {"type": "string", "default": "vertex",
+                    "description": "multicellular substrate the particles are bounded by: 'cpm', 'vertex', or 'munk'"},
         "seed_per_cell": {"type": "integer", "default": 60,
                           "description": "molecules (A+B) seeded per cell"},
         "divide_every": {"type": "integer", "default": 8,
@@ -43,7 +45,7 @@ _PATCH = Path(__file__).resolve().parents[2] / "workspace" / "blueprints" / "bou
     core_extensions=[register_workspace_processes],
     default_n_steps=20,
 )
-def bounded_particles(core=None, blueprint=None, seed_per_cell: int = 60,
+def bounded_particles(core=None, blueprint=None, backend: str = "vertex", seed_per_cell: int = 60,
                       divide_every: int = 8, overlay_out: str = "bounded_particles") -> dict:
     return {
         "state": {
@@ -52,6 +54,7 @@ def bounded_particles(core=None, blueprint=None, seed_per_cell: int = 60,
                 "address": "local:BoundedParticlesProcess",
                 "config": {
                     "blueprint": blueprint or str(_PATCH),
+                    "backend": str(backend),
                     "seed_per_cell": int(seed_per_cell),
                     "divide_every": int(divide_every),
                     "overlay_out": str(overlay_out),

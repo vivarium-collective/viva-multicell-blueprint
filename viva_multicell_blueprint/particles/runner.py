@@ -79,15 +79,28 @@ class SmoldynRunner:
                                                   seed=seed, spec=self.spec)
             return out
         if self._mode == "subproc":
-            req = {"cmd": "step", "step": int(step_idx), "spec": self.spec, "cells": cells}
-            self._proc.stdin.write(json.dumps(req) + "\n"); self._proc.stdin.flush()
-            line = self._proc.stdout.readline()
-            if not line:
-                raise RuntimeError("smoldyn worker closed unexpectedly")
-            resp = json.loads(line)
-            if not resp.get("ok"):
-                raise RuntimeError(f"smoldyn worker: {resp.get('error')}\n{resp.get('trace','')}")
-            return resp["cells"]
+            req = json.dumps({"cmd": "step", "step": int(step_idx),
+                              "spec": self.spec, "cells": cells}) + "\n"
+            for attempt in (0, 1):      # one restart if the worker died (e.g. a Smoldyn segfault)
+                try:
+                    self._proc.stdin.write(req); self._proc.stdin.flush()
+                    line = self._proc.stdout.readline()
+                    if not line:
+                        raise BrokenPipeError("worker closed")
+                    resp = json.loads(line)
+                    if not resp.get("ok"):
+                        raise RuntimeError(f"smoldyn worker: {resp.get('error')}\n{resp.get('trace','')}")
+                    return resp["cells"]
+                except (BrokenPipeError, OSError, ValueError):
+                    if attempt == 0 and self._python:
+                        try:
+                            self._proc.kill()
+                        except Exception:
+                            pass
+                        self._start_worker(self._python)   # restart + retry the step once
+                        continue
+                    # give up on this step: hold particles unchanged so the run continues
+                    return {cid: c.get("parts") or [] for cid, c in cells.items()}
         raise RuntimeError("Smoldyn is not available (no in-process module and no "
                            "resolvable interpreter; set SMOLDYN_PYTHON)")
 

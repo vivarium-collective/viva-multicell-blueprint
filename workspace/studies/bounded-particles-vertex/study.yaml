@@ -1,0 +1,46 @@
+schema_version: 4
+name: bounded-particles-vertex
+created: "2026-11-22"
+status: designed
+phase: Design
+simulation_status: not_run
+implementation_status: complete
+evaluation_status: not_evaluated
+gate_status: pending
+execution_status: pending
+verdict: pending
+design_status: drafted
+title: "Smoldyn particles bounded by tyssue (vertex) polygons: confinement, conservation across division, reaction equilibrium"
+kind: demonstration
+confidence: Investigating
+investigation: particle-multicell-composition
+
+composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
+backend: vertex
+
+claim: >
+  A Smoldyn particle sim composed with the vertex backend keeps every cell's molecules
+  strictly inside that cell's moving boundary (junction-tension polygons), conserves molecule count when a
+  cell divides (each molecule inherited by exactly one daughter, by containment), and lets
+  the reversible reaction A+B<->C reach equilibrium inside the living tissue.
+
+experiment: >
+  Run the `bounded_particles` composite with backend=vertex on a small patch (~4 cells,
+  seed_per_cell molecules of A and B) for ~18 steps with one scheduled division. Each step:
+  advance the vertex tissue (cells move/deform; one cell divides), then advance each cell's
+  confined Smoldyn sim. Record per step, per cell: molecule positions + counts (A/B/C).
+  Checks: (1) CONFINEMENT -- every molecule lies inside its cell's boundary each step;
+  (2) CONSERVATION -- at the division step, the mother's count equals the sum over its two
+  daughters; (3) REACTION -- A+B<->C relaxes toward the kf/kb equilibrium inside each cell.
+
+outcomes: >
+  The flipbook overlay (reports/assets/bounded_particles_vertex.html) -- particles coloured by
+  cell, each inside its vertex boundary, with a step/cell/molecule caption -- is the
+  qualitative artifact; the confinement / conservation / reaction checks are the
+  quantitative ones (pending run).
+
+notes: |
+  One of three parallel studies (cpm / vertex / munk) that run the SAME composite on the
+  three multicellular substrates, so the particle coupling can be compared across
+  paradigms. Smoldyn runs via SmoldynRunner (in-process on Linux 3.12, 3.11 subprocess
+  bridge on macOS).
