@@ -10,15 +10,16 @@ gate_status: pending
 execution_status: planned
 verdict:
 design_status: drafted
-title: "Model-definition format: one scene, three cell types, three formalisms (ODE, Smoldyn particles, MaBoSS) sharing an extracellular field"
+title: "Model-definition format: one scene, three cell types, three formalisms (ODE, Smoldyn particles,
+  MaBoSS) sharing an extracellular field"
 kind: demonstration
 confidence: Investigating
 investigation: particle-multicell-composition
 
 composite: viva_multicell_blueprint.composites.scene_model.scene_model
 baseline:
-  - name: scene-model-mixed-formalism
-    composite: viva_multicell_blueprint.composites.scene_model.scene_model
+- name: scene-model-mixed-formalism
+  composite: viva_multicell_blueprint.composites.scene_model.scene_model
 
 claim: >
   A declarative scene (cells + types) bound to a per-type model registry compiles to one
@@ -37,3 +38,8 @@ outcomes: >
 
 notes: |
   Regenerate with `python -m viva_multicell_blueprint.model_format.viz`.
+visualizations:
+- name: mixed-formalism scene — flipbook
+  address: html:scene-model-flipbook.html
+  config:
+    title: ODE / Smoldyn / MaBoSS cells over a shared field
