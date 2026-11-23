@@ -18,6 +18,13 @@ dependencies = [
     "matplotlib",
     "plotly",
     "pandas",
+    # The xarray emitter (how runs persist cell_counts) needs the Rust zarr v3
+    # writer `zarrs` + `bottleneck`, which live in viva-emitters' `[dev]` extra —
+    # not `[xarray]` — so they are not pulled by the workbench's
+    # viva-emitters[xarray] request. Declare them here so a plain `uv sync`
+    # (CI, a fresh machine, the republish-with-runs) can actually run a blueprint.
+    "zarrs>=0.2",
+    "bottleneck>=1.3",
     # Web-based workspace dashboard (server + templates + assets + lib helpers).
     # Extracted from viva-template as of v0.4.16; provides the `vivarium-workbench
     # serve` CLI invoked by scripts/serve.sh.
@@ -86,7 +93,12 @@ override-dependencies = [
     # vivarium-workbench @main requires viva-emitters[sqlite,...]>=0.4.3, but the
     # sqlite extra is only on PyPI's viva-emitters <0.4.3, so a fresh resolve is
     # unsatisfiable. Force viva-emitters to its git @main (0.4.5, extras intact).
-    "viva-emitters @ git+https://github.com/vivarium-collective/viva-emitters.git@main",
+    # Carry the extras workbench requests (sqlite,xarray,parquet): a bare
+    # `viva-emitters @ <url>` override REPLACES workbench's
+    # `viva-emitters[sqlite,xarray,parquet]` request and silently drops the
+    # extras, so the xarray emitter's runtime deps (unum, fsspec, …) never
+    # resolve and every run that persists through it dies on ModuleNotFoundError.
+    "viva-emitters[sqlite,xarray,parquet] @ git+https://github.com/vivarium-collective/viva-emitters.git@main",
 ]
 
 [tool.uv.sources]
