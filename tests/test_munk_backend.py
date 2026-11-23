@@ -43,7 +43,7 @@ def _three_cells():
 
 def _two_adjacent():
     """Two cells of different types whose discs overlap (share a contact lens).
-    size 12 -> radius ~1.954 (2r ~3.908); centers 2.6 apart leave ~1.3 um of overlap.
+    size 12 -> radius ~1.954 (2r ~3.908); centers 1.5 apart leave ~2.4 um of overlap (over half the 3.908 um radius-sum).
     The overlap is deliberately decisive (not just-touching): ``update`` runs one pymunk
     relaxation step that nudges the discs apart, and Chipmunk's float solver is not
     bit-identical across platforms, so a marginal overlap can collapse to a zero-length
@@ -51,7 +51,7 @@ def _two_adjacent():
     chord after one step on every platform."""
     return [
         {"id": 1, "type": "A", "centroid": [20.0, 20.0], "size": 12.0},
-        {"id": 2, "type": "B", "centroid": [22.6, 20.0], "size": 12.0},
+        {"id": 2, "type": "B", "centroid": [21.5, 20.0], "size": 12.0},
     ]
 
 

@@ -68,7 +68,9 @@ members:
   - bounded-particles-cpm
   - bounded-particles-vertex
   - bounded-particles-munk
+  - scene-model-mixed-formalism
 studies:
   - bounded-particles-cpm
   - bounded-particles-vertex
   - bounded-particles-munk
+  - scene-model-mixed-formalism

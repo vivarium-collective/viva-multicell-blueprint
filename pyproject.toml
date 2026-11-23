@@ -66,6 +66,7 @@ particles = ["smoldyn"]
 [project.scripts]
 multicell-blueprint = "viva_multicell_blueprint.cli.__main__:main"
 
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
