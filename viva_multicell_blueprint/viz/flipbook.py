@@ -45,7 +45,7 @@ from ..compare.metrics import neighbour_exchanges  # noqa: E402
 from ..compare.raster import cell_id_raster, grid_shape, rasterize, type_codes  # noqa: E402
 from ._common import HTML_CAP, MAX_FRAMES, decimate_indices, state_color, times  # noqa: E402
 
-_DPI = 100
+_DPI = 160
 _PALETTE_COLORS = 128   # adaptive-palette quantization: flat cell regions compress
                         # hugely as an indexed PNG with no visible quality loss, so
                         # many more frames fit under the inline cap.
@@ -362,7 +362,7 @@ def _flipbook(runs, grid_spec, *, dt_days=1.0, max_frames=MAX_FRAMES, title=None
     return Flipbook(data_uris, [f"{t:g}" for t in ts], title)
 
 
-def _flipbook_budgeted(runs, grid_spec, *, max_frames=MAX_FRAMES, budget=2_200_000,
+def _flipbook_budgeted(runs, grid_spec, *, max_frames=MAX_FRAMES, budget=2_450_000,
                        smooth_window=4, single=False, **kw):
     """Pre-smooth geometry, then decimate/halve frames until the rendered HTML fits
     ``budget`` bytes (bottoming out at 2 frames with a RuntimeWarning)."""
@@ -384,7 +384,7 @@ def _flipbook_budgeted(runs, grid_spec, *, max_frames=MAX_FRAMES, budget=2_200_0
 
 
 def single_playback(run, grid_spec, *, backend="cpm", max_frames=MAX_FRAMES,
-                    budget=2_200_000, smooth_window=4, title=None, **kw):
+                    budget=2_450_000, smooth_window=4, title=None, **kw):
     """Single-backend spatial playback flipbook (the Blueprint Studio per-run video).
     Geometry is temporally smoothed over +/-``smooth_window`` sim steps, then frames
     are decimated to fit the inline cap. Returns a :class:`Flipbook`."""
@@ -393,7 +393,7 @@ def single_playback(run, grid_spec, *, backend="cpm", max_frames=MAX_FRAMES,
                               title=title or f"Spatial playback — {backend}", **kw)
 
 
-def spatial_playback_multi(runs, grid_spec, *, max_frames=MAX_FRAMES, budget=2_200_000,
+def spatial_playback_multi(runs, grid_spec, *, max_frames=MAX_FRAMES, budget=2_450_000,
                            smooth_window=4, **kw):
     """N synchronized panels (one per paradigm), one shared time slider. ``runs`` is
     an ordered ``{backend: run}`` mapping. Each panel draws that backend in its
