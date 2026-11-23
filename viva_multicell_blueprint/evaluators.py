@@ -99,6 +99,33 @@ def atlas_total_molecules_final(reader, test, ws_root) -> float:
     return float(vals[-1]) if vals else 0.0
 
 
+@declares_sources("consensus_spread")
+def atlas_spread_max(reader, test, ws_root) -> float:
+    """Maximum consensus spread over the run — the largest per-cell distance between the three
+    backends' centroids. A small bound means CPM, vertex and munk stay coupled on one cell set."""
+    vals = _values(reader, "consensus_spread")
+    sim = vals[1:] if len(vals) > 1 else vals
+    return float(max(sim)) if sim else 0.0
+
+
+@declares_sources("committed_fraction")
+def atlas_committed_final(reader, test, ws_root) -> float:
+    """Final fraction of cells whose fate committed (divide > 0.5) — the end state of the
+    area → metabolism → fate cross-scale coupling in the consensus tissue."""
+    vals = _values(reader, "committed_fraction")
+    return float(vals[-1]) if vals else 0.0
+
+
+@declares_sources("interface_breaches")
+def atlas_breaches_max(reader, test, ws_root) -> float:
+    """Max per-step interface breaches (mesenchyme cells reflected off the epithelial floor). A
+    small bound means the interface holds — the two tissues couple without the mesenchyme
+    flooding through."""
+    vals = _values(reader, "interface_breaches")
+    sim = vals[1:] if len(vals) > 1 else vals
+    return float(max(sim)) if sim else 0.0
+
+
 def register_derived_scalars(reg: dict) -> None:
     reg["atlas_fate_transitions"] = atlas_fate_transitions
     reg["atlas_product_final"] = atlas_product_final
@@ -107,3 +134,6 @@ def register_derived_scalars(reg: dict) -> None:
     reg["atlas_cells_min"] = atlas_cells_min
     reg["atlas_confined_min"] = atlas_confined_min
     reg["atlas_total_molecules_final"] = atlas_total_molecules_final
+    reg["atlas_spread_max"] = atlas_spread_max
+    reg["atlas_committed_final"] = atlas_committed_final
+    reg["atlas_breaches_max"] = atlas_breaches_max

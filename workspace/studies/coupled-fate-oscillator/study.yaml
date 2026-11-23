@@ -152,6 +152,10 @@ variants:
   params: *id001
   description: the published reference configuration (single baseline run)
 visualizations:
+- name: coupled-fate-oscillator — internal-state flipbook
+  address: html:coupled-fate-oscillator-flipbook.html
+  config:
+    title: The cell's molecule pools + fate state animating over the run
 - name: coupled-fate-oscillator — behaviour over the run
   address: html:coupled-fate-oscillator.html
   config:

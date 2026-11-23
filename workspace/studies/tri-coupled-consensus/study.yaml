@@ -1,0 +1,200 @@
+schema_version: 4
+name: tri-coupled-consensus
+created: '2026-11-23'
+status: draft
+phase: Design
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: pending
+execution_status: planned
+verdict:
+design_status: drafted
+title: 'Tri-coupled consensus: CPM, vertex and center-based mechanics on one shared cell set'
+kind: confirmatory
+confidence: Accepted
+investigation: composition-atlas
+report:
+  verdict: supported
+question: |
+  Can three mechanics paradigms — Cellular Potts (voxel), vertex (polygon) and center-based (disc) — run ONE shared cell set, coupled into a consensus where vertex owns shape, munk owns position and CPM owns area?
+study_card:
+  goal: |
+    Couple three tissue simulators on one cell set into a single consensus tissue.
+  mechanism: |
+    CPM, vertex and munk each simulate the same cells; each step the three centroids converge to a munk-weighted consensus, the CPM rasterizes the vertex shape at that position, and the CPM's occupied area sizes the munk disc and the vertex target.
+  why_before_next: |
+    The multi-tissue foundation of the atlas — one cell set carrying three mechanics paradigms at once, each contributing what it models best (CPM area, vertex shape, munk position).
+  expected_result: |
+    Three mechanics paradigms run one shared cell set and stay coupled into a consensus (spread bounded, cells persist) — a genuine multi-tissue composite.
+  main_expert_question: |
+    Should the consensus weights (munk-dominant for position) be learned from a reference tissue rather than fixed, so the blend adapts to the regime?
+composite: viva_multicell_blueprint.composites.tri_coupled.tri_coupled
+baseline:
+- name: tri-coupled-consensus
+  composite: viva_multicell_blueprint.composites.tri_coupled.tri_coupled
+  params: &id001
+    cpm_res: 3
+    munk_squish: 0.8
+conditions:
+  baseline:
+    name: tri-coupled-consensus-baseline
+    composite: viva_multicell_blueprint.composites.tri_coupled.tri_coupled
+    description: |
+      CPM, vertex and munk each simulate the same cells; each step the three centroids converge to a munk-weighted consensus, the CPM rasterizes the vertex shape at that position, and the CPM's occupied area sizes the munk disc and the vertex target.
+    params: *id001
+variants:
+- name: reference
+  params: *id001
+  description: the published reference configuration (single baseline run)
+readouts:
+- name: consensus_spread
+  description: mean per-cell max distance between the three backends' centroids (lower = tighter consensus)
+  store_path: consensus_spread
+  units: um
+  status: measured
+- name: n_cells
+  description: cells held in common across the three backends
+  store_path: n_cells
+  units: cells
+  status: measured
+behavior_tests:
+- name: three-backends-stay-coupled
+  classification: primary
+  description: |
+    The three backends track one cell set: the max consensus spread stays within 6um, so CPM/vertex/munk never diverge into separate tissues.
+  measure:
+    kind: derived_scalar
+    path: atlas_spread_max
+  pass_if:
+    op: <=
+    value: 6.0
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: um
+- name: cell-set-persists
+  classification: primary
+  description: |
+    The shared cell set persists across the coupled run (>=8 cells).
+  measure:
+    kind: derived_scalar
+    path: atlas_cells_min
+  pass_if:
+    op: '>='
+    value: 8
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: cells
+conclusion_verdicts:
+  if_primary_tests_pass: |
+    Three mechanics paradigms run one shared cell set and stay coupled into a consensus (spread bounded, cells persist) — a genuine multi-tissue composite.
+  if_primary_tests_fail: |
+    A diverging spread or collapsing cell set would mean the three backends decouple.
+conclusion_logic:
+  if_primary_tests_pass:
+    verdict: supported
+    summary: |
+      Three mechanics paradigms run one shared cell set and stay coupled into a consensus (spread bounded, cells persist) — a genuine multi-tissue composite.
+  if_primary_tests_fail:
+    verdict: refuted
+    summary: |
+      A diverging spread or collapsing cell set would mean the three backends decouple.
+findings:
+- id: F1-tri-coupled-consensus
+  kind: computational
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: |
+    Cellular-Potts, vertex and center-based mechanics run one shared cell set coupled into a consensus (vertex shape, munk position, CPM area), staying within a few um of each other.
+  evidence:
+    from_test: three-backends-stay-coupled
+    from_run: baseline
+    observed: consensus spread ~1.3-1.7um; 13 cells held in common
+    expected: primary test 'three-backends-stay-coupled' passes
+  provenance:
+    run_ids:
+    - baseline
+visualizations:
+- name: tri-coupled-consensus — consensus flipbook
+  address: html:tri-coupled-consensus.html
+  config:
+    title: 'Tri-coupled consensus: CPM, vertex and center-based mechanics on one shared cell set'
+runs:
+- name: baseline
+  status: completed
+  timestamp: 1795468697.8661199
+  emitter:
+    kind: sqlite
+    store: workspace/studies/tri-coupled-consensus/runs/baseline/history.db
+  generations: 1
+  sim_minutes: 0
+  n_readouts: 2
+  computed_outcomes:
+    three-backends-stay-coupled:
+      result: PASS
+      measured_value: 1.698095
+      evaluated_by: code
+      operator: derived_scalar/<=
+      detail: 1.698 <= 6.0
+      axis:
+        id: three-backends-stay-coupled
+        label: "The three backends track one cell set: the max consensus spread stays within 6um, so CPM/vertex/munk never diverge into separate tissues.\n"
+        verdict: within_tol
+        value: 1.698095
+        meter: 0.8584920833333334
+        detail:
+        expected:
+          kind: value
+          value: 6.0
+          low:
+          high:
+          op: <=
+          tol: 0.05
+          statement:
+          units:
+        margin: 4.301905
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+    cell-set-persists:
+      result: PASS
+      measured_value: 13.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 13 >= 8.0
+      axis:
+        id: cell-set-persists
+        label: "The shared cell set persists across the coupled run (>=8 cells).\n"
+        verdict: within_tol
+        value: 13.0
+        meter: 0.8125
+        detail:
+        expected:
+          kind: value
+          value: 8.0
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 5.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+  outcomes:
+    three-backends-stay-coupled:
+      result: PASS
+    cell-set-persists:
+      result: PASS
+pipeline_gate:
+  gate_evaluator:
+    result: passed
+    blocked_by: []
+    evaluated_by: code
+    diverges_from_authored: false

@@ -72,6 +72,36 @@ def _circle_outline(cx: float, cy: float, r: float, n: int = _FOOTPRINT_SEGMENTS
              cy + r * math.sin(2.0 * math.pi * k / n)] for k in range(n)]
 
 
+def _squished_outline(cx, cy, r, sxx, sxy, syy, squish, max_ratio,
+                      n: int = _FOOTPRINT_SEGMENTS) -> list:
+    """An AREA-PRESERVING oblong outline under anisotropic crowding.
+
+    pymunk bodies are rigid discs — they do not deform in the solver — so this is
+    a *reported-shape* deformation: the local contact-stress tensor
+    ``[[sxx, sxy], [sxy, syy]]`` (sum over overlapping neighbours of
+    ``overlap · û⊗û``) is diagonalized; the cell is squished along its principal
+    compression axis and bulges perpendicular, conserving area (π r²). ``squish``
+    scales (differential stress → aspect ratio); ``max_ratio`` caps it. A cell
+    with isotropic or no crowding stays a circle."""
+    if squish <= 0.0:
+        return _circle_outline(cx, cy, r, n)
+    tr = sxx + syy
+    diff = math.hypot(sxx - syy, 2.0 * sxy)          # 2·sqrt((λmax-λmin)/2 ... ) = λmax-λmin
+    if diff <= 1e-9:
+        return _circle_outline(cx, cy, r, n)
+    theta = 0.5 * math.atan2(2.0 * sxy, sxx - syy)   # principal (compression) axis
+    k = min(max(1.0 + squish * diff, 1.0), float(max_ratio))
+    a_comp = r / math.sqrt(k)        # short semi-axis, along the compression axis
+    a_perp = r * math.sqrt(k)        # long semi-axis, perpendicular (bulge)
+    ct, st = math.cos(theta), math.sin(theta)
+    pts = []
+    for i in range(n):
+        phi = 2.0 * math.pi * i / n
+        xp, yp = a_comp * math.cos(phi), a_perp * math.sin(phi)
+        pts.append([cx + xp * ct - yp * st, cy + xp * st + yp * ct])
+    return pts
+
+
 class MunkBackend(MechanicsBackend):
     """viva-munk center-based (pymunk) substrate satisfying the ``MechanicsBackend`` contract."""
 
@@ -110,6 +140,12 @@ class MunkBackend(MechanicsBackend):
         # clamp so it never destabilizes.
         self._adhesion_range = float(bp.get("adhesion_range", 3.0))
         self._adh_scale = float(bp.get("adhesion_velocity_scale", 0.02))
+        # squish: rigid pymunk discs can't deform in the solver, but under
+        # anisotropic crowding we REPORT an area-preserving oblong footprint from
+        # the local contact-stress tensor. 0 = always circular (default);
+        # higher = more oblong per unit differential stress, capped at squish_max_ratio.
+        self._squish = float(bp.get("squish", 0.0))
+        self._squish_max_ratio = float(bp.get("squish_max_ratio", 2.5))
         self._adhesivity = self._parse_adhesivity(config.get("adhesion") or [])
         # chemotaxis gain: converts the blueprint `strength` (a CPM Hamiltonian
         # lambda, e.g. 5000 -- NOT a velocity) into a sane up-gradient drift
@@ -318,6 +354,11 @@ class MunkBackend(MechanicsBackend):
         # (d2b) per-cell motility: a random kick scaled by each cell's motility.
         self._apply_motility()
 
+        # (d2c) cross-paradigm NUDGE (tri-coupled composite): spring each cell's
+        #       center toward an externally-supplied target centroid (e.g. its
+        #       vertex twin's centroid). cell_id -> [x, y]. Opt-in; absent -> no-op.
+        self._apply_nudge(inputs.get("nudge"))
+
         # (d3) clamp every cell's speed before integrating: the stability guarantee so
         #      no injected drive or stiff collision can blow positions up.
         self._clamp_speeds()
@@ -406,6 +447,22 @@ class MunkBackend(MechanicsBackend):
             vx, vy = agent["velocity"]
             kick = float(m) * self._motility_gain
             agent["velocity"] = (vx + kick * math.cos(th), vy + kick * math.sin(th))
+
+    def _apply_nudge(self, targets) -> None:
+        """Spring each cell's center toward an external target centroid (tri-coupled
+        composite: the vertex-centroid ↔ munk-center tug). Velocity injection, so it
+        rides the same clamp/integrator as motility/chemotaxis."""
+        gain = getattr(self, "_nudge_gain", 0.3)
+        for bid, tgt in (targets or {}).items():
+            agent = self._agents.get(str(bid))
+            if agent is None or not tgt:
+                continue
+            loc = agent.get("location") or agent.get("position")
+            if not loc:
+                continue
+            vx, vy = agent["velocity"]
+            agent["velocity"] = (vx + gain * (float(tgt[0]) - float(loc[0])),
+                                 vy + gain * (float(tgt[1]) - float(loc[1])))
 
     def _pair_adhesivity(self, mi: str, mj: str) -> float:
         """Matrix adhesivity for the pair, with per-cell overrides applied: each
@@ -601,10 +658,10 @@ class MunkBackend(MechanicsBackend):
             sizes[bid] = size
             out_types[bid] = tname
             alive[bid] = True
-            footprints[bid] = {"kind": "polygon", "xy": _circle_outline(cx, cy, r)}
             self._cache[bid] = {"pos": [cx, cy], "size": size, "type": tname}
 
             nbrs, by_type = [], {}
+            sxx = sxy = syy = 0.0
             for other, (ox, oy, orr) in live.items():
                 if other == bid:
                     continue
@@ -614,8 +671,21 @@ class MunkBackend(MechanicsBackend):
                 nbrs.append(other)
                 otype = self._meta[other]["type"]
                 by_type[otype] = by_type.get(otype, 0.0) + contact
+                # contact-stress tensor: overlap depth projected along the line of
+                # centres, accumulated as overlap·û⊗û (drives the oblong footprint).
+                dx, dy = ox - cx, oy - cy
+                d = math.hypot(dx, dy)
+                overlap = (r + orr) - d
+                if overlap > 0.0 and d > 1e-9:
+                    ux, uy = dx / d, dy / d
+                    sxx += overlap * ux * ux
+                    sxy += overlap * ux * uy
+                    syy += overlap * uy * uy
             neighbors[bid] = nbrs
             shared[bid] = by_type
+            footprints[bid] = {"kind": "polygon",
+                               "xy": _squished_outline(cx, cy, r, sxx, sxy, syy,
+                                                       self._squish, self._squish_max_ratio)}
 
         return {
             "positions": positions,

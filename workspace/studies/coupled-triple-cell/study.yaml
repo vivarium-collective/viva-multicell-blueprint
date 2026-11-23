@@ -163,6 +163,10 @@ variants:
   params: *id001
   description: the published reference configuration (single baseline run)
 visualizations:
+- name: coupled-triple-cell — internal-state flipbook
+  address: html:coupled-triple-cell-flipbook.html
+  config:
+    title: The cell's molecule pools + fate state animating over the run
 - name: coupled-triple-cell — behaviour over the run
   address: html:coupled-triple-cell.html
   config:
