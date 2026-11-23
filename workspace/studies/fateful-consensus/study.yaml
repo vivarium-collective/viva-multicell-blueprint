@@ -1,0 +1,209 @@
+schema_version: 4
+name: fateful-consensus
+created: '2026-11-23'
+status: draft
+phase: Design
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: pending
+execution_status: planned
+verdict:
+design_status: drafted
+title: "Fateful consensus: a tri-coupled tissue where cell area drives each cell's metabolism→fate"
+kind: confirmatory
+confidence: Accepted
+investigation: composition-atlas
+report:
+  verdict: supported
+question: |
+  Can a tri-coupled consensus tissue drive each cell's sub-cellular fate — the CPM-owned AREA setting the metabolic rate, the metabolite pinning a MaBoSS fate input, the fate committing the cell — so three tissue + two sub-cellular simulators run as one composite?
+study_card:
+  goal: |
+    Compose every scale: a three-paradigm consensus tissue with a per-cell metabolism→fate chain driven top-down by cell area.
+  mechanism: |
+    On top of the tri-coupled consensus, every cell runs a CoupledCell (an SBML-ODE metabolism whose metabolite C pins a MaBoSS fate). Each step the cell's CPM area sets its ODE rate (kf0 = k*area), C builds and pins high_C, and the fate commits (divide).
+  why_before_next: |
+    The grand unification of the atlas: three tissue simulators and two sub-cellular simulators in one composite with a live mechanics→metabolism→fate information flow across scales.
+  expected_result: |
+    Cell area drives each cell's metabolism and fate while the three-paradigm consensus holds — every scale composed into one running system with a top-down mechanics→fate coupling.
+  main_expert_question: |
+    Should a committed cell's fate feed BACK to the mechanics (e.g. drive division across all three backends), closing the cross-scale loop rather than only flowing top-down?
+composite: viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus
+baseline:
+- name: fateful-consensus
+  composite: viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus
+  params: &id001
+    munk_squish: 0.8
+conditions:
+  baseline:
+    name: fateful-consensus-baseline
+    composite: viva_multicell_blueprint.composites.fateful_consensus.fateful_consensus
+    description: |
+      On top of the tri-coupled consensus, every cell runs a CoupledCell (an SBML-ODE metabolism whose metabolite C pins a MaBoSS fate). Each step the cell's CPM area sets its ODE rate (kf0 = k*area), C builds and pins high_C, and the fate commits (divide).
+    params: *id001
+variants:
+- name: reference
+  params: *id001
+  description: the published reference configuration (single baseline run)
+readouts:
+- name: committed_fraction
+  description: fraction of cells whose fate committed (divide>0.5) via the area→metabolism→fate chain
+  store_path: committed_fraction
+  units: fraction
+  status: measured
+- name: mean_metabolite
+  description: mean per-cell metabolite C (area-driven)
+  store_path: mean_metabolite
+  units: molecules
+  status: measured
+- name: consensus_spread
+  description: tri-coupled consensus tightness
+  store_path: consensus_spread
+  units: um
+  status: measured
+- name: n_cells
+  description: cells in the consensus tissue
+  store_path: n_cells
+  units: cells
+  status: measured
+behavior_tests:
+- name: area-drives-fate-commitment
+  classification: primary
+  description: |
+    The cross-scale chain fires: area→metabolism→fate commits at least half the cells by the end of the run.
+  measure:
+    kind: derived_scalar
+    path: atlas_committed_final
+  pass_if:
+    op: '>='
+    value: 0.5
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: fraction
+- name: consensus-holds-under-coupling
+  classification: primary
+  description: |
+    The three-backend consensus stays tight (<=6um) even while the per-cell sub-cellular layer runs.
+  measure:
+    kind: derived_scalar
+    path: atlas_spread_max
+  pass_if:
+    op: <=
+    value: 6.0
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: um
+conclusion_verdicts:
+  if_primary_tests_pass: |
+    Cell area drives each cell's metabolism and fate while the three-paradigm consensus holds — every scale composed into one running system with a top-down mechanics→fate coupling.
+  if_primary_tests_fail: |
+    No commitment, or a diverging consensus, would mean the cross-scale composition fails.
+conclusion_logic:
+  if_primary_tests_pass:
+    verdict: supported
+    summary: |
+      Cell area drives each cell's metabolism and fate while the three-paradigm consensus holds — every scale composed into one running system with a top-down mechanics→fate coupling.
+  if_primary_tests_fail:
+    verdict: refuted
+    summary: |
+      No commitment, or a diverging consensus, would mean the cross-scale composition fails.
+findings:
+- id: F1-fateful-consensus
+  kind: computational
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: |
+    A tri-coupled consensus tissue runs a per-cell metabolism→fate chain driven by cell area: three tissue + two sub-cellular simulators compose with a live mechanics→metabolism→fate flow.
+  evidence:
+    from_test: area-drives-fate-commitment
+    from_run: baseline
+    observed: committed fraction reaches 1.0; mean C builds to ~18 as area drives metabolism
+    expected: primary test 'area-drives-fate-commitment' passes
+  provenance:
+    run_ids:
+    - baseline
+visualizations:
+- name: fateful-consensus — consensus flipbook
+  address: html:fateful-consensus.html
+  config:
+    title: "Fateful consensus: a tri-coupled tissue where cell area drives each cell's metabolism→fate"
+runs:
+- name: baseline
+  status: completed
+  timestamp: 1795468702.834626
+  emitter:
+    kind: sqlite
+    store: workspace/studies/fateful-consensus/runs/baseline/history.db
+  generations: 1
+  sim_minutes: 0
+  n_readouts: 4
+  computed_outcomes:
+    area-drives-fate-commitment:
+      result: PASS
+      measured_value: 1.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 1 >= 0.5
+      axis:
+        id: area-drives-fate-commitment
+        label: "The cross-scale chain fires: area→metabolism→fate commits at least half the cells by the end of the run.\n"
+        verdict: within_tol
+        value: 1.0
+        meter: 1.0
+        detail:
+        expected:
+          kind: value
+          value: 0.5
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 0.5
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+    consensus-holds-under-coupling:
+      result: PASS
+      measured_value: 1.803677
+      evaluated_by: code
+      operator: derived_scalar/<=
+      detail: 1.804 <= 6.0
+      axis:
+        id: consensus-holds-under-coupling
+        label: "The three-backend consensus stays tight (<=6um) even while the per-cell sub-cellular layer runs.\n"
+        verdict: within_tol
+        value: 1.803677
+        meter: 0.8496935833333332
+        detail:
+        expected:
+          kind: value
+          value: 6.0
+          low:
+          high:
+          op: <=
+          tol: 0.05
+          statement:
+          units:
+        margin: 4.196323
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+  outcomes:
+    area-drives-fate-commitment:
+      result: PASS
+    consensus-holds-under-coupling:
+      result: PASS
+pipeline_gate:
+  gate_evaluator:
+    result: passed
+    blocked_by: []
+    evaluated_by: code
+    diverges_from_authored: false

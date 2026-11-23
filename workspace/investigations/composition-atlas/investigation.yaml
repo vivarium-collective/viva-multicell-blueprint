@@ -89,6 +89,12 @@ at_a_glance:
 - study: scene-model-mixed-formalism
   role: |
     The declarative model-definition format: an imaging-style scene of typed cells compiles to one composite where ODE, Smoldyn-particle and MaBoSS cells share an extracellular field.
+- study: tri-coupled-consensus
+  role: |
+    Tissue <-> tissue: Cellular Potts, vertex and center-based mechanics run ONE shared cell set coupled into a consensus (vertex shape, munk position, CPM area).
+- study: fateful-consensus
+  role: |
+    The grand unification: the tri-coupled consensus tissue where each cell's CPM area drives an ODE metabolism -> MaBoSS fate -- three tissue + two sub-cellular simulators, one composite.
 executive:
   what_is_this: >
     A curated showcase of composition across modelling paradigms, built on the
@@ -151,6 +157,8 @@ members:
 - bounded-particles-vertex
 - bounded-particles-munk
 - scene-model-mixed-formalism
+- tri-coupled-consensus
+- fateful-consensus
 studies:
 - coupled-fate-oscillator
 - coupled-particle-catalysis
@@ -160,6 +168,8 @@ studies:
 - bounded-particles-vertex
 - bounded-particles-munk
 - scene-model-mixed-formalism
+- tri-coupled-consensus
+- fateful-consensus
 scientific_argument:
   main_claim: |
     A model's SEMANTICS (its chemistry/logic) are separable from its MECHANICS (the solver that runs it) at every scale, so the same few simulators compose in many directions through small, typed coupling contracts: several sub-cellular simulators couple inside one cell (a product threshold pins a Boolean input; a particle count sets an ODE rate; a Boolean output gates a reaction), a cell is itself a coupled composite, and a tissue of such cells couples the sub-cellular scale back to mechanics — a cell's own metabolism->fate chain decides when the tissue divides.
