@@ -84,7 +84,6 @@ binary wheel and otherwise through a subprocess bridge.
 |---|---|
 | [A composition atlas: building cell and tissue models by coupling simulators in every direction _(running)_](https://vivarium-collective.github.io/viva-multicell-blueprint/workbench/reports/investigation-composition-atlas.html) | This workspace has three tissue-scale simulators (Cellular Potts, vertex, center-based) and three sub-cellular simulators (SBML-ODE, Smoldyn particles, MaBoSS Boolean). How many genuinely different m… |
 | [Blueprint to pipeline to three substrates: one backend-neutral blueprint, run faithfully on CPM, vertex and center-based, with a pluggable subcellular layer _(running)_](https://vivarium-collective.github.io/viva-multicell-blueprint/workbench/reports/investigation-influenza-crossparadigm.html) | Can ONE versioned, backend-neutral blueprint be translated by a single pipeline (`blueprint_pipeline`) and run faithfully on three different mechanical substrates -- a Cellular Potts model (viva-cpm)… |
-| [Composing particle simulations with multicellular simulators: molecules bounded by living cells _(running)_](https://vivarium-collective.github.io/viva-multicell-blueprint/workbench/reports/investigation-particle-multicell-composition.html) | Can a particle-based molecular simulator (Smoldyn) be composed with a multicellular simulator (the tyssue/vertex backend) so that each cell's molecules are confined to that cell's own, dynamically ch… |
 <!-- END:investigations -->
 
 ## Run it locally

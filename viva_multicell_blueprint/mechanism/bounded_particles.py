@@ -98,6 +98,7 @@ class BoundedParticlesProcess(Process):
         self._frame_imgs = []
         self._gif_frames = []
         self._step = 0
+        self._divisions_total = 0
         self._divide_every = int(self.config.get("divide_every", 8))
         self._seed_n = int(self.config.get("seed_per_cell", 60))
         self._out = Path("workspace/reports/assets") / (str(self.config.get("overlay_out", "bounded_particles")) + ".html")
@@ -137,6 +138,7 @@ class BoundedParticlesProcess(Process):
 
     def outputs(self):
         return {"n_cells": "overwrite[integer]", "n_particles": "overwrite[integer]",
+                "n_divisions": "overwrite[integer]", "confined_fraction": "overwrite[float]",
                 "smoldyn_mode": "overwrite[string]"}
 
     def _color(self, cid):
@@ -169,6 +171,7 @@ class BoundedParticlesProcess(Process):
                 (give if dpath.contains_point([p[1], p[2]]) else keep).append(p)
             self._particles[mother] = keep
             self._particles[daughter] = give
+            self._divisions_total += 1
 
         # seed particles for any new cell that still has none
         for cid, poly in foot.items():
@@ -195,7 +198,22 @@ class BoundedParticlesProcess(Process):
             print(f"  [overlay] {e}")
 
         npart = sum(len(s["parts"]) for s in snapshot.values())
-        return {"n_cells": len(foot), "n_particles": npart, "smoldyn_mode": self._runner.mode}
+        # confinement: fraction of particles inside their own cell's boundary (the coupling's
+        # core guarantee — a reflective Smoldyn surface keeps molecules in their cell)
+        inside = total = 0
+        for cid, snap in snapshot.items():
+            poly = snap["parts"] and np.asarray(snap["poly"])
+            if poly is None or len(snap["parts"]) == 0:
+                continue
+            path = MplPath(np.asarray(snap["poly"]))
+            for p in snap["parts"]:
+                total += 1
+                if path.contains_point([p[1], p[2]]):
+                    inside += 1
+        confined = (inside / total) if total else 1.0
+        return {"n_cells": len(foot), "n_particles": npart,
+                "n_divisions": self._divisions_total, "confined_fraction": float(confined),
+                "smoldyn_mode": self._runner.mode}
 
     # ---- overlay: cells + particles, coloured by cell ------------------------
     def _write_overlay(self):

@@ -61,8 +61,11 @@ def bounded_particles(core=None, blueprint=None, backend: str = "vertex", seed_p
                 },
                 "inputs": {},
                 "outputs": {"n_cells": ["n_cells"], "n_particles": ["n_particles"],
+                            "n_divisions": ["n_divisions"],
+                            "confined_fraction": ["confined_fraction"],
                             "smoldyn_mode": ["smoldyn_mode"]},
             },
-            "n_cells": 0, "n_particles": 0, "smoldyn_mode": "",
+            "n_cells": 0, "n_particles": 0, "n_divisions": 0,
+            "confined_fraction": 0.0, "smoldyn_mode": "",
         }
     }

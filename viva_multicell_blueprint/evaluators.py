@@ -81,9 +81,29 @@ def atlas_cells_min(reader, test, ws_root) -> float:
     return float(min(sim)) if sim else 0.0
 
 
+@declares_sources("confined_fraction")
+def atlas_confined_min(reader, test, ws_root) -> float:
+    """Minimum confined fraction over the simulated run — the fraction of particles inside
+    their own cell's boundary (bounded-particles confinement). The leading pre-run emit
+    (index 0, confined_fraction=0.0 before any particles) is skipped."""
+    vals = _values(reader, "confined_fraction")
+    sim = vals[1:] if len(vals) > 1 else vals
+    return float(min(sim)) if sim else 0.0
+
+
+@declares_sources("total_molecules")
+def atlas_total_molecules_final(reader, test, ws_root) -> float:
+    """Final total molecule count across the scene's cells — the mixed-formalism composite
+    produced live molecular state (scene-model)."""
+    vals = _values(reader, "total_molecules")
+    return float(vals[-1]) if vals else 0.0
+
+
 def register_derived_scalars(reg: dict) -> None:
     reg["atlas_fate_transitions"] = atlas_fate_transitions
     reg["atlas_product_final"] = atlas_product_final
     reg["atlas_signal_growth"] = atlas_signal_growth
     reg["atlas_divisions_final"] = atlas_divisions_final
     reg["atlas_cells_min"] = atlas_cells_min
+    reg["atlas_confined_min"] = atlas_confined_min
+    reg["atlas_total_molecules_final"] = atlas_total_molecules_final
