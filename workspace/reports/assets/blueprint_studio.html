@@ -30,7 +30,9 @@
   .row{display:flex;gap:16px;flex-wrap:wrap}
   .row>div{flex:1;min-width:160px}
   .engines{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px}
-  .engine{min-width:0;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
+  .engine,.subtile{min-width:0;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
+  .engine small,.subtile small{display:block;color:var(--muted);font-weight:400;margin-top:3px;font-size:12px}
+  .subtile.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
   .engine.sel[data-e=cpm]{border-color:var(--cpm);background:color-mix(in srgb,var(--cpm) 10%,transparent)}
   .engine.sel[data-e=vertex]{border-color:var(--vertex);background:color-mix(in srgb,var(--vertex) 10%,transparent)}
   .engine.sel[data-e=munk]{border-color:var(--munk);background:color-mix(in srgb,var(--munk) 10%,transparent)}
@@ -38,6 +40,12 @@
   .btn-mini{display:inline-block;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;text-decoration:none}
   .btn-mini:hover{border-color:var(--muted)}
   .result{margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--code);font-size:13px}
+  .run-x{display:inline-block;border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;font-weight:700;padding:0 9px 0 0;line-height:1;vertical-align:baseline}
+  .run-x:hover{color:var(--err)}
+  .saved-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .saved-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:13px}
+  .saved-when{font-size:11.5px}
+  .saved-links{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
   .result.ok{background:var(--accentbg);border-color:var(--accent)}
   .result.err{background:color-mix(in srgb,var(--err) 10%,transparent);border-color:var(--err)}
   .engine small{display:block;color:var(--muted);font-weight:400;margin-top:3px}
@@ -174,46 +182,43 @@
 
   <!-- RUN -->
   <div class="card">
-    <div class="row">
-      <div>
-        <label>Mechanics engine</label>
-        <div class="engines">
-          <div class="engine" data-e="cpm" id="eng-cpm">CPM<small>Cellular Potts (voxel)</small></div>
-          <div class="engine" data-e="vertex" id="eng-vertex">Vertex<small>tyssue (polygon)</small></div>
-          <div class="engine" data-e="munk" id="eng-munk">Center-based<small>pymunk (disc)</small></div>
-          <div class="engine sel" data-e="tri" id="eng-tri">Tri-coupled<small>one coupled composite: shape·position·area</small></div>
-        </div>
-        <p class="hint">Select one or more — each runs on the same blueprint; stand-alone modules are independent, Tri-coupled runs all three coupled.</p>
-      </div>
-      <div>
-        <label for="steps">Steps</label>
-        <input type="number" id="steps" value="60" min="1" max="2000" step="1">
-        <p class="hint">Coupled steps (MCS). Keep modest for an interactive run.</p>
-        <label for="subcell" style="margin-top:12px">Subcellular layer</label>
-        <select id="subcell">
-          <option value="">None — mechanics + fields + rules only</option>
-          <option value="ode">ODE — per-cell metabolism (tellurium)</option>
-          <option value="boolean">Boolean — per-cell gene network (MaBoSS)</option>
-          <option value="particle">Particle — per-cell stochastic reactions (Smoldyn)</option>
-        </select>
-        <p class="hint" id="subcell-hint">A per-cell intracellular model runs inside every <span id="subcell-type">epithelial</span> cell on the same blueprint, coupled to a field and feeding back on the cell (growth / division).</p>
-      </div>
+    <label>Mechanics engine</label>
+    <div class="engines">
+      <div class="engine" data-e="cpm" id="eng-cpm">CPM<small>Cellular Potts (voxel)</small></div>
+      <div class="engine" data-e="vertex" id="eng-vertex">Vertex<small>tyssue (polygon)</small></div>
+      <div class="engine" data-e="munk" id="eng-munk">Center-based<small>pymunk (disc)</small></div>
+      <div class="engine sel" data-e="tri" id="eng-tri">Tri-coupled<small>one coupled composite: shape·position·area</small></div>
     </div>
-    <div style="margin-top:16px">
-      <button class="run" id="run">Run ▸</button>
+    <p class="hint">Select one or more — each runs on the same blueprint. Stand-alone modules are independent; Tri-coupled runs all three coupled, and Tri-coupled + the Particle subcellular layer runs Smoldyn confined inside the consensus tissue.</p>
+
+    <label style="margin-top:18px">Subcellular layer</label>
+    <div class="engines" id="subcells">
+      <div class="subtile sel" data-s="">None<small>mechanics + fields + rules only</small></div>
+      <div class="subtile" data-s="ode">ODE<small>per-cell metabolism · tellurium</small></div>
+      <div class="subtile" data-s="boolean">Boolean<small>gene network · MaBoSS</small></div>
+      <div class="subtile" data-s="particle">Particle<small>stochastic reactions · Smoldyn</small></div>
     </div>
+    <p class="hint" id="subcell-hint">A per-cell intracellular model runs inside every <span id="subcell-type">epithelial</span> cell on the same blueprint, coupled to a field and feeding back on the cell (growth / division).</p>
+
+    <label for="steps" style="margin-top:18px">Steps</label>
+    <input type="number" id="steps" value="60" min="1" max="2000" step="1" style="max-width:180px">
+    <p class="hint">Coupled steps (MCS). Keep modest for an interactive run.</p>
+    <div style="margin-top:14px"><button class="run" id="run">Run ▸</button></div>
+
     <div id="nobackend" style="display:none;margin-top:12px;padding:12px 14px;border-radius:9px;border:1px solid var(--line);background:var(--code);font-size:13px">
       📄 <b>Read-only view.</b> This is the published static snapshot — there is no live server to run on.
       To run a simulation, open this workspace's <b>live</b> workbench
       (<code>vivarium-workbench serve</code>) → Explore → Blueprint Studio.
     </div>
     <div id="status"></div>
+    <div id="saved-runs"></div>
   </div>
 </div>
 
 <script>
 const COMPOSITE = "viva_multicell_blueprint.composites.pipeline.blueprint_pipeline";
 const TRI_COMPOSITE = "viva_multicell_blueprint.composites.tri_coupled.tri_coupled";
+const PCONS_COMPOSITE = "viva_multicell_blueprint.composites.particle_consensus.particle_consensus";
 const API = location.pathname.replace(/\/assets\/blueprint_studio\.html$/, "") + "/api";
 const SPA = API.replace(/\/api$/, "");
 const TEMPLATES = {
@@ -786,6 +791,7 @@ $("#components").addEventListener("click",(e)=>{
 });
 
 applyTemplate();
+renderSavedRuns();
 
 (async function checkBackend(){
   try{ const r = await fetch(`${API}/analysis-viewers`, {method:"GET"}); if(r.ok) return; }catch(e){}
@@ -797,6 +803,12 @@ applyTemplate();
 document.querySelectorAll(".engine").forEach(el => el.addEventListener("click", () => {
   el.classList.toggle("sel");
 }));
+// subcellular layer: single-select tiles (one intracellular model at a time), same look as the engine tiles
+document.querySelectorAll("#subcells .subtile").forEach(el => el.addEventListener("click", () => {
+  document.querySelectorAll("#subcells .subtile").forEach(x => x.classList.remove("sel"));
+  el.classList.add("sel");
+}));
+function currentSubcell(){ const s = document.querySelector("#subcells .subtile.sel"); return s ? (s.dataset.s || "") : ""; }
 
 function setStatus(msg, cls){ const s=$("#status"); s.className="show "+(cls||""); s.innerHTML=msg; }
 
@@ -817,6 +829,16 @@ $("#download").addEventListener("click", () => {
 // spatial video); "tri" runs the coupled tri_coupled composite, whose output is the
 // 3-paradigm overlay it writes to assets/<overlay_out>.html.
 function jobFor(eng, overridesBase){
+  const sub = currentSubcell();
+  // Tri-coupled + Smoldyn subcellular IS the particle_consensus composite: Smoldyn
+  // molecules confined inside each cell of the consensus tissue. Reached via the two
+  // tile selections, not a separate mechanics tile.
+  if(eng==="tri" && sub==="particle"){
+    const out = `studio_pcons_${Date.now()}`;
+    return {composite: PCONS_COMPOSITE, emit_paths:["confined_fraction","n_particles"],
+      overrides:{...overridesBase, overlay_out: out, seed_per_cell: 40, munk_squish: 0.8},
+      art:{href:`${out}.html`, label:"▶ View particles-in-tissue ↗", dlname:"particle-consensus.html"}};
+  }
   if(eng==="tri"){
     const out = `studio_tri_${Date.now()}`;
     return {composite: TRI_COMPOSITE, emit_paths:["consensus_spread"],
@@ -839,23 +861,23 @@ async function pollRun(runId, el, eng, art){
       if(st && /complete|done|finished|success/.test(st)){
         el.className="result ok";
         const dl = `${API}/simulation-run-download?run_id=${encodeURIComponent(runId)}`;
-        el.innerHTML = `✓ <b>${eng}</b> run complete <span class="muted">(${runId})</span>`
+        _cardBody(el, `✓ <b>${eng}</b> run complete <span class="muted">(${runId})</span>`
           + `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">`
           + (art ? `<a class="btn-mini" href="${art.href}" target="_blank" rel="noopener">${art.label}</a>` : "")
           + (art ? `<a class="btn-mini" href="${art.href}" download="${art.dlname}">Download ⬇</a>` : "")
           + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">View results ↗</a>`
           + `<a class="btn-mini" href="${dl}" download>Download results ⬇</a>`
-          + `</div>`;
+          + `</div>`);
         return true;
       }
       if(st && /fail|error/.test(st)){
-        el.className="result err"; el.innerHTML = `✗ <b>${eng}</b> run ${st} — see the Simulations DB. <span class="muted">(${runId})</span>`;
+        el.className="result err"; _cardBody(el, `✗ <b>${eng}</b> run ${st} — see the Simulations DB. <span class="muted">(${runId})</span>`);
         return false;
       }
-      if(st) el.innerHTML = `⏳ <b>${eng}</b> — ${st}… <span class="muted">(${runId})</span>`;
+      if(st) _cardBody(el, `⏳ <b>${eng}</b> — ${st}… <span class="muted">(${runId})</span>`);
     }catch(e){}
   }
-  el.innerHTML = `⏳ <b>${eng}</b> still running — follow it in the <a href="#simulations">Simulations DB</a>.`;
+  _cardBody(el, `⏳ <b>${eng}</b> still running — follow it in the <a href="#simulations">Simulations DB</a>.`);
   return false;
 }
 
@@ -910,9 +932,89 @@ function withSubcellular(text, kind){
   return replaceTopBlock(text, "subcellular", block);
 }
 
+// Dismissable run cards: a persistent ✕ that removes the card and, if the run is
+// still live, cancels it (SIGTERMs the detached run via the workbench stop route).
+function _cardBody(el, html){
+  if(!el.querySelector(".run-x")){
+    el.innerHTML = '<button type="button" class="run-x" title="Dismiss — cancels the run if it is still live" onclick="_dismissRun(this)">✕</button><span class="run-body"></span>';
+  }
+  el.querySelector(".run-body").innerHTML = html;
+}
+async function _dismissRun(btn){
+  const el = btn.closest(".result"); if(!el) return;
+  const rid = el.dataset.runid || "";
+  el.style.opacity = "0.5"; btn.disabled = true;
+  if(rid && !/^\(/.test(rid)){
+    try{ await fetch(`${API}/composite-run/${encodeURIComponent(rid)}/stop`, {method:"POST"}); }catch(e){}
+  }
+  el.remove();
+}
+window._dismissRun = _dismissRun;
+
+// Saved runs: a durable record (localStorage, survives reloads) of every run launched
+// from this Studio, with its artifact link, so old runs are findable. Live status is
+// refreshed from the workbench Simulations DB on render. Artifact files live on disk
+// under reports/assets/, so the relative links keep resolving after a reload.
+// The Saved-runs panel IS the Simulations DB (durable, cross-reload, cross-browser):
+// every Studio run (label "blueprint-studio <eng> <tpl>") with live status, its spatial
+// artifact (overlay / video — derived from the run's recorded config.overlay_out /
+// video_out, so ALL runs get a View link, not just this session's), a results download
+// (/api/simulation-run-download), and a link into the Simulations DB.
+async function renderSavedRuns(){
+  const host=$("#saved-runs"); if(!host) return;
+  let sims=[];
+  try{ const d=await (await fetch(`${API}/simulations`)).json(); sims=d.simulations||[]; }catch(e){ host.innerHTML=""; return; }
+  const stud=sims.filter(s=>String(s.label||"").startsWith("blueprint-studio"))
+                 .sort((a,b)=>(b.started_at||0)-(a.started_at||0));
+  const head=`<label style="margin-top:22px;display:flex;align-items:baseline;gap:8px"><span>Saved runs <span class="muted" style="font-weight:400">— every Studio run, from the Simulations DB</span></span>`
+    + `<button type="button" class="btn-mini" style="margin-left:auto;font-weight:400" onclick="renderSavedRuns()">↻ Refresh</button></label>`;
+  if(!stud.length){ host.innerHTML=head+`<p class="hint">No Studio runs recorded yet — they appear here (and in the Simulations DB) as you Run.</p>`; return; }
+  const ENGNAME={cpm:"CPM",vertex:"Vertex",munk:"Center-based",tri:"Tri-coupled"};
+  const SUBNAME={tellurium:"ODE (tellurium)",maboss:"Boolean (MaBoSS)",smoldyn:"Particle (Smoldyn)"};
+  const MODELNAME={default:"Sego flu-lung",large:"Sego flu-lung (large)",simple:"Minimal sheet",mixed:"Mixed population",infection:"Infection field"};
+  const rows=stud.map(s=>{
+    const rid=String(s.run_id||""); const parts=String(s.label||"").split(/\s+/);
+    const eng=parts[1]||"run"; const tpl=parts.slice(2).join(" ");
+    const st=String(s.status||s.state||"").toLowerCase();
+    const done=/complete|done|finish|success/.test(st), bad=/fail|error|cancel/.test(st);
+    const badge=done?'<span style="color:var(--accent);font-weight:600">✓ complete</span>'
+      :bad?`<span style="color:var(--err);font-weight:600">✗ ${esc(st)}</span>`
+      :st?`<span class="muted">${esc(st)}…</span>`:'<span class="muted">recorded</span>';
+    const when=s.started_at?new Date(s.started_at*1000).toLocaleString():"";
+    const cfg=s.config||{};
+    // Describe what ran: mechanics engine, subcellular layer, and the model (template
+    // + its parsed shape, so an edited/custom blueprint reads differently).
+    let mech = ENGNAME[eng]||eng;
+    if(String(s.spec_id||"").includes("particle_consensus")) mech="Tri-coupled + Smoldyn (consensus)";
+    let sub="None", model=MODELNAME[tpl]||tpl||"custom";
+    try{ const bp = (window.jsyaml && cfg.blueprint) ? window.jsyaml.load(cfg.blueprint) : null;
+      if(bp){
+        const mods=Object.values(bp.subcellular||{}).map(v=>v&&v.module).filter(Boolean);
+        if(mods.length) sub = SUBNAME[mods[0]]||mods[0];
+        const nt=(bp.cell_types||[]).length, nf=(bp.fields||[]).length;
+        const bits=[]; if(nt)bits.push(nt+" cell type"+(nt>1?"s":"")); if(nf)bits.push(nf+" field"+(nf>1?"s":""));
+        if(bits.length) model += " · "+bits.join(", ");
+      }
+    }catch(e){}
+    let artHref="";
+    if(cfg.overlay_out) artHref=`${esc(String(cfg.overlay_out))}.html`;
+    else if(cfg.video_out) artHref=`_studio_runs/${esc(String(cfg.video_out))}.html`;
+    const dl=`${API}/simulation-run-download?run_id=${encodeURIComponent(rid)}`;
+    return `<div class="saved-row">`
+      + `<div style="min-width:0;flex:1"><b>${esc(mech)}</b> ${badge}`
+      + `<div class="muted saved-when">Subcellular: ${esc(sub)} · Model: ${esc(model)} · ${esc(when)}</div></div>`
+      + `<span class="saved-links">`
+      + (done&&artHref?`<a class="btn-mini" href="${artHref}" target="_blank" rel="noopener">▶ View ↗</a>`:"")
+      + (done?`<a class="btn-mini" href="${dl}" download>Download ⬇</a>`:"")
+      + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">Results DB ↗</a>`
+      + `</span></div>`;
+  }).join("");
+  host.innerHTML=head+`<div class="saved-list">${rows}</div>`;
+}
+
 async function startRun(eng, steps, overridesBase, tpl){
   const el = document.createElement("div"); el.className="result";
-  el.innerHTML = `⏳ <b>${eng}</b> — starting (${steps} steps)…`;
+  _cardBody(el, `⏳ <b>${eng}</b> — starting (${steps} steps)…`);
   $("#status").appendChild(el);
   const job = jobFor(eng, overridesBase);
   try{
@@ -922,11 +1024,13 @@ async function startRun(eng, steps, overridesBase, tpl){
                             emit_paths: job.emit_paths, label:`blueprint-studio ${eng} ${tpl}`}),
     });
     const data = await resp.json().catch(()=>({}));
-    if(!resp.ok){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${data.error||resp.statusText}`; return; }
+    if(!resp.ok){ el.className="result err"; _cardBody(el, `<b>${eng}</b>: ${data.error||resp.statusText}`); return; }
     const runId = data.run_id || data.simulation_id || data.database_id || data.id || "(started)";
-    el.innerHTML = `⏳ <b>${eng}</b> — running… <span class="muted">(${runId})</span>`;
+    el.dataset.runid = String(runId);
+    _cardBody(el, `⏳ <b>${eng}</b> — running… <span class="muted">(${runId})</span>`);
+    setTimeout(renderSavedRuns, 1500);   // the new run shows up in the Saved-runs list (from the DB)
     return {runId, el, eng, art: job.art};
-  }catch(e){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${e}`; }
+  }catch(e){ el.className="result err"; _cardBody(el, `<b>${eng}</b>: ${e}`); }
 }
 
 $("#run").addEventListener("click", async () => {
@@ -936,18 +1040,14 @@ $("#run").addEventListener("click", async () => {
   if(!engines.length){ setStatus("Select at least one engine to run.", "err"); return; }
   const overridesBase = {};
   const bp = $("#bp").value.trim();
-  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = withSubcellular($("#bp").value, $("#subcell").value);
-  $("#run").disabled = true;
-  $("#status").className = "show"; $("#status").innerHTML = "";
-  const started = [];
-  for(const eng of engines){ const r = await startRun(eng, steps, overridesBase, tpl); if(r) started.push(r); }
-  await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng, r.art)));
-  const foot = document.createElement("div"); foot.className="result"; foot.style.marginTop="12px";
-  foot.innerHTML = `📊 Artifacts are linked above per engine — a spatial playback <b>video</b> for the `
-    + `stand-alone modules, the 3-paradigm <b>overlay</b> for tri-coupled; scalar/population `
-    + `charts are in the <a href="${SPA}/#simulations" target="_blank">Simulations DB</a>.`;
-  $("#status").appendChild(foot);
-  $("#run").disabled = false;
+  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = withSubcellular($("#bp").value, currentSubcell());
+  $("#status").className = "show";   // non-blocking: don't clear — the queue accumulates; dismiss cards with ✕
+  // Launch each selected run WITHOUT blocking Run: the pollers update their own cards in the
+  // background, so you can tweak the blueprint / pick another engine and launch again while the
+  // queue below keeps growing. Each card's ✕ cancels + removes it.
+  for(const eng of engines){
+    startRun(eng, steps, overridesBase, tpl).then(r => { if(r) pollRun(r.runId, r.el, r.eng, r.art); });
+  }
 });
 </script>
 </body>
