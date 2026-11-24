@@ -394,7 +394,10 @@ function cellsFromInitial(bp){
     if(!blk) return;
     const [ox,oy]=blk.origin||[0,0]; const [nx,ny]=blk.shape||[1,1];
     const sp = blk.spacing || 5;
-    for(let i=0;i<nx;i++) for(let j=0;j<ny;j++) cells.push({x:ox+i*sp, y:oy+j*sp, type: blk.type||type});
+    // Carry the block's target cell size — the vertex sheet tiles each cell at
+    // this area, so losing it (→ size 1) collapses the mesh to slivers.
+    const sz = (blk.size!=null) ? +blk.size : 1.0;
+    for(let i=0;i<nx;i++) for(let j=0;j<ny;j++) cells.push({x:ox+i*sp, y:oy+j*sp, type: blk.type||type, size: sz});
   };
   emit(is.block);
   (is.extra_blocks||[]).forEach(b=>emit(b));
@@ -412,6 +415,7 @@ function cellsFromInitial(bp){
 let ICSTATE = null;
 let TEMPLATE_IS_BLOCK = null;
 let NOMINAL_SPACING = null;   // characteristic spacing of the pristine layout (drives the min-gap guard)
+let NOMINAL_SIZE = null;      // characteristic cell target size of the pristine layout (new cells inherit it)
 
 // Median nearest-neighbour distance — the layout's natural cell spacing.
 function _medianNN(cells){
@@ -473,15 +477,20 @@ function renderInitial(bp){
   const isExplicit = !!(bp.initial_state && bp.initial_state.cells && bp.initial_state.cells.length);
   // Stash the parametric original (for Reset) + its natural spacing (for the guard),
   // captured while the layout is still pristine so crowding can't shrink the gap.
+  const _sizes = cells.map(c=>c.size).filter(s=>s!=null).sort((a,b)=>a-b);
+  const _medSize = _sizes.length ? _sizes[Math.floor(_sizes.length/2)] : null;
   if(!isExplicit){
     const blk = extractTopBlock($("#bp").value, "initial_state"); if(blk) TEMPLATE_IS_BLOCK = blk;
     const nn = _medianNN(cells); if(nn) NOMINAL_SPACING = nn;
+    if(_medSize) NOMINAL_SIZE = _medSize;
   }
   // Keep new/moved cells at ~0.8× the layout's native spacing so the vertex mesh
   // stays well-conditioned (crowded centroids → sliver polygons).
   const minGap = (NOMINAL_SPACING || _medianNN(cells) || Math.max(3, Math.min(W,H)/12)) * 0.8;
+  // New cells inherit the layout's target cell size (the vertex tiles at this area).
+  const cellSize = _medSize || NOMINAL_SIZE || 1.0;
   const prevActive = ICSTATE && ICSTATE.active, prevTool = ICSTATE && ICSTATE.tool;
-  ICSTATE = {cells, types:allTypes, colors, W, H, S, pad, sc, r, isExplicit, minGap,
+  ICSTATE = {cells, types:allTypes, colors, W, H, S, pad, sc, r, isExplicit, minGap, cellSize,
              active:(prevActive && allTypes.includes(prevActive))?prevActive:(allTypes[0]||"H"),
              tool:(prevTool==="erase")?"erase":"paint"};
   icDraw(); icPalette(); icMeta();
@@ -521,7 +530,7 @@ function icWire(){
     } else if(ICSTATE.tool!=="erase"){      // click empty → add a cell of the active type
       const p=toDomain(ev);
       const [ax,ay]=_resolve(p.x, p.y, -1);   // keep it off its neighbours (vertex-safe)
-      ICSTATE.cells.push({x:ax, y:ay, type:ICSTATE.active, size:1.0});
+      ICSTATE.cells.push({x:ax, y:ay, type:ICSTATE.active, size:ICSTATE.cellSize});
       icCommit();
     }
   });
