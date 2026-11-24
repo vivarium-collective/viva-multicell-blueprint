@@ -29,8 +29,8 @@
   textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;min-height:300px;white-space:pre;resize:vertical}
   .row{display:flex;gap:16px;flex-wrap:wrap}
   .row>div{flex:1;min-width:160px}
-  .engines{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap}
-  .engine{flex:1;min-width:120px;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
+  .engines{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px}
+  .engine{min-width:0;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
   .engine.sel[data-e=cpm]{border-color:var(--cpm);background:color-mix(in srgb,var(--cpm) 10%,transparent)}
   .engine.sel[data-e=vertex]{border-color:var(--vertex);background:color-mix(in srgb,var(--vertex) 10%,transparent)}
   .engine.sel[data-e=munk]{border-color:var(--munk);background:color-mix(in srgb,var(--munk) 10%,transparent)}
@@ -707,7 +707,7 @@ function renderComponents(bp){
     const c = mm.const||{};
     out.push(comp("mech","constants","Mechanics mapping & constants",
       "The named constants the rule expressions reference (rate coefficients, thresholds). These are the knobs the biology is written in — editable.",
-      `${Object.keys(c).length} constant(s)`, kvTable(Object.entries(c).map(([k,v])=>[k, ein(v,{t:"kv",key:k})])), true));
+      `${Object.keys(c).length} constant(s)`, kvTable(Object.entries(c).map(([k,v])=>[k, ein(v,{t:"kv",key:k})]))));
   }
   // Domain (always, last)
   const d=bp.domain||{};
