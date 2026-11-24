@@ -21,7 +21,6 @@ from viva_multicell_blueprint.mechanism.immune import ImmuneRecruitmentProcess
 from viva_multicell_blueprint.mechanism.rules import RulesProcess
 from viva_multicell_blueprint.mechanism.subcellular import SubcellularProcess
 from viva_multicell_blueprint.mechanism.systemic_ode import SystemicODEProcess
-from viva_multicell_blueprint.mechanism.tri_coupled import TriCoupledProcess
 
 __all__ = [
     "CellActuationMergeStep",
@@ -37,5 +36,4 @@ __all__ = [
     "SystemicODEProcess",
     "ImmuneRecruitmentProcess",
     "SubcellularProcess",
-    "TriCoupledProcess",
 ]
