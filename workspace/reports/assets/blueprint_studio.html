@@ -35,6 +35,7 @@
   .engine.sel[data-e=vertex]{border-color:var(--vertex);background:color-mix(in srgb,var(--vertex) 10%,transparent)}
   .engine.sel[data-e=munk]{border-color:var(--munk);background:color-mix(in srgb,var(--munk) 10%,transparent)}
   .engine.sel[data-e=tri]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  .engine.sel[data-e=pcons]{border-color:#1565c0;background:color-mix(in srgb,#1565c0 10%,transparent)}
   .btn-mini{display:inline-block;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;text-decoration:none}
   .btn-mini:hover{border-color:var(--muted)}
   .result{margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--code);font-size:13px}
@@ -182,6 +183,7 @@
           <div class="engine" data-e="vertex" id="eng-vertex">Vertex<small>tyssue (polygon)</small></div>
           <div class="engine" data-e="munk" id="eng-munk">Center-based<small>pymunk (disc)</small></div>
           <div class="engine sel" data-e="tri" id="eng-tri">Tri-coupled<small>one coupled composite: shape·position·area</small></div>
+          <div class="engine" data-e="pcons" id="eng-pcons">Particle-consensus<small>Smoldyn particles inside the consensus tissue</small></div>
         </div>
         <p class="hint">Select one or more — each runs on the same blueprint; stand-alone modules are independent, Tri-coupled runs all three coupled.</p>
       </div>
@@ -214,6 +216,7 @@
 <script>
 const COMPOSITE = "viva_multicell_blueprint.composites.pipeline.blueprint_pipeline";
 const TRI_COMPOSITE = "viva_multicell_blueprint.composites.tri_coupled.tri_coupled";
+const PCONS_COMPOSITE = "viva_multicell_blueprint.composites.particle_consensus.particle_consensus";
 const API = location.pathname.replace(/\/assets\/blueprint_studio\.html$/, "") + "/api";
 const SPA = API.replace(/\/api$/, "");
 const TEMPLATES = {
@@ -822,6 +825,12 @@ function jobFor(eng, overridesBase){
     return {composite: TRI_COMPOSITE, emit_paths:["consensus_spread"],
       overrides:{...overridesBase, overlay_out: out, munk_squish: 0.8},
       art:{href:`${out}.html`, label:"▶ View tri-coupled overlay ↗", dlname:"tri-coupled-overlay.html"}};
+  }
+  if(eng==="pcons"){
+    const out = `studio_pcons_${Date.now()}`;
+    return {composite: PCONS_COMPOSITE, emit_paths:["confined_fraction","n_particles"],
+      overrides:{...overridesBase, overlay_out: out, seed_per_cell: 40, munk_squish: 0.8},
+      art:{href:`${out}.html`, label:"▶ View particles-in-tissue ↗", dlname:"particle-consensus.html"}};
   }
   const out = `studio_${Date.now()}_${eng}`;
   return {composite: COMPOSITE, emit_paths:["cell_counts"],
