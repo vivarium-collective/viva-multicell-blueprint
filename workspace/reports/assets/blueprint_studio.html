@@ -955,38 +955,41 @@ window._dismissRun = _dismissRun;
 // from this Studio, with its artifact link, so old runs are findable. Live status is
 // refreshed from the workbench Simulations DB on render. Artifact files live on disk
 // under reports/assets/, so the relative links keep resolving after a reload.
+// The Saved-runs panel is the Simulations DB itself (the durable, cross-reload record):
+// it lists every Studio run the workbench recorded (label "blueprint-studio <eng> <tpl>")
+// with live status + a link into the Simulations DB. localStorage only enriches
+// THIS session's rows with their artifact (overlay/video) link, which the DB doesn't
+// carry; artifact files persist under reports/assets/ so those links keep resolving.
 const SAVED_KEY = "blueprintStudioRuns";
 function _savedRuns(){ try{ return JSON.parse(localStorage.getItem(SAVED_KEY)||"[]"); }catch(e){ return []; } }
-function _saveRun(rec){ try{ const a=_savedRuns().filter(r=>r.runId!==rec.runId); a.unshift(rec); localStorage.setItem(SAVED_KEY, JSON.stringify(a.slice(0,60))); }catch(e){} renderSavedRuns(); }
-function _removeSaved(id){ try{ localStorage.setItem(SAVED_KEY, JSON.stringify(_savedRuns().filter(r=>r.runId!==id))); }catch(e){} renderSavedRuns(); }
-function _clearSaved(){ if(!confirm("Clear all saved runs from this browser? (the runs themselves stay in the Simulations DB)")) return; try{ localStorage.removeItem(SAVED_KEY); }catch(e){} renderSavedRuns(); }
-window._removeSaved=_removeSaved; window._clearSaved=_clearSaved;
+function _saveRun(rec){ try{ const a=_savedRuns().filter(r=>r.runId!==rec.runId); a.unshift(rec); localStorage.setItem(SAVED_KEY, JSON.stringify(a.slice(0,80))); }catch(e){} renderSavedRuns(); }
 async function renderSavedRuns(){
   const host=$("#saved-runs"); if(!host) return;
-  const recs=_savedRuns();
-  if(!recs.length){ host.innerHTML=""; return; }
-  let sims={};
-  try{ const d=await (await fetch(`${API}/simulations`)).json();
-    (d.simulations||[]).forEach(r=>[r.id,r.run_id,r.simulation_id,r.database_id].forEach(k=>{ if(k) sims[String(k)]=(r.status||r.state||"").toLowerCase(); }));
-  }catch(e){}
-  const rows=recs.map(r=>{
-    const s=sims[String(r.runId)]||"";
-    const badge=/complete|done|finish|success/.test(s)?'<span style="color:var(--accent);font-weight:600">✓ complete</span>'
-      :/fail|error|cancel/.test(s)?`<span style="color:var(--err);font-weight:600">✗ ${esc(s)}</span>`
-      :s?`<span class="muted">${esc(s)}…</span>`:'<span class="muted">recorded</span>';
-    const when=r.ts?new Date(r.ts).toLocaleString():"";
+  const art={}; _savedRuns().forEach(r=>{ if(r.runId) art[String(r.runId)]={href:r.artHref, label:r.artLabel, sub:r.sub}; });
+  let sims=[];
+  try{ const d=await (await fetch(`${API}/simulations`)).json(); sims=d.simulations||[]; }catch(e){ host.innerHTML=""; return; }
+  const stud=sims.filter(s=>String(s.label||"").startsWith("blueprint-studio"))
+                 .sort((a,b)=>(b.started_at||0)-(a.started_at||0));
+  const head=`<label style="margin-top:22px;display:block">Saved runs <span class="muted" style="font-weight:400">— every Studio run, from the Simulations DB</span></label>`;
+  if(!stud.length){ host.innerHTML=head+`<p class="hint">No Studio runs recorded yet — they appear here (and in the Simulations DB) as you Run.</p>`; return; }
+  const rows=stud.map(s=>{
+    const rid=String(s.run_id||""); const parts=String(s.label||"").split(/\s+/);
+    const eng=parts[1]||"run"; const tpl=parts.slice(2).join(" ");
+    const st=String(s.status||s.state||"").toLowerCase();
+    const badge=/complete|done|finish|success/.test(st)?'<span style="color:var(--accent);font-weight:600">✓ complete</span>'
+      :/fail|error|cancel/.test(st)?`<span style="color:var(--err);font-weight:600">✗ ${esc(st)}</span>`
+      :st?`<span class="muted">${esc(st)}…</span>`:'<span class="muted">recorded</span>';
+    const when=s.started_at?new Date(s.started_at*1000).toLocaleString():"";
+    const a=art[rid]||{};
     return `<div class="saved-row">`
-      + `<button class="run-x" title="Remove from saved runs" onclick="_removeSaved('${esc(String(r.runId))}')">✕</button>`
-      + `<span><b>${esc(r.eng)}</b>${r.sub?` <span class="muted">+ ${esc(r.sub)}</span>`:""}</span> ${badge}`
+      + `<span><b>${esc(eng)}</b>${a.sub?` <span class="muted">+ ${esc(a.sub)}</span>`:""}${tpl?` <span class="muted saved-when">· ${esc(tpl)}</span>`:""}</span> ${badge}`
       + ` <span class="muted saved-when">${esc(when)}</span>`
       + `<span class="saved-links">`
-      + (r.artHref?`<a class="btn-mini" href="${esc(r.artHref)}" target="_blank" rel="noopener">${esc(r.artLabel||"View ↗")}</a>`:"")
+      + (a.href?`<a class="btn-mini" href="${esc(a.href)}" target="_blank" rel="noopener">${esc(a.label||"View ↗")}</a>`:"")
       + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">Results DB ↗</a>`
       + `</span></div>`;
   }).join("");
-  host.innerHTML=`<label style="margin-top:22px;display:block">Saved runs <span class="muted" style="font-weight:400">— kept across reloads</span></label>`
-    + `<div class="saved-list">${rows}</div>`
-    + `<div style="margin-top:6px"><button class="btn-mini" onclick="_clearSaved()">Clear all</button></div>`;
+  host.innerHTML=head+`<div class="saved-list">${rows}</div>`;
 }
 
 async function startRun(eng, steps, overridesBase, tpl){
