@@ -1007,10 +1007,27 @@ async function renderSavedRuns(){
       + (done&&artHref?`<a class="btn-mini" href="${artHref}" target="_blank" rel="noopener">▶ View ↗</a>`:"")
       + (done?`<a class="btn-mini" href="${dl}" download>Download ⬇</a>`:"")
       + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">Results DB ↗</a>`
+      + `<button type="button" class="btn-mini" data-rid="${esc(rid)}" title="Delete this run from the Simulations DB" onclick="_deleteSavedRun(this)">🗑 Delete</button>`
       + `</span></div>`;
   }).join("");
   host.innerHTML=head+`<div class="saved-list">${rows}</div>`;
 }
+
+// Delete a run out of the Simulations DB (row + tombstone + artifacts) from the
+// saved-runs list. Confirms first; the POST route also stops a still-live run.
+async function _deleteSavedRun(btn){
+  const rid = btn.dataset.rid || ""; if(!rid) return;
+  if(!confirm("Delete this run from the Simulations DB?\n\nThis removes its record and artifacts and cannot be undone.")) return;
+  btn.disabled = true; const prev = btn.textContent; btn.textContent = "deleting…";
+  try{
+    const r = await fetch(`${API}/composite-run/${encodeURIComponent(rid)}/delete`, {method:"POST"});
+    if(!r.ok){ const d = await r.json().catch(()=>({}));
+      alert("Delete failed: " + (d.error || d.outcome || r.statusText));
+      btn.disabled = false; btn.textContent = prev; return; }
+  }catch(e){ alert("Delete failed: " + e); btn.disabled = false; btn.textContent = prev; return; }
+  renderSavedRuns();   // re-read the DB — the row is gone
+}
+window._deleteSavedRun = _deleteSavedRun;
 
 async function startRun(eng, steps, overridesBase, tpl){
   const el = document.createElement("div"); el.className="result";
