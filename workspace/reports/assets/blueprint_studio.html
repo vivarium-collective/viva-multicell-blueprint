@@ -132,6 +132,8 @@
       <option value="simple">Minimal sheet (editable)</option>
       <option value="mixed">Mixed population + adhesion (editable)</option>
       <option value="infection">Infection field + rule (editable)</option>
+      <option value="mibitof_patch">MIBI-TOF colon — real imaging patch (~120 cells)</option>
+      <option value="mibitof">MIBI-TOF colon — full FOV (~1016 cells, heavy)</option>
     </select>
     <p class="hint" id="tplhint"></p>
   </div>
@@ -222,6 +224,12 @@ const PCONS_COMPOSITE = "viva_multicell_blueprint.composites.particle_consensus.
 const API = location.pathname.replace(/\/assets\/blueprint_studio\.html$/, "") + "/api";
 const SPA = API.replace(/\/api$/, "");
 const TEMPLATES = {
+  mibitof_patch: {readonly:false, fetch:"mibitof_colon_patch.yaml",
+    hint:"Initialized from REAL MIBI-TOF spatial-omics imaging: the densest 64×64 crop of a human colon-carcinoma field of view (squidpy's mibitof; same modality as HuBMAP CODEX) — cells seeded at their imaged positions, sizes, and named types. Mechanics-only (structural seed) → best viewed with CPM/Tri-coupled. Studio-scale.",
+    yaml:"# loading the MIBI-TOF colon patch (real imaging)…\n"},
+  mibitof: {readonly:false, fetch:"mibitof_colon.yaml",
+    hint:"The FULL MIBI-TOF colon-carcinoma field of view (~1016 real cells, 8 cell types) seeded at their imaged positions. Heavy — best with the CPM backend; slow/cluttered for the vertex/munk mechanics. Keep the step count low.",
+    yaml:"# loading the full MIBI-TOF colon FOV (real imaging)…\n"},
   default: {readonly:false, fetch:"sego_blueprint.yaml",
     hint:"The committed Sego 2022 flu-lung blueprint (loaded below). Edit and run it, or pick a smaller template.",
     yaml:"# loading the Sego 2022 blueprint…\n"},
