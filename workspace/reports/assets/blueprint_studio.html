@@ -960,6 +960,18 @@ window._dismissRun = _dismissRun;
 // artifact (overlay / video — derived from the run's recorded config.overlay_out /
 // video_out, so ALL runs get a View link, not just this session's), a results download
 // (/api/simulation-run-download), and a link into the Simulations DB.
+// Human-readable run duration from started_at → completed_at (unix secs). A
+// still-running run shows elapsed-so-far; an un-started/unknown run shows "".
+function _fmtDur(start, end, status){
+  if(!start) return "";
+  const terminal = /complete|done|finish|success|fail|error|cancel/.test(String(status||"").toLowerCase());
+  const t1 = end || (terminal ? null : Date.now()/1000);
+  if(!t1) return "";
+  let s = Math.max(0, Math.round(t1 - start));
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  const out = h ? `${h}h ${m}m` : m ? `${m}m ${sec}s` : `${sec}s`;
+  return terminal ? out : out+" so far";
+}
 async function renderSavedRuns(){
   const host=$("#saved-runs"); if(!host) return;
   let sims=[];
@@ -981,6 +993,7 @@ async function renderSavedRuns(){
       :bad?`<span style="color:var(--err);font-weight:600">✗ ${esc(st)}</span>`
       :st?`<span class="muted">${esc(st)}…</span>`:'<span class="muted">recorded</span>';
     const when=s.started_at?new Date(s.started_at*1000).toLocaleString():"";
+    const durStr=_fmtDur(s.started_at, s.completed_at, st);
     const cfg=s.config||{};
     // Describe what ran: mechanics engine, subcellular layer, and the model (template
     // + its parsed shape, so an edited/custom blueprint reads differently).
@@ -1002,7 +1015,7 @@ async function renderSavedRuns(){
     const dl=`${API}/simulation-run-download?run_id=${encodeURIComponent(rid)}`;
     return `<div class="saved-row">`
       + `<div style="min-width:0;flex:1"><b>${esc(mech)}</b> ${badge}`
-      + `<div class="muted saved-when">Subcellular: ${esc(sub)} · Model: ${esc(model)} · ${esc(when)}</div></div>`
+      + `<div class="muted saved-when">Subcellular: ${esc(sub)} · Model: ${esc(model)} · ${esc(when)}${durStr?` · ⏱ ${esc(durStr)}`:""}</div></div>`
       + `<span class="saved-links">`
       + (done&&artHref?`<a class="btn-mini" href="${artHref}" target="_blank" rel="noopener">▶ View ↗</a>`:"")
       + (done?`<a class="btn-mini" href="${dl}" download>Download ⬇</a>`:"")
