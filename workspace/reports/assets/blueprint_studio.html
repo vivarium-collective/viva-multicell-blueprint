@@ -194,7 +194,7 @@
           <option value="">None — mechanics + fields + rules only</option>
           <option value="ode">ODE — per-cell metabolism (tellurium)</option>
           <option value="boolean">Boolean — per-cell gene network (MaBoSS)</option>
-          <option value="particle" disabled>Particle — per-cell stochastic reactions (Smoldyn) · needs install</option>
+          <option value="particle">Particle — per-cell stochastic reactions (Smoldyn)</option>
         </select>
         <p class="hint" id="subcell-hint">A per-cell intracellular model runs inside every <span id="subcell-type">epithelial</span> cell on the same blueprint, coupled to a field and feeding back on the cell (growth / division).</p>
       </div>
@@ -892,10 +892,11 @@ function subcellSection(kind, type, fld){
       coupling:{const:{die_at:0.5}, inputs, outputs:{die_when:{var:"Apoptosis", gt:"const.die_at"}}}}};
   }
   if(kind==="particle"){
-    // per-cell Smoldyn stochastic reactions (A -> B); needs the smoldyn engine installed.
+    // per-cell Smoldyn stochastic reactions: one bimolecular A + B <-> C. The field
+    // feeds species A; amounts (A/B/C molecule counts) read back as scalars.
     const inputs = fld?{A:`field.${fld}@centroid`}:{};
     return {[type]:{module:"smoldyn", division:"split",
-      model:{source:{species:["A","B"], reactions:[{name:"conv", reactants:["A"], products:["B"], rate:0.1}]}},
+      model:{source:{species:["A","B","C"], reactions:[{subs:["A","B"], prds:["C"], kf:0.1, kb:0.0}]}},
       params:{}, coupling:{inputs, outputs:{}}}};
   }
   return null;
