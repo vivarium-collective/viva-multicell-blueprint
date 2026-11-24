@@ -39,6 +39,8 @@
   .btn-mini{display:inline-block;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;text-decoration:none}
   .btn-mini:hover{border-color:var(--muted)}
   .result{margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--code);font-size:13px}
+  .run-x{display:inline-block;border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;font-weight:700;padding:0 9px 0 0;line-height:1;vertical-align:baseline}
+  .run-x:hover{color:var(--err)}
   .result.ok{background:var(--accentbg);border-color:var(--accent)}
   .result.err{background:color-mix(in srgb,var(--err) 10%,transparent);border-color:var(--err)}
   .engine small{display:block;color:var(--muted);font-weight:400;margin-top:3px}
@@ -848,23 +850,23 @@ async function pollRun(runId, el, eng, art){
       if(st && /complete|done|finished|success/.test(st)){
         el.className="result ok";
         const dl = `${API}/simulation-run-download?run_id=${encodeURIComponent(runId)}`;
-        el.innerHTML = `✓ <b>${eng}</b> run complete <span class="muted">(${runId})</span>`
+        _cardBody(el, `✓ <b>${eng}</b> run complete <span class="muted">(${runId})</span>`
           + `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">`
           + (art ? `<a class="btn-mini" href="${art.href}" target="_blank" rel="noopener">${art.label}</a>` : "")
           + (art ? `<a class="btn-mini" href="${art.href}" download="${art.dlname}">Download ⬇</a>` : "")
           + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">View results ↗</a>`
           + `<a class="btn-mini" href="${dl}" download>Download results ⬇</a>`
-          + `</div>`;
+          + `</div>`);
         return true;
       }
       if(st && /fail|error/.test(st)){
-        el.className="result err"; el.innerHTML = `✗ <b>${eng}</b> run ${st} — see the Simulations DB. <span class="muted">(${runId})</span>`;
+        el.className="result err"; _cardBody(el, `✗ <b>${eng}</b> run ${st} — see the Simulations DB. <span class="muted">(${runId})</span>`);
         return false;
       }
-      if(st) el.innerHTML = `⏳ <b>${eng}</b> — ${st}… <span class="muted">(${runId})</span>`;
+      if(st) _cardBody(el, `⏳ <b>${eng}</b> — ${st}… <span class="muted">(${runId})</span>`);
     }catch(e){}
   }
-  el.innerHTML = `⏳ <b>${eng}</b> still running — follow it in the <a href="#simulations">Simulations DB</a>.`;
+  _cardBody(el, `⏳ <b>${eng}</b> still running — follow it in the <a href="#simulations">Simulations DB</a>.`);
   return false;
 }
 
@@ -919,9 +921,28 @@ function withSubcellular(text, kind){
   return replaceTopBlock(text, "subcellular", block);
 }
 
+// Dismissable run cards: a persistent ✕ that removes the card and, if the run is
+// still live, cancels it (SIGTERMs the detached run via the workbench stop route).
+function _cardBody(el, html){
+  if(!el.querySelector(".run-x")){
+    el.innerHTML = '<button type="button" class="run-x" title="Dismiss — cancels the run if it is still live" onclick="_dismissRun(this)">✕</button><span class="run-body"></span>';
+  }
+  el.querySelector(".run-body").innerHTML = html;
+}
+async function _dismissRun(btn){
+  const el = btn.closest(".result"); if(!el) return;
+  const rid = el.dataset.runid || "";
+  el.style.opacity = "0.5"; btn.disabled = true;
+  if(rid && !/^\(/.test(rid)){
+    try{ await fetch(`${API}/composite-run/${encodeURIComponent(rid)}/stop`, {method:"POST"}); }catch(e){}
+  }
+  el.remove();
+}
+window._dismissRun = _dismissRun;
+
 async function startRun(eng, steps, overridesBase, tpl){
   const el = document.createElement("div"); el.className="result";
-  el.innerHTML = `⏳ <b>${eng}</b> — starting (${steps} steps)…`;
+  _cardBody(el, `⏳ <b>${eng}</b> — starting (${steps} steps)…`);
   $("#status").appendChild(el);
   const job = jobFor(eng, overridesBase);
   try{
@@ -931,11 +952,12 @@ async function startRun(eng, steps, overridesBase, tpl){
                             emit_paths: job.emit_paths, label:`blueprint-studio ${eng} ${tpl}`}),
     });
     const data = await resp.json().catch(()=>({}));
-    if(!resp.ok){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${data.error||resp.statusText}`; return; }
+    if(!resp.ok){ el.className="result err"; _cardBody(el, `<b>${eng}</b>: ${data.error||resp.statusText}`); return; }
     const runId = data.run_id || data.simulation_id || data.database_id || data.id || "(started)";
-    el.innerHTML = `⏳ <b>${eng}</b> — running… <span class="muted">(${runId})</span>`;
+    el.dataset.runid = String(runId);
+    _cardBody(el, `⏳ <b>${eng}</b> — running… <span class="muted">(${runId})</span>`);
     return {runId, el, eng, art: job.art};
-  }catch(e){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${e}`; }
+  }catch(e){ el.className="result err"; _cardBody(el, `<b>${eng}</b>: ${e}`); }
 }
 
 $("#run").addEventListener("click", async () => {
