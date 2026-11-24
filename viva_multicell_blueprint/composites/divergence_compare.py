@@ -37,12 +37,15 @@ _PATCH = Path(__file__).resolve().parents[2] / "workspace" / "blueprints" / "tri
                         "description": "center-based oblong-under-crowding"},
         "overlay_out": {"type": "string", "default": "divergence_compare",
                         "description": "flipbook written to reports/assets/<overlay_out>.html"},
+        "render_every": {"type": "integer", "default": 1,
+                         "description": "keep only every Nth step in the gif (long runs stay small)"},
     },
     core_extensions=[register_workspace_processes],
     default_n_steps=16,
 )
 def divergence_compare(core=None, blueprint=None, cpm_res: int = 3, cpm_temp: float = 1.0,
-                       munk_squish: float = 0.8, overlay_out: str = "divergence_compare") -> dict:
+                       munk_squish: float = 0.8, overlay_out: str = "divergence_compare",
+                       render_every: int = 1) -> dict:
     return {
         "state": {
             "divergence_compare": {
@@ -54,6 +57,7 @@ def divergence_compare(core=None, blueprint=None, cpm_res: int = 3, cpm_temp: fl
                     "cpm_temp": float(cpm_temp),
                     "munk_squish": float(munk_squish),
                     "overlay_out": str(overlay_out),
+                    "render_every": int(render_every),
                 },
                 "inputs": {},
                 "outputs": {"cpm_vs_coupled_drift": ["cpm_vs_coupled_drift"],

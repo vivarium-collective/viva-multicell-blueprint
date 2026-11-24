@@ -35,6 +35,9 @@ class DivergenceCompareProcess(Process):
         "cpm_temp": {"_type": "float", "_default": 1.0},
         "munk_squish": {"_type": "float", "_default": 0.8},
         "overlay_out": {"_type": "string", "_default": "divergence_compare"},
+        # Render (keep) only every Nth step in the gif, so a long run stays a
+        # sane-sized animation. All steps are still simulated; 1 = every step.
+        "render_every": {"_type": "integer", "_default": 1},
     }
 
     def __init__(self, config=None, core=None):
@@ -47,6 +50,7 @@ class DivergenceCompareProcess(Process):
             for b in ("cpm", "vertex", "munk")
         }
         self._tri = TriCoupledProcess({**base, "render": False}, core=core)
+        self._render_every = max(1, int(self.config.get("render_every", 1) or 1))
         t = self._tri
         self.W, self.H, self.nx, self.ny = t.W, t.H, t.nx, t.ny
         # bid -> cell-type name (from the shared init's vertex footprints; bids are
@@ -177,11 +181,12 @@ b.onclick=()=>{{if(t)stop();else{{t=setInterval(()=>show(i+1),240);b.textContent
         self._tri.update({}, 1)
         solo_geom = {b: self._solo[b]._prev or {} for b in ("cpm", "vertex", "munk")}
         tri_geom = self._tri._prev or {}
-        try:
-            self._render_frame(solo_geom, tri_geom)
-            self._write_overlay()
-        except Exception as e:  # pragma: no cover
-            print(f"  [divergence] render step {self._step}: {e}")
+        if self._step % self._render_every == 0:
+            try:
+                self._render_frame(solo_geom, tri_geom)
+                self._write_overlay()
+            except Exception as e:  # pragma: no cover
+                print(f"  [divergence] render step {self._step}: {e}")
         # drift readout: mean CPM-alone vs CPM-coupled centroid distance
         drift = self._cpm_drift(solo_geom["cpm"], tri_geom)
         self._step += 1
