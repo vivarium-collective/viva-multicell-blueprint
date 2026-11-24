@@ -4,10 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Blueprint Studio</title>
+<!-- js-yaml: parse the backend-neutral blueprint for the structured view. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
 <style>
   :root{
     --bg:#ffffff; --fg:#1b1b1f; --muted:#5b5b66; --line:#e3e3ea; --card:#f7f7fb;
     --cpm:#0072B2; --vertex:#D55E00; --munk:#CC79A7; --accent:#2e7d32; --accentbg:#eaf5ec; --err:#b3261e; --code:#f0f0f5;
+    --fieldc:#1f9e89; --rulec:#8d58d6; --odec:#c7761b; --immunec:#b3306e; --mechc:#2b6cb0;
   }
   :root:not([data-theme="light"]){ @media (prefers-color-scheme: dark){
     :root{ --bg:#16161a; --fg:#ececf1; --muted:#a0a0ad; --line:#2c2c34; --card:#1e1e24;
@@ -16,22 +19,22 @@
   :root[data-theme="dark"]{ --bg:#16161a; --fg:#ececf1; --muted:#a0a0ad; --line:#2c2c34; --card:#1e1e24; --accentbg:#16301b; --code:#1e1e24; }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:860px;margin:0 auto;padding:28px 16px 64px}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 16px 64px}
   h1{font-size:22px;margin:0 0 4px}
   .sub{color:var(--muted);margin:0 0 22px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
   label{display:block;font-weight:600;margin:0 0 6px;font-size:13px}
   select,input[type=number],textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;
     background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit}
-  textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;min-height:260px;white-space:pre;resize:vertical}
+  textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;min-height:300px;white-space:pre;resize:vertical}
   .row{display:flex;gap:16px;flex-wrap:wrap}
   .row>div{flex:1;min-width:160px}
-  .engines{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap}
-  .engine{flex:1;min-width:120px;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
+  .engines{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px}
+  .engine{min-width:0;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
   .engine.sel[data-e=cpm]{border-color:var(--cpm);background:color-mix(in srgb,var(--cpm) 10%,transparent)}
   .engine.sel[data-e=vertex]{border-color:var(--vertex);background:color-mix(in srgb,var(--vertex) 10%,transparent)}
   .engine.sel[data-e=munk]{border-color:var(--munk);background:color-mix(in srgb,var(--munk) 10%,transparent)}
-  .engine.sel[data-e=all]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  .engine.sel[data-e=tri]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
   .btn-mini{display:inline-block;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;text-decoration:none}
   .btn-mini:hover{border-color:var(--muted)}
   .result{margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--code);font-size:13px}
@@ -46,17 +49,77 @@
   a{color:var(--cpm)}
   .hint{color:var(--muted);font-size:12px;margin-top:6px}
   .muted{color:var(--muted)}
+  /* View toggle */
+  .tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:14px}
+  .tab{padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;background:var(--bg);color:var(--muted);border:0;border-right:1px solid var(--line)}
+  .tab:last-child{border-right:0}
+  .tab.sel{background:var(--accent);color:#fff}
+  /* Component cards */
+  .comp{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;background:var(--bg);margin-bottom:12px;overflow:hidden}
+  .comp>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .comp>summary::-webkit-details-marker{display:none}
+  .comp>summary::before{content:"▸";color:var(--muted);font-size:12px}
+  .comp[open]>summary::before{content:"▾"}
+  .comp-title{font-weight:700;font-size:15px}
+  .comp-tag{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  .comp-count{margin-left:auto;font-size:12px;color:var(--muted)}
+  .comp-what{padding:0 14px 6px;color:var(--muted);font-size:13px;line-height:1.5}
+  .comp-body{padding:0 14px 14px}
+  .comp[data-k=fields]{border-left-color:var(--fieldc)} .comp[data-k=rules]{border-left-color:var(--rulec)}
+  .comp[data-k=ode]{border-left-color:var(--odec)} .comp[data-k=immune]{border-left-color:var(--immunec)}
+  .comp[data-k=mech]{border-left-color:var(--mechc)} .comp[data-k=cells]{border-left-color:var(--accent)}
+  .comp[data-k=domain]{border-left-color:var(--muted)}
+  table.kv{width:100%;border-collapse:collapse;font-size:13px}
+  table.kv td{padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.kv td:first-child{color:var(--muted);white-space:nowrap;width:1%;font-family:ui-monospace,monospace;font-size:12px}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0;background:var(--card)}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .ic-wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .ic-svg{flex:0 0 auto}
+  .ic-side{flex:1;min-width:200px}
+  .ic-legend{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+  /* editable initial-state canvas */
+  #ic-canvas .ic-cell{cursor:grab}
+  #ic-canvas .ic-cell:hover{stroke:var(--fg);stroke-width:1.3}
+  .ic-tools{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:6px}
+  .ic-tools-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-right:2px}
+  .ic-sw{display:inline-flex;align-items:center;gap:5px;font-size:12px;border:1px solid var(--line);border-radius:7px;
+    padding:3px 8px;background:var(--bg);color:var(--fg);cursor:pointer}
+  .ic-sw .dot{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+  .ic-sw.sel{border-color:var(--accent);background:var(--accentbg);font-weight:600}
+  .ic-sw.ic-erase.sel{border-color:var(--err);background:color-mix(in srgb,var(--err) 10%,transparent)}
+  .ic-edithint{font-size:11.5px;margin-bottom:8px;line-height:1.4}
+  .info{font-size:12px;color:var(--muted);background:var(--code);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px}
+  .about-prov{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:120px;overflow:auto;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+  .parse-err{color:var(--err);font-size:13px;padding:10px 12px;border:1px solid var(--err);border-radius:8px;background:color-mix(in srgb,var(--err) 8%,transparent)}
+  .eq{font-family:ui-monospace,monospace;font-size:12px;background:var(--code);padding:2px 6px;border-radius:4px}
+  /* inline editable value inputs */
+  .ein{padding:3px 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);
+       font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px}
+  .ein:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}
+  .edit-note{font-size:11px;color:var(--muted);margin:2px 0 10px}
+  /* add / delete tooling */
+  .erow{display:flex;align-items:center;gap:8px;padding:3px 0}
+  .erow-lbl{font-family:ui-monospace,monospace;font-size:12.5px;min-width:70px;color:var(--muted)}
+  .fblock{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
+  .fblock:first-child{border-top:0;margin-top:0}
+  .xbtn{margin-left:auto;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:6px;
+        width:24px;height:24px;line-height:1;cursor:pointer;font-size:12px;flex:0 0 auto}
+  .xbtn:hover{border-color:var(--err);color:var(--err)}
+  .addbtn{margin-top:10px;border:1px dashed var(--line);background:transparent;color:var(--accent);
+          border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
+  .addbtn:hover{border-color:var(--accent);background:var(--accentbg)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Blueprint Studio</h1>
-  <p class="sub">Fill in a backend-neutral blueprint, pick the mechanics engine, and run it. Results land in the Simulations DB.</p>
+  <p class="sub">A backend-neutral blueprint — its initial conditions and model components, laid out to read and poke at. Pick a mechanics engine and run it; results land in the Simulations DB.</p>
 
   <div class="card">
     <label for="tpl">Start from</label>
     <select id="tpl">
-      <option value="default">Sego 2022 flu-lung (committed, read-only)</option>
+      <option value="default">Sego 2022 flu-lung (committed, editable)</option>
       <option value="large">Sego 2022 flu-lung — LARGE (~2.4x tissue, editable)</option>
       <option value="simple">Minimal sheet (editable)</option>
       <option value="mixed">Mixed population + adhesion (editable)</option>
@@ -65,33 +128,75 @@
     <p class="hint" id="tplhint"></p>
   </div>
 
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <label for="bp" style="margin:0">Blueprint (YAML)</label>
-      <div style="display:flex;gap:8px">
-        <button class="btn-mini" id="copy">Copy spec</button>
-        <button class="btn-mini" id="download">Download .yaml</button>
-      </div>
-    </div>
-    <textarea id="bp" spellcheck="false" style="margin-top:8px"></textarea>
-    <p class="hint">Edit freely. Backend/run parameters (<code>tension_scale</code>, <code>rules_seed</code>) are not part of the canonical blueprint — set the engine below.</p>
+  <!-- ABOUT (always visible, above the view toggle) -->
+  <div class="tabs">
+    <button class="tab sel" data-v="structured">Structured view</button>
+    <button class="tab" data-v="yaml">Raw YAML</button>
   </div>
 
+  <!-- STRUCTURED VIEW -->
+  <div id="view-structured">
+    <div id="parse-err" class="parse-err" style="display:none"></div>
+
+    <div class="card">
+      <label>Initial conditions <span class="muted" style="font-weight:400">— the starting layout the simulation begins from</span></label>
+      <div class="ic-wrap">
+        <div class="ic-svg" id="ic-svg"></div>
+        <div class="ic-side">
+          <div class="ic-edit" id="ic-edit"></div>
+          <div class="ic-legend" id="ic-legend"></div>
+          <div id="ic-desc" class="comp-what" style="padding:0"></div>
+          <div class="info" id="ic-info"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Model components <span class="muted" style="font-weight:400">— what the blueprint computes each step</span></label>
+      <div id="components"></div>
+    </div>
+  </div>
+
+  <!-- RAW YAML VIEW -->
+  <div id="view-yaml" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <label for="bp" style="margin:0">Blueprint (YAML)</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn-mini" id="copy">Copy spec</button>
+          <button class="btn-mini" id="download">Download .yaml</button>
+        </div>
+      </div>
+      <textarea id="bp" spellcheck="false" style="margin-top:8px"></textarea>
+      <p class="hint">Edit freely — the Structured view updates as you type. Backend/run parameters (<code>tension_scale</code>, <code>rules_seed</code>) are not part of the canonical blueprint — set the engine below.</p>
+    </div>
+  </div>
+
+  <!-- RUN -->
   <div class="card">
     <div class="row">
       <div>
         <label>Mechanics engine</label>
         <div class="engines">
-          <div class="engine sel" data-e="cpm" id="eng-cpm">CPM<small>Cellular Potts (voxel)</small></div>
+          <div class="engine" data-e="cpm" id="eng-cpm">CPM<small>Cellular Potts (voxel)</small></div>
           <div class="engine" data-e="vertex" id="eng-vertex">Vertex<small>tyssue (polygon)</small></div>
           <div class="engine" data-e="munk" id="eng-munk">Center-based<small>pymunk (disc)</small></div>
-          <div class="engine" data-e="all" id="eng-all">All three<small>CPM + vertex + center-based</small></div>
+          <div class="engine sel" data-e="tri" id="eng-tri">Tri-coupled<small>one coupled composite: shape·position·area</small></div>
         </div>
+        <p class="hint">Select one or more — each runs on the same blueprint; stand-alone modules are independent, Tri-coupled runs all three coupled.</p>
       </div>
       <div>
         <label for="steps">Steps</label>
         <input type="number" id="steps" value="60" min="1" max="2000" step="1">
         <p class="hint">Coupled steps (MCS). Keep modest for an interactive run.</p>
+        <label for="subcell" style="margin-top:12px">Subcellular layer</label>
+        <select id="subcell">
+          <option value="">None — mechanics + fields + rules only</option>
+          <option value="ode">ODE — per-cell metabolism (tellurium)</option>
+          <option value="boolean">Boolean — per-cell gene network (MaBoSS)</option>
+          <option value="particle">Particle — per-cell stochastic reactions (Smoldyn)</option>
+        </select>
+        <p class="hint" id="subcell-hint">A per-cell intracellular model runs inside every <span id="subcell-type">epithelial</span> cell on the same blueprint, coupled to a field and feeding back on the cell (growth / division).</p>
       </div>
     </div>
     <div style="margin-top:16px">
@@ -108,11 +213,9 @@
 
 <script>
 const COMPOSITE = "viva_multicell_blueprint.composites.pipeline.blueprint_pipeline";
-// The page is served at <base>/assets/blueprint_studio.html; the API lives at
-// <base>/api/... - derive it so POSTs don't resolve under /assets/ (405) and so
-// a reverse-proxy base path is honored.
+const TRI_COMPOSITE = "viva_multicell_blueprint.composites.tri_coupled.tri_coupled";
 const API = location.pathname.replace(/\/assets\/blueprint_studio\.html$/, "") + "/api";
-const SPA = API.replace(/\/api$/, "");   // the workbench root (for #simulations)
+const SPA = API.replace(/\/api$/, "");
 const TEMPLATES = {
   default: {readonly:false, fetch:"sego_blueprint.yaml",
     hint:"The committed Sego 2022 flu-lung blueprint (loaded below). Edit and run it, or pick a smaller template.",
@@ -175,41 +278,528 @@ initial_state:
 `},
 };
 const $ = s => document.querySelector(s);
-let engine = "cpm";
 
+// ---- cell-type colours (stable per blueprint, with sensible defaults) -------
+const KNOWN_COLORS = {H:"#2b6cb0", I:"#c7761b", D:"#333333", M:"#CC79A7",
+  NK:"#5aa9e6", CD8:"#b3306e", A:"#2e7d32", B:"#D55E00", medium:"#cccccc"};
+const PALETTE = ["#2b6cb0","#c7761b","#2e7d32","#CC79A7","#5aa9e6","#b3306e","#D55E00","#1f9e89","#8d58d6","#777777"];
+function typeColors(types){
+  const out={}; let i=0;
+  (types||[]).forEach(t=>{
+    const base=String(t).split("_")[0];
+    out[t] = KNOWN_COLORS[t] || KNOWN_COLORS[base] || PALETTE[i%PALETTE.length]; i++;
+  });
+  return out;
+}
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const escA = s => String(s).replace(/&/g,"&amp;").replace(/'/g,"&#39;").replace(/"/g,"&quot;");
+const fmt = v => (typeof v==="number" ? (Math.abs(v)<1e-3 && v!==0 ? v.toExponential(3) : +v.toFixed(4)) : v);
+const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+
+// ---- inline editing: render editable inputs that patch the YAML in place -----
+// Each input carries a JSON "anchor" describing how to locate its value in the
+// YAML text, so an edit updates ONLY that value and leaves comments/layout intact.
+function ein(value, anchor, kind){
+  const w = kind==="expr" ? "width:100%;min-width:260px" : (kind==="sm" ? "width:72px" : "width:130px");
+  return `<input class="ein" type="text" value="${escA(value)}" data-a='${escA(JSON.stringify(anchor))}' style="${w}" spellcheck="false">`;
+}
+function applyPatch(text, a, nv){
+  try{
+    if(a.t==="kv"){                                   // unique `key: value`
+      const re = new RegExp("(\\b"+escRe(a.key)+"\\s*:\\s*)([^\\n#,}\\]]+)");
+      if(!re.test(text)) return null;
+      return text.replace(re, (m,p1)=> p1 + nv);
+    }
+    if(a.t==="scoped"){                               // key within a named block/row
+      const re = new RegExp("((?:name|a|b):\\s*"+escRe(a.scope)+"\\b[\\s\\S]*?\\b"+escRe(a.key)+":\\s*)([^\\n#,}\\]]+)");
+      if(!re.test(text)) return null;
+      return text.replace(re, (m,p1)=> p1 + nv);
+    }
+    if(a.t==="adhesion"){                             // strength of an a↔b row (flow or block)
+      const re = new RegExp("(\\ba:\\s*"+escRe(a.a)+"\\b[\\s\\S]{0,80}?\\bb:\\s*"+escRe(a.b)+"\\b[\\s\\S]{0,80}?\\bstrength:\\s*)([^\\n#,}\\]]+)");
+      if(!re.test(text)) return null;
+      return text.replace(re, (m,p1)=> p1 + nv);
+    }
+    if(a.t==="arr"){                                  // a `key: [ ... ]` flow array
+      const re = new RegExp("(\\b"+escRe(a.key)+"\\s*:\\s*)(\\[[^\\]]*\\])");
+      if(!re.test(text)) return null;
+      return text.replace(re, (m,p1)=> p1 + nv);
+    }
+    if(a.t==="expr"){                                 // replace the exact old string
+      if(text.indexOf(a.old)<0) return null;
+      return text.replace(a.old, nv);
+    }
+  }catch(e){}
+  return null;
+}
+// Delete the YAML list item (bullet `- …` + its continuation lines) containing `needle`.
+function deleteItemContaining(text, needle){
+  const lines = text.split("\n");
+  const L = lines.findIndex(ln => ln.indexOf(needle)>=0);
+  if(L<0) return null;
+  let start=-1, indent=0;
+  for(let i=L;i>=0;i--){ const m=lines[i].match(/^(\s*)-\s/); if(m){ start=i; indent=m[1].length; break; } }
+  if(start<0) return null;
+  let end=lines.length;
+  for(let i=start+1;i<lines.length;i++){
+    const ind = lines[i].search(/\S/);
+    if(ind<0) continue;                                  // blank
+    if(/^\s*-\s/.test(lines[i]) && ind===indent){ end=i; break; }   // next sibling item
+    if(ind<indent){ end=i; break; }                      // dedent to a new key
+  }
+  lines.splice(start, end-start);
+  return lines.join("\n");
+}
+// Append a new item under a top-level list key (`rules:`/`fields:`/…), after the
+// last existing item. Creates the key if absent.
+function addListItem(text, key, itemLines){
+  const lines = text.split("\n");
+  const ri = lines.findIndex(ln=> new RegExp("^"+key+"\\s*:").test(ln));
+  if(ri<0) return text.replace(/\s*$/,"") + "\n"+key+":\n"+itemLines.join("\n")+"\n";
+  let insertAt=ri+1, indent=null;
+  for(let i=ri+1;i<lines.length;i++){
+    const ind = lines[i].search(/\S/);
+    if(ind<0){ insertAt=i+1; continue; }
+    if(/^\s*-\s/.test(lines[i])){ indent=ind; insertAt=i+1; }
+    else if(indent!=null && ind>indent){ insertAt=i+1; }
+    else { break; }
+  }
+  const pad = indent!=null ? " ".repeat(indent) : "  ";
+  lines.splice(insertAt, 0, ...itemLines.map(l=> pad+l));
+  return lines.join("\n");
+}
+
+// ---- blueprint parsing ------------------------------------------------------
+function parseBlueprint(text){
+  // Strip backend/run keys that aren't canonical; js-yaml handles the rest.
+  return window.jsyaml ? window.jsyaml.load(text) : null;
+}
+function provenanceComment(text){
+  const lines = text.split("\n"); const out=[];
+  for(const ln of lines){ if(/^\s*#/.test(ln)) out.push(ln.replace(/^\s*#\s?/,"")); else if(ln.trim()==="") { if(out.length) break; } else break; }
+  return out.join("\n").trim();
+}
+
+function render(text){
+  let bp;
+  try{ bp = parseBlueprint(text); }
+  catch(e){ $("#parse-err").style.display="block"; $("#parse-err").textContent = "Could not parse the blueprint YAML: "+e.message; return; }
+  $("#parse-err").style.display="none";
+  if(!bp || typeof bp!=="object"){ return; }
+  renderInitial(bp);
+  renderComponents(bp);
+  const stn=$("#subcell-type"); if(stn) stn.textContent = subcellTargetType(bp);
+}
+
+// ---- initial conditions: SVG preview computed from the blueprint ------------
+function cellsFromInitial(bp){
+  const is = bp.initial_state||{}; const cells=[];
+  // Explicit per-cell list takes precedence (matches the backend resolver), so an
+  // edited layout round-trips. Each cell is {id,type,centroid:[x,y],size}.
+  if(is.cells && is.cells.length){
+    return is.cells.map(c=>{ const ct=c.centroid||[c.x,c.y]; return {x:+(ct[0]||0), y:+(ct[1]||0), type:c.type, size:(c.size!=null?+c.size:1.0)}; });
+  }
+  const emit = (blk, type)=>{
+    if(!blk) return;
+    const [ox,oy]=blk.origin||[0,0]; const [nx,ny]=blk.shape||[1,1];
+    const sp = blk.spacing || 5;
+    // Carry the block's target cell size — the vertex sheet tiles each cell at
+    // this area, so losing it (→ size 1) collapses the mesh to slivers.
+    const sz = (blk.size!=null) ? +blk.size : 1.0;
+    for(let i=0;i<nx;i++) for(let j=0;j<ny;j++) cells.push({x:ox+i*sp, y:oy+j*sp, type: blk.type||type, size: sz});
+  };
+  emit(is.block);
+  (is.extra_blocks||[]).forEach(b=>emit(b));
+  // infected_seed: flip a fraction of the main-block cells to the seed type.
+  const seed = is.infected_seed;
+  if(seed && seed.fraction){
+    const main = cells.filter(c=>c.type===(is.block&&is.block.type));
+    const n = Math.round(main.length*seed.fraction);
+    for(let k=0;k<n && k<main.length;k++) main[k].type = seed.type;
+  }
+  return cells;
+}
+// The live editable initial-state model + the blueprint's original parametric
+// block text (so Reset can revert after edits materialize to an explicit list).
+let ICSTATE = null;
+let TEMPLATE_IS_BLOCK = null;
+let NOMINAL_SPACING = null;   // characteristic spacing of the pristine layout (drives the min-gap guard)
+let NOMINAL_SIZE = null;      // characteristic cell target size of the pristine layout (new cells inherit it)
+
+// Median nearest-neighbour distance — the layout's natural cell spacing.
+function _medianNN(cells){
+  if(!cells || cells.length<2) return null;
+  const d=[];
+  for(let i=0;i<cells.length;i++){
+    let m=Infinity;
+    for(let j=0;j<cells.length;j++){ if(i===j) continue;
+      const r=Math.hypot(cells[i].x-cells[j].x, cells[i].y-cells[j].y); if(r<m) m=r; }
+    if(isFinite(m)) d.push(m);
+  }
+  d.sort((a,b)=>a-b);
+  return d.length ? d[Math.floor(d.length/2)] : null;
+}
+// Push (x,y) out until it clears every cell (except `except`) by the min gap — so a
+// new/moved cell never crowds the vertex (tyssue) mesh into slivers.
+function _resolve(x, y, except){
+  const g=ICSTATE.minGap, cells=ICSTATE.cells;
+  for(let it=0; it<10; it++){
+    let near=-1, nd=Infinity;
+    for(let i=0;i<cells.length;i++){ if(i===except) continue;
+      const r=Math.hypot(cells[i].x-x, cells[i].y-y); if(r<nd){ nd=r; near=i; } }
+    if(near<0 || nd>=g) break;
+    let dx=x-cells[near].x, dy=y-cells[near].y, r=Math.hypot(dx,dy);
+    if(r<1e-6){ dx=Math.cos(it); dy=Math.sin(it); r=1; }     // coincident → pick a direction
+    x=cells[near].x + dx/r*g; y=cells[near].y + dy/r*g;
+    x=Math.max(0,Math.min(ICSTATE.W,x)); y=Math.max(0,Math.min(ICSTATE.H,y));
+  }
+  return [x,y];
+}
+// Relax a crowded layout: iterative pairwise repulsion up to the min gap.
+function icTidy(){
+  const g=ICSTATE.minGap, cells=ICSTATE.cells;
+  for(let it=0; it<80; it++){
+    let moved=false;
+    for(let i=0;i<cells.length;i++) for(let j=i+1;j<cells.length;j++){
+      let dx=cells[j].x-cells[i].x, dy=cells[j].y-cells[i].y, r=Math.hypot(dx,dy);
+      if(r<g){
+        if(r<1e-6){ dx=Math.cos(i+j); dy=Math.sin(i+j); r=1; }
+        const push=(g-r)/2+1e-3, ux=dx/r, uy=dy/r;
+        cells[i].x-=ux*push; cells[i].y-=uy*push; cells[j].x+=ux*push; cells[j].y+=uy*push; moved=true;
+      }
+    }
+    cells.forEach(c=>{ c.x=Math.max(0,Math.min(ICSTATE.W,c.x)); c.y=Math.max(0,Math.min(ICSTATE.H,c.y)); });
+    if(!moved) break;
+  }
+  icCommit();
+}
+
+function renderInitial(bp){
+  const d = bp.domain||{}; const ext = d.extent_um||[50,50];
+  const W=+ext[0], H=+ext[1];
+  const cells = cellsFromInitial(bp).map(c=>({x:+c.x, y:+c.y, type:c.type, size:(c.size!=null?+c.size:1.0)}));
+  const declared = (bp.cell_types||[]).map(t=>t.name);
+  const allTypes = declared.concat(cells.map(c=>c.type)).filter((v,i,a)=>a.indexOf(v)===i);
+  const colors = typeColors(allTypes);
+  const S=320, pad=8, sc=(S-2*pad)/Math.max(W,H);
+  const r = Math.max(3, Math.min(10, (cells.length>1 ? (sc*(minSpacing(cells)||5)*0.42) : 8)));
+  const isExplicit = !!(bp.initial_state && bp.initial_state.cells && bp.initial_state.cells.length);
+  // Stash the parametric original (for Reset) + its natural spacing (for the guard),
+  // captured while the layout is still pristine so crowding can't shrink the gap.
+  const _sizes = cells.map(c=>c.size).filter(s=>s!=null).sort((a,b)=>a-b);
+  const _medSize = _sizes.length ? _sizes[Math.floor(_sizes.length/2)] : null;
+  if(!isExplicit){
+    const blk = extractTopBlock($("#bp").value, "initial_state"); if(blk) TEMPLATE_IS_BLOCK = blk;
+    const nn = _medianNN(cells); if(nn) NOMINAL_SPACING = nn;
+    if(_medSize) NOMINAL_SIZE = _medSize;
+  }
+  // Keep new/moved cells at ~0.8× the layout's native spacing so the vertex mesh
+  // stays well-conditioned (crowded centroids → sliver polygons).
+  const minGap = (NOMINAL_SPACING || _medianNN(cells) || Math.max(3, Math.min(W,H)/12)) * 0.8;
+  // New cells inherit the layout's target cell size (the vertex tiles at this area).
+  const cellSize = _medSize || NOMINAL_SIZE || 1.0;
+  const prevActive = ICSTATE && ICSTATE.active, prevTool = ICSTATE && ICSTATE.tool;
+  ICSTATE = {cells, types:allTypes, colors, W, H, S, pad, sc, r, isExplicit, minGap, cellSize,
+             active:(prevActive && allTypes.includes(prevActive))?prevActive:(allTypes[0]||"H"),
+             tool:(prevTool==="erase")?"erase":"paint"};
+  icDraw(); icPalette(); icMeta();
+}
+
+function icDraw(){
+  const {cells,colors,S,pad,sc,r}=ICSTATE;
+  let svg = `<svg id="ic-canvas" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" style="touch-action:none;cursor:crosshair" role="img" aria-label="editable initial cell layout">`;
+  svg += `<rect id="ic-bg" x="${pad}" y="${pad}" width="${S-2*pad}" height="${S-2*pad}" fill="var(--bg)" stroke="var(--line)"/>`;
+  // y flips so origin is bottom-left (matches the sim's coordinate sense)
+  cells.forEach((c,i)=>{
+    const cx = pad + c.x*sc, cy = S - pad - c.y*sc;
+    svg += `<circle class="ic-cell" data-i="${i}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${colors[c.type]||"#999"}" fill-opacity="0.9" stroke="rgba(0,0,0,.3)" stroke-width="0.6"/>`;
+  });
+  svg += `</svg>`;
+  $("#ic-svg").innerHTML = svg;
+  icWire();
+}
+
+function icWire(){
+  const svg = $("#ic-canvas"); if(!svg) return;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const toDomain=(ev)=>{
+    const rect=svg.getBoundingClientRect();
+    const sx=(ev.clientX-rect.left)*(ICSTATE.S/rect.width);
+    const sy=(ev.clientY-rect.top)*(ICSTATE.S/rect.height);
+    return {x:clamp((sx-ICSTATE.pad)/ICSTATE.sc,0,ICSTATE.W), y:clamp((ICSTATE.S-ICSTATE.pad-sy)/ICSTATE.sc,0,ICSTATE.H)};
+  };
+  let drag=null;
+  svg.addEventListener("pointerdown",(ev)=>{
+    const t=ev.target;
+    if(t.classList && t.classList.contains("ic-cell")){
+      const i=+t.dataset.i;
+      if(ICSTATE.tool==="erase"){ ICSTATE.cells.splice(i,1); icCommit(); return; }
+      drag={i, moved:false, x0:ev.clientX, y0:ev.clientY};
+      try{ svg.setPointerCapture(ev.pointerId); }catch(e){}
+    } else if(ICSTATE.tool!=="erase"){      // click empty → add a cell of the active type
+      const p=toDomain(ev);
+      const [ax,ay]=_resolve(p.x, p.y, -1);   // keep it off its neighbours (vertex-safe)
+      ICSTATE.cells.push({x:ax, y:ay, type:ICSTATE.active, size:ICSTATE.cellSize});
+      icCommit();
+    }
+  });
+  svg.addEventListener("pointermove",(ev)=>{
+    if(!drag) return;
+    if(Math.abs(ev.clientX-drag.x0)+Math.abs(ev.clientY-drag.y0)>2) drag.moved=true;
+    const p=toDomain(ev), c=ICSTATE.cells[drag.i]; if(!c) return;
+    c.x=p.x; c.y=p.y;
+    const circ=svg.querySelector('.ic-cell[data-i="'+drag.i+'"]');
+    if(circ){ circ.setAttribute("cx",(ICSTATE.pad+c.x*ICSTATE.sc).toFixed(1)); circ.setAttribute("cy",(ICSTATE.S-ICSTATE.pad-c.y*ICSTATE.sc).toFixed(1)); }
+  });
+  const end=()=>{ if(!drag) return; const d=drag; drag=null;
+    const c=ICSTATE.cells[d.i];
+    if(!d.moved && ICSTATE.tool==="paint"){ if(c) c.type=ICSTATE.active; }
+    else if(d.moved && c){ const [nx,ny]=_resolve(c.x, c.y, d.i); c.x=nx; c.y=ny; }  // settle clear of neighbours
+    icCommit();
+  };
+  svg.addEventListener("pointerup",end);
+  svg.addEventListener("pointercancel",end);
+}
+
+function icPalette(){
+  const {types,colors,active,tool}=ICSTATE;
+  let h=`<div class="ic-tools"><span class="ic-tools-lbl">Add / paint:</span>`;
+  h+=types.map(t=>`<button type="button" class="ic-sw${(t===active&&tool==='paint')?' sel':''}" data-type="${esc(t)}" title="Click the canvas to add a ${esc(t)} cell; click a cell to repaint it ${esc(t)}"><span class="dot" style="background:${colors[t]||'#999'}"></span>${esc(t)}</button>`).join("");
+  h+=`<button type="button" class="ic-sw ic-erase${tool==='erase'?' sel':''}" data-tool="erase" title="Click a cell to remove it">🗑 Erase</button>`;
+  h+=`<button type="button" class="ic-sw" data-tool="tidy" title="Relax crowded cells to a vertex-safe spacing">✦ Tidy</button>`;
+  h+=`<button type="button" class="ic-sw" data-tool="reset" title="Revert the layout to the blueprint's original initial_state">↺ Reset</button>`;
+  h+=`</div><div class="ic-edithint muted">Click empty to <b>add</b> · <b>drag</b> to move · click a cell to <b>repaint</b> · <b>Erase</b> then click to remove. New/moved cells keep a minimum spacing so the vertex mesh stays valid; <b>Tidy</b> relaxes a crowded layout.</div>`;
+  const host=$("#ic-edit"); host.innerHTML=h;
+  host.querySelectorAll('.ic-sw[data-type]').forEach(b=> b.addEventListener("click", ()=>{ ICSTATE.active=b.dataset.type; ICSTATE.tool="paint"; icPalette(); }));
+  const eb=host.querySelector('[data-tool="erase"]'); if(eb) eb.addEventListener("click", ()=>{ ICSTATE.tool = ICSTATE.tool==="erase"?"paint":"erase"; icPalette(); });
+  const tb=host.querySelector('[data-tool="tidy"]'); if(tb) tb.addEventListener("click", icTidy);
+  const rb=host.querySelector('[data-tool="reset"]'); if(rb) rb.addEventListener("click", icReset);
+}
+
+function icMeta(){
+  const {cells,colors,W,H,isExplicit}=ICSTATE;
+  const counts={}; cells.forEach(c=>counts[c.type]=(counts[c.type]||0)+1);
+  $("#ic-legend").innerHTML = Object.keys(counts).map(t=>
+    `<span class="chip"><span class="dot" style="background:${colors[t]||"#999"}"></span>${esc(t)} <span class="muted">· ${counts[t]}</span></span>`).join("");
+  $("#ic-desc").innerHTML = `<b>${cells.length}</b> cell${cells.length===1?"":"s"} on a ${esc(W+"×"+H)} µm patch — edit directly on the canvas.`;
+  $("#ic-info").innerHTML = isExplicit
+    ? "Edited layout — written to <code>initial_state.cells</code> in the YAML; the exact starting state every engine is handed when you Run."
+    : "Computed from <code>domain</code> + <code>initial_state</code> in your browser. Edit it (add / move / remove cells) and it is written to <code>initial_state.cells</code> — the same start state every engine runs.";
+}
+
+function icCommit(){
+  ICSTATE.isExplicit = true;
+  icWriteYaml();                 // persist to the #bp YAML (what Run posts) — setting .value doesn't re-fire input
+  icDraw(); icPalette(); icMeta();
+}
+
+function icSerializeCells(cells){
+  const rnd=(v)=>{ const n=Math.round(v*100)/100; return String(n); };
+  const rows = cells.map((c,i)=>`    - {id: ${i+1}, type: ${c.type}, centroid: [${rnd(c.x)}, ${rnd(c.y)}], size: ${c.size!=null?c.size:1.0}}`);
+  return "initial_state:\n  cells:\n" + rows.join("\n") + "\n";
+}
+function icWriteYaml(){ $("#bp").value = replaceTopBlock($("#bp").value, "initial_state", icSerializeCells(ICSTATE.cells)); }
+function icReset(){
+  if(!TEMPLATE_IS_BLOCK) return;
+  $("#bp").value = replaceTopBlock($("#bp").value, "initial_state", TEMPLATE_IS_BLOCK);
+  render($("#bp").value);
+}
+
+// Replace / extract a top-level YAML block (``key:`` + its indented body), leaving
+// everything else — and its comments — untouched.
+function extractTopBlock(text, key){
+  const lines=text.split("\n"); const re=new RegExp("^"+key+":"); const out=[];
+  for(let i=0;i<lines.length;i++){
+    if(re.test(lines[i])){
+      out.push(lines[i]); i++;
+      while(i<lines.length && (lines[i]==="" || /^\s/.test(lines[i]))){ out.push(lines[i]); i++; }
+      while(out.length && out[out.length-1]==="") out.pop();
+      return out.join("\n")+"\n";
+    }
+  }
+  return null;
+}
+function replaceTopBlock(text, key, newBlock){
+  const lines=text.split("\n"); const re=new RegExp("^"+key+":"); const out=[]; let i=0, done=false;
+  while(i<lines.length){
+    if(!done && re.test(lines[i])){
+      i++;                                               // skip the key line
+      while(i<lines.length && (lines[i]==="" || /^\s/.test(lines[i]))) i++;   // skip its body
+      out.push(...newBlock.replace(/\n+$/,"").split("\n"));
+      done=true;
+    } else { out.push(lines[i]); i++; }
+  }
+  if(!done){ if(out.length && out[out.length-1].trim()!=="") out.push(""); out.push(...newBlock.replace(/\n+$/,"").split("\n")); }
+  return out.join("\n");
+}
+function minSpacing(cells){ return cells.reduce((m,c)=>c.spacing?Math.min(m,c.spacing):m, 5); }
+
+// ---- model components --------------------------------------------------------
+function comp(k, tag, title, what, countTxt, bodyHtml, open){
+  return `<details class="comp" data-k="${k}"${open?" open":""}>`
+    + `<summary><span class="comp-title">${esc(title)}</span><span class="comp-tag">${esc(tag)}</span>`
+    + (countTxt?`<span class="comp-count">${esc(countTxt)}</span>`:"") + `</summary>`
+    + (what?`<div class="comp-what">${what}</div>`:"")
+    + (bodyHtml?`<div class="comp-body">${bodyHtml}</div>`:"")
+    + `</details>`;
+}
+function kvTable(rows){ return `<table class="kv">`+rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v}</td></tr>`).join("")+`</table>`; }
+
+function renderComponents(bp){
+  const out=[]; const types=(bp.cell_types||[]); const colors=typeColors(types.map(t=>t.name));
+  // Cell types & adhesion
+  if(types.length){
+    const chips = types.map(t=>`<span class="chip"><span class="dot" style="background:${colors[t.name]||"#999"}"></span><code>${esc(t.name)}</code> <span class="muted">· target</span> ${ein(t.target_size??"", {t:"scoped",scope:t.name,key:"target_size"}, "sm")}</span>`).join("");
+    let adh="";
+    if((bp.adhesion||[]).length){
+      adh = `<div style="margin-top:10px"><div class="comp-tag">adhesion (contact energies)</div>`
+        + kvTable(bp.adhesion.map(a=>[`${a.a} ↔ ${a.b}`, `strength ${ein(a.strength??"", {t:"adhesion", a:a.a, b:a.b}, "sm")}`])) + `</div>`;
+    }
+    out.push(comp("cells","cell types","Cell types & adhesion",
+      "The agents on the sheet and how strongly each pair sticks. Adhesion drives sorting and tissue shape — identical on every engine.",
+      `${types.length} type${types.length===1?"":"s"}`, chips+adh));
+  }
+  // Fields
+  if((bp.fields||[]).length){
+    const body = bp.fields.map(f=>{
+      const sec = (f.secretion||[]).map(s=>`<code>${esc(s.type)}</code>@${esc(fmt(s.rate))}`).join(", ")||"—";
+      const upt = (f.uptake||[]).map(s=>`<code>${esc(s.type)}</code>@${esc(fmt(s.rate))}`).join(", ")||"—";
+      return `<div class="fblock"><div class="erow"><b>${esc(f.name)}</b>`
+        + `<button class="xbtn" data-del='${escA(JSON.stringify("name: "+f.name))}' title="Delete field ${esc(f.name)}">✕</button></div>`+kvTable([
+        ["D (diffusion)", ein(f.D, {t:"scoped",scope:f.name,key:"D"})], ["decay", ein(f.decay, {t:"scoped",scope:f.name,key:"decay"})],
+        ["secreted by", sec], ["taken up by", upt],
+        ["dynamics", f.dynamics?`dt ${esc(fmt(f.dynamics.dt))}, ${esc(String(f.dynamics.substeps))} substeps`:"—"],
+      ])+`</div>`;
+    }).join("") + `<button class="addbtn" data-add="field">+ add field</button>`;
+    out.push(comp("fields","reaction–diffusion","Fields",
+      "Chemical fields on the shared grid — they diffuse, decay, are secreted/taken up by cells, and feed the rules below. Edit, add, or delete them.",
+      `${bp.fields.length}: ${bp.fields.map(f=>f.name).join(", ")}`, body));
+  }
+  // Rules
+  if((bp.rules||[]).length){
+    const rows = bp.rules.map(r=>{
+      const lbl = r.type==="transition" ? `${r.from} → ${r.to}` : (r.type==="kill" ? `kill ${r.target||r.to||""}` : (r.kind||r.type||"rule"));
+      const expr = r.rate_expr||r.rate||"";
+      const needle = expr || ("from: "+(r.from||""));
+      return `<div class="erow"><span class="erow-lbl">${esc(lbl)}</span>`
+        + ein(expr, {t:"expr", old:expr}, "expr")
+        + `<button class="xbtn" data-del='${escA(JSON.stringify(needle))}' title="Delete this rule">✕</button></div>`;
+    }).join("");
+    const body = rows + `<button class="addbtn" data-add="rule">+ add rule</button>`;
+    out.push(comp("rules","cell-state rules","Rules",
+      "Per-cell state changes — transitions (H→I), killing, recovery — each fired at a rate given by an <b>expression</b> over fields and neighbours. These rate expressions ARE the cell-state equations — edit, add, or delete them.",
+      `${bp.rules.length} rule${bp.rules.length===1?"":"s"}`, body));
+  }
+  // Systemic ODE
+  if(bp.systemic_ode){
+    const ode=bp.systemic_ode; const cp=ode.coupling||{}; const pr=ode.params||{};
+    const rows=[["model_ref", `<code>${esc(ode.model_ref||"—")}</code>`]];
+    Object.entries(cp).forEach(([k,v])=> rows.push(["coupling."+k, typeof v==="number"?ein(v,{t:"kv",key:k}):esc(String(v))]));
+    Object.entries(pr.hill_exponents||{}).forEach(([k,v])=> rows.push(["hill."+k, ein(v,{t:"kv",key:k})]));
+    const states=(pr.spatialized_states||[]).concat(pr.integrated_states||[]);
+    const chips = states.length?`<div class="comp-tag" style="margin-top:10px">states · ${states.length}</div><div style="margin-top:4px">${states.slice(0,28).map(s=>`<span class="chip">${esc(s)}</span>`).join("")}</div>`:"";
+    const note = `<div class="info" style="margin-top:8px">The full ODE system is the referenced <code>${esc(ode.model_ref||"model")}</code> model (Antimony/CVODE) — its equations live in that model, not inline. The knobs above are how it couples into the tissue; to change the <b>cell-state</b> equations, edit the Rules' <code>rate_expr</code>s above.</div>`;
+    out.push(comp("ode","systemic ODE","Systemic ODE",
+      "A well-mixed compartment model running alongside the tissue (a Price-2015 immune ODE) — its state modulates recruitment and rates.",
+      ode.model_ref?("ref: "+ode.model_ref):"", kvTable(rows)+chips+note));
+  }
+  // Immune
+  if(bp.immune){
+    const im=bp.immune; const t=im.types||im.cell_types||[];
+    out.push(comp("immune","recruitment","Immune recruitment",
+      "Immune cells (NK, CD8, macrophage…) are recruited onto the patch over time and act through the rules — killing infected cells.",
+      Array.isArray(t)?`${t.length} type(s)`:"", kvTable(Object.entries(im).filter(([k])=>k!=="types").map(([k,v])=>[k, typeof v==="object"?esc(JSON.stringify(v)):fmt(v)]))));
+  }
+  // Mechanics mapping
+  const mm = bp.mechanics_mapping || (bp.const?{const:bp.const}:null);
+  if(mm){
+    const c = mm.const||{};
+    out.push(comp("mech","constants","Mechanics mapping & constants",
+      "The named constants the rule expressions reference (rate coefficients, thresholds). These are the knobs the biology is written in — editable.",
+      `${Object.keys(c).length} constant(s)`, kvTable(Object.entries(c).map(([k,v])=>[k, ein(v,{t:"kv",key:k})]))));
+  }
+  // Domain (always, last)
+  const d=bp.domain||{};
+  out.push(comp("domain","grid","Domain",
+    "The simulation patch every component shares — editable.", "",
+    kvTable([
+      ["extent_um", ein(JSON.stringify(d.extent_um||[]), {t:"arr", key:"extent_um"}, "expr")],
+      ["grid_resolution_um", ein(d.grid_resolution_um??1, {t:"kv", key:"grid_resolution_um"}, "sm")],
+      ["boundary", ein(d.boundary||"noflux", {t:"kv", key:"boundary"})],
+    ])));
+  $("#components").innerHTML = out.join("") || "<div class='muted'>No components parsed.</div>";
+}
+
+// ---- view toggle ------------------------------------------------------------
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("sel"));
+  t.classList.add("sel");
+  const v=t.dataset.v;
+  $("#view-structured").style.display = v==="structured"?"":"none";
+  $("#view-yaml").style.display = v==="yaml"?"":"none";
+  if(v==="structured") render($("#bp").value);
+}));
+
+// ---- templates --------------------------------------------------------------
 async function applyTemplate(){
   const t = TEMPLATES[$("#tpl").value];
   $("#bp").value = t.yaml;
-  $("#bp").readOnly = !!t.readonly;
+  $("#bp").readOnly = false;   // every draft model is editable — nothing is read-only
   $("#tplhint").textContent = t.hint;
   if(t.fetch){
     try{ const r = await fetch(t.fetch); if(r.ok) $("#bp").value = await r.text(); }
     catch(e){ $("#bp").value = "# could not load the Sego blueprint ("+e+")\n"; }
   }
+  render($("#bp").value);
 }
 $("#tpl").addEventListener("change", applyTemplate);
+
+// re-render structured view as the YAML is edited (debounced)
+let _t=null;
+$("#bp").addEventListener("input", ()=>{ clearTimeout(_t); _t=setTimeout(()=>render($("#bp").value), 300); });
+
+// inline editing: a change in a structured value patches the YAML in place.
+$("#components").addEventListener("change", (e)=>{
+  const inp = e.target.closest(".ein"); if(!inp) return;
+  let a; try{ a=JSON.parse(inp.dataset.a); }catch(err){ return; }
+  const patched = applyPatch($("#bp").value, a, inp.value.trim());
+  if(patched==null){ inp.style.borderColor="var(--err)"; inp.title="Could not locate this value in the YAML — edit it in the Raw YAML view."; return; }
+  rerender(patched);
+});
+function rerender(newText){
+  const openKeys = [...document.querySelectorAll("#components .comp[open]")].map(d=>d.dataset.k);
+  $("#bp").value = newText; render(newText);
+  openKeys.forEach(k=>{ const d=document.querySelector('#components .comp[data-k="'+k+'"]'); if(d) d.open=true; });
+}
+// structural tooling: add / delete rules + fields (text ops, comments preserved).
+$("#components").addEventListener("click",(e)=>{
+  const del = e.target.closest(".xbtn"), add = e.target.closest(".addbtn");
+  if(!del && !add) return;
+  const text = $("#bp").value; let out = null;
+  if(del){ try{ out = deleteItemContaining(text, JSON.parse(del.dataset.del)); }catch(err){} }
+  else {
+    const bp = parseBlueprint(text) || {}; const types = (bp.cell_types||[]).map(t=>t.name);
+    if(add.dataset.add==="rule") out = addListItem(text, "rules", ['- {type: transition, from: '+(types[0]||"H")+', to: '+(types[1]||types[0]||"I")+', rate_expr: "0.0"}']);
+    else if(add.dataset.add==="field") out = addListItem(text, "fields", ["- name: new_field", "  D: 0.1", "  decay: 0.01", "  dynamics: {dt: 0.2, substeps: 5}"]);
+  }
+  if(out!=null) rerender(out);
+});
+
 applyTemplate();
 
-// Detect a missing backend (the published static snapshot has no /api). If the
-// run endpoint isn't reachable, show the read-only banner and disable Run so the
-// page is honest instead of failing on click.
 (async function checkBackend(){
-  try{
-    const r = await fetch(`${API}/analysis-viewers`, {method:"GET"});
-    if(r.ok) return;                       // live server — Run stays enabled
-  }catch(e){ /* unreachable */ }
+  try{ const r = await fetch(`${API}/analysis-viewers`, {method:"GET"}); if(r.ok) return; }catch(e){}
   $("#nobackend").style.display = "block";
   const run = $("#run"); run.disabled = true; run.textContent = "Run (live server only)";
 })();
 
+// multi-select: each tile toggles independently; Run launches every selected one.
 document.querySelectorAll(".engine").forEach(el => el.addEventListener("click", () => {
-  document.querySelectorAll(".engine").forEach(e => e.classList.remove("sel"));
-  el.classList.add("sel"); engine = el.dataset.e;
+  el.classList.toggle("sel");
 }));
 
 function setStatus(msg, cls){ const s=$("#status"); s.className="show "+(cls||""); s.innerHTML=msg; }
 
-// --- Copy / Download the spec -------------------------------------------------
 $("#copy").addEventListener("click", async () => {
   try{ await navigator.clipboard.writeText($("#bp").value); $("#copy").textContent="Copied ✓";
        setTimeout(()=>$("#copy").textContent="Copy spec",1200); }
@@ -223,7 +813,23 @@ $("#download").addEventListener("click", () => {
   a.click(); URL.revokeObjectURL(a.href);
 });
 
-async function pollRun(runId, el, eng, videoOut){
+// Per-engine job: stand-alone modules run blueprint_pipeline (backend override +
+// spatial video); "tri" runs the coupled tri_coupled composite, whose output is the
+// 3-paradigm overlay it writes to assets/<overlay_out>.html.
+function jobFor(eng, overridesBase){
+  if(eng==="tri"){
+    const out = `studio_tri_${Date.now()}`;
+    return {composite: TRI_COMPOSITE, emit_paths:["consensus_spread"],
+      overrides:{...overridesBase, overlay_out: out, munk_squish: 0.8},
+      art:{href:`${out}.html`, label:"▶ View tri-coupled overlay ↗", dlname:"tri-coupled-overlay.html"}};
+  }
+  const out = `studio_${Date.now()}_${eng}`;
+  return {composite: COMPOSITE, emit_paths:["cell_counts"],
+    overrides:{...overridesBase, backend: eng, video_out: out},
+    art:{href:`_studio_runs/${out}.html`, label:"▶ View video ↗", dlname:`${eng}-playback.html`}};
+}
+
+async function pollRun(runId, el, eng, art){
   for(let i=0;i<120;i++){
     await new Promise(r=>setTimeout(r,2500));
     try{
@@ -233,11 +839,10 @@ async function pollRun(runId, el, eng, videoOut){
       if(st && /complete|done|finished|success/.test(st)){
         el.className="result ok";
         const dl = `${API}/simulation-run-download?run_id=${encodeURIComponent(runId)}`;
-        const vid = videoOut ? `_studio_runs/${encodeURIComponent(videoOut)}.html` : null;
         el.innerHTML = `✓ <b>${eng}</b> run complete <span class="muted">(${runId})</span>`
           + `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">`
-          + (vid ? `<a class="btn-mini" href="${vid}" target="_blank" rel="noopener">▶ View video ↗</a>` : "")
-          + (vid ? `<a class="btn-mini" href="${vid}" download="${eng}-playback.html">Download video ⬇</a>` : "")
+          + (art ? `<a class="btn-mini" href="${art.href}" target="_blank" rel="noopener">${art.label}</a>` : "")
+          + (art ? `<a class="btn-mini" href="${art.href}" download="${art.dlname}">Download ⬇</a>` : "")
           + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">View results ↗</a>`
           + `<a class="btn-mini" href="${dl}" download>Download results ⬇</a>`
           + `</div>`;
@@ -248,53 +853,99 @@ async function pollRun(runId, el, eng, videoOut){
         return false;
       }
       if(st) el.innerHTML = `⏳ <b>${eng}</b> — ${st}… <span class="muted">(${runId})</span>`;
-    }catch(e){ /* keep polling */ }
+    }catch(e){}
   }
   el.innerHTML = `⏳ <b>${eng}</b> still running — follow it in the <a href="#simulations">Simulations DB</a>.`;
   return false;
+}
+
+// ---- subcellular layer ------------------------------------------------------
+// The per-cell intracellular model attaches to one epithelial cell type (prefer H)
+// and couples to a diffusing field (prefer virus). The pipeline composite auto-wires
+// a `subcellular:` section when present, so we inject it into the posted blueprint
+// at run time without touching the editor's YAML.
+function subcellTargetType(bp){
+  const types=(bp.cell_types||[]).map(t=>t.name);
+  return types.includes("H")?"H":(types[0]||"H");
+}
+function subcellDriveField(bp){
+  const f=(bp.fields||[]).map(x=>x.name);
+  return f.includes("virus")?"virus":(f[0]||null);
+}
+function subcellSection(kind, type, fld){
+  if(kind==="ode"){
+    // per-cell growth ODE (tellurium): S grows, faster where the field is high; the
+    // cell divides when S crosses a threshold. Autonomous if the blueprint has no field.
+    const src = "model g\n  species S;\n  S = 25;\n" + (fld?"  v = 0;\n":"")
+      + "  mu := 0.05;\n  J0: -> S; " + (fld?"mu*(1+5*v)*S":"mu*S") + ";\nend\n";
+    const coupling = {const:{divide_at:80.0},
+      inputs: fld?{v:`field.${fld}@centroid`}:{},
+      outputs:{divide_when:{var:"S", gt:"const.divide_at"}}};
+    return {[type]:{module:"tellurium", division:"split", model:{source:src}, params:{}, coupling}};
+  }
+  if(kind==="boolean"){
+    // per-cell MaBoSS network: a field-driven Signal → Stress → Apoptosis; the cell
+    // dies when Apoptosis turns on. Autonomous (quiescent) if there is no field.
+    const inputs = fld?{Signal:`field.${fld}@centroid`}:{};
+    return {[type]:{module:"maboss", division:"split",
+      model:{source:"Signal, Signal\nStress, Signal\nApoptosis, Stress\n"}, params:{seed:1},
+      coupling:{const:{die_at:0.5}, inputs, outputs:{die_when:{var:"Apoptosis", gt:"const.die_at"}}}}};
+  }
+  if(kind==="particle"){
+    // per-cell Smoldyn stochastic reactions: one bimolecular A + B <-> C. The field
+    // feeds species A; amounts (A/B/C molecule counts) read back as scalars.
+    const inputs = fld?{A:`field.${fld}@centroid`}:{};
+    return {[type]:{module:"smoldyn", division:"split",
+      model:{source:{species:["A","B","C"], reactions:[{subs:["A","B"], prds:["C"], kf:0.1, kb:0.0}]}},
+      params:{}, coupling:{inputs, outputs:{}}}};
+  }
+  return null;
+}
+function withSubcellular(text, kind){
+  if(!kind || !window.jsyaml) return text;
+  let bp; try{ bp=parseBlueprint(text); }catch(e){ return text; }
+  const sec=subcellSection(kind, subcellTargetType(bp), subcellDriveField(bp));
+  if(!sec) return text;
+  const block="subcellular:\n" + window.jsyaml.dump(sec, {lineWidth:-1}).replace(/^(?=.)/gm,"  ");
+  return replaceTopBlock(text, "subcellular", block);
 }
 
 async function startRun(eng, steps, overridesBase, tpl){
   const el = document.createElement("div"); el.className="result";
   el.innerHTML = `⏳ <b>${eng}</b> — starting (${steps} steps)…`;
   $("#status").appendChild(el);
-  // unique output name so the recorder writes a per-run spatial video we can open.
-  const videoOut = `studio_${Date.now()}_${eng}`;
+  const job = jobFor(eng, overridesBase);
   try{
     const resp = await fetch(`${API}/composite-test-run`, {
       method:"POST", headers:{"content-type":"application/json"},
-      // emit_paths: cell-population counts — a well-shaped scalar observable the
-      // xarray emitter can persist (the full state has empty-list stores → zarr 0-chunk).
-      // video_out: record a spatial-playback video to /assets/_studio_runs/<name>.html.
-      body: JSON.stringify({id: COMPOSITE, steps,
-                            overrides:{...overridesBase, backend:eng, video_out:videoOut},
-                            emit_paths:["cell_counts"], label:`blueprint-studio ${eng} ${tpl}`}),
+      body: JSON.stringify({id: job.composite, steps, overrides: job.overrides,
+                            emit_paths: job.emit_paths, label:`blueprint-studio ${eng} ${tpl}`}),
     });
     const data = await resp.json().catch(()=>({}));
     if(!resp.ok){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${data.error||resp.statusText}`; return; }
     const runId = data.run_id || data.simulation_id || data.database_id || data.id || "(started)";
     el.innerHTML = `⏳ <b>${eng}</b> — running… <span class="muted">(${runId})</span>`;
-    return {runId, el, eng, videoOut};
+    return {runId, el, eng, art: job.art};
   }catch(e){ el.className="result err"; el.innerHTML=`✗ <b>${eng}</b>: ${e}`; }
 }
 
 $("#run").addEventListener("click", async () => {
   const tpl = $("#tpl").value;
   const steps = parseFloat($("#steps").value) || 60;
-  const engines = engine==="all" ? ["cpm","vertex","munk"] : [engine];
+  const engines = [...document.querySelectorAll(".engine.sel")].map(e => e.dataset.e);
+  if(!engines.length){ setStatus("Select at least one engine to run.", "err"); return; }
   const overridesBase = {};
   const bp = $("#bp").value.trim();
-  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = $("#bp").value;
+  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = withSubcellular($("#bp").value, $("#subcell").value);
   $("#run").disabled = true;
   $("#status").className = "show"; $("#status").innerHTML = "";
-  // launch all requested engines (concurrently), then poll each to completion
   const started = [];
   for(const eng of engines){ const r = await startRun(eng, steps, overridesBase, tpl); if(r) started.push(r); }
-  await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng, r.videoOut)));
-  // results footer: where the population charts live
+  await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng, r.art)));
   const foot = document.createElement("div"); foot.className="result"; foot.style.marginTop="12px";
-  foot.innerHTML = `📊 Each run records a spatial playback <b>video</b> (buttons above) and its `
-    + `population charts are in the <a href="${SPA}/#simulations" target="_blank">Simulations DB</a>.`;
+  foot.innerHTML = `📊 Artifacts are linked above per engine — a spatial playback <b>video</b> for the `
+    + `stand-alone modules, the 3-paradigm <b>overlay</b> for tri-coupled; scalar/population `
+    + `charts are in the <a href="${SPA}/#simulations" target="_blank">Simulations DB</a>.`;
   $("#status").appendChild(foot);
   $("#run").disabled = false;
 });
