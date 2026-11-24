@@ -136,10 +136,19 @@ class TriCoupledProcess(Process):
         "cpm_blend": {"_type": "float", "_default": 0.9},
         "munk_squish": {"_type": "float", "_default": 0.8},   # oblong-under-crowding
         "overlay_out": {"_type": "string", "_default": "tri_coupled"},
+        # Solo mode: step ONE backend uncoupled ("cpm"|"vertex"|"munk") instead of
+        # the consensus — used by the divergence_compare composite to run each
+        # paradigm standalone from the same init. Empty = the full coupled system.
+        "solo": {"_type": "string", "_default": ""},
+        # When False, update() does not write the overlay HTML (the caller renders
+        # it instead — e.g. divergence_compare drives several of these as sub-sims).
+        "render": {"_type": "boolean", "_default": True},
     }
 
     def __init__(self, config=None, core=None):
         super().__init__(config, core)
+        self._solo = str(self.config.get("solo", "") or "")
+        self._render = bool(self.config.get("render", True))
         import viva_cpm.schema as cpm_schema
         self._cpm_schema = cpm_schema
         bp = _resolve_blueprint(self.config.get("blueprint"))
@@ -210,6 +219,8 @@ class TriCoupledProcess(Process):
         return self._cpm_schema.load_world(spec)
 
     def update(self, inputs, interval=1):
+        if self._solo:
+            return self._update_solo()
         nx, ny, pts = self.nx, self.ny, self._pts
         consensus, offsets, nudge, v_tsize = {}, {}, {}, {}
         if self._prev is not None:
@@ -256,11 +267,43 @@ class TriCoupledProcess(Process):
                 pass
             geom[b] = _emit(self._insts[b])
         self._frames.append(geom); self._prev = geom
-        try:
-            self._write_overlay()
-        except Exception:
-            pass
+        if self._render:
+            try:
+                self._write_overlay()
+            except Exception:
+                pass
         return {"consensus_spread": self._spread(geom), "n_cells": len(self._cpm_to_bid)}
+
+    def _update_solo(self):
+        """Step ONE backend uncoupled (``self._solo``): no consensus nudge, no
+        cross-backend blend — each paradigm evolves on its own from the shared
+        init. Appends the single-backend geom to ``self._frames`` so a caller
+        (divergence_compare) can read ``self._prev`` after each step."""
+        b = self._solo
+        if b == "cpm":
+            try:
+                w = self._cpm_world(self._cpm_labels, seed=len(self._frames))
+                w.step(self.MCS)
+                self._cpm_labels = _relabel_to_stable(w.snapshot(), self._cpm_labels)
+            except Exception:
+                pass
+            _lab = np.asarray(self._cpm_labels); cpm_area = {}
+            for cid in np.unique(_lab):
+                if cid == 0:
+                    continue
+                bid = self._cpm_to_bid.get(int(cid))
+                if bid:
+                    cpm_area[str(bid)] = float((_lab == cid).sum()) / (self.RES * self.RES)
+            geom = {"_cpm_labels": self._cpm_labels.tolist(), "_cpm_area": cpm_area,
+                    "cpm": {"positions": _labels_coms(self._cpm_labels, self._pts, self._cpm_to_bid)}}
+        else:  # vertex | munk, stepped with empty inputs (no nudge / target)
+            try:
+                self._insts[b].update({"fates": {}, "field_grid": {}}, 1.0)
+            except Exception:
+                pass
+            geom = {b: _emit(self._insts[b])}
+        self._frames.append(geom); self._prev = geom
+        return {"consensus_spread": 0.0, "n_cells": len(self._cpm_to_bid)}
 
     def _spread(self, g):
         c, v, m = _pos(g, "cpm"), _pos(g, "vertex"), _pos(g, "munk")
