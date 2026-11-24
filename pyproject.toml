@@ -56,12 +56,17 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7.4"]
 cli = ["typer", "rich"]
-# bounded-particles composite (Smoldyn). An EXTRA, not a core dep: Smoldyn ships a
-# macOS binary wheel only up to py3.11 while this package requires >=3.12, so a
-# default `uv sync` on macOS would fail. On Linux 3.12 `.[particles]` installs it and
-# the composite runs Smoldyn in-process; on macOS SmoldynRunner bridges to a 3.11
-# interpreter (set SMOLDYN_PYTHON or keep a viva-smoldyn venv).
-particles = ["smoldyn"]
+# Smoldyn particle engine (bounded-particles composite + the Studio's particle
+# subcellular layer). An EXTRA, not a core dep. Smoldyn's `py3-none-any` wheels
+# mis-bundle a single version-specific `.so`: plain `smoldyn` on macOS arm64 py3.12
+# resolves to a build carrying a cp314 binary that won't import. Specific dev builds
+# DO ship a cp312 macOS binary — pin one on macOS so `.[particles]` runs Smoldyn
+# in-process; Linux keeps the manylinux wheel. (The SmoldynRunner py3.11 bridge via
+# SMOLDYN_PYTHON remains a fallback for envs without a cp312 wheel.)
+particles = [
+    "smoldyn==2.77.dev202610282210; sys_platform=='darwin'",
+    "smoldyn; sys_platform!='darwin'",
+]
 
 [project.scripts]
 multicell-blueprint = "viva_multicell_blueprint.cli.__main__:main"

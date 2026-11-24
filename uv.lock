@@ -4,10 +4,12 @@ requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
-    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version >= '3.14' and sys_platform == 'darwin'",
+    "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version < '3.14' and sys_platform == 'win32'",
     "python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version < '3.14' and sys_platform == 'darwin'",
+    "python_full_version < '3.14' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 
 [manifest]
@@ -1836,7 +1838,8 @@ dev = [
     { name = "pytest" },
 ]
 particles = [
-    { name = "smoldyn" },
+    { name = "smoldyn", version = "2.76", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
+    { name = "smoldyn", version = "2.77.dev202610282210", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
 ]
 
 [package.metadata]
@@ -1858,7 +1861,8 @@ requires-dist = [
     { name = "rich", marker = "extra == 'cli'" },
     { name = "scikit-image" },
     { name = "scipy" },
-    { name = "smoldyn", marker = "extra == 'particles'" },
+    { name = "smoldyn", marker = "sys_platform == 'darwin' and extra == 'particles'", specifier = "==2.77.dev202610282210" },
+    { name = "smoldyn", marker = "sys_platform != 'darwin' and extra == 'particles'" },
     { name = "typer", marker = "extra == 'cli'" },
     { name = "tyssue", git = "https://github.com/vivarium-collective/vivatyssue.git" },
     { name = "viva-cpm", git = "https://github.com/vivarium-collective/viva-cpm.git?branch=main" },
@@ -3564,9 +3568,29 @@ wheels = [
 name = "smoldyn"
 version = "2.76"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version < '3.14' and sys_platform == 'win32'",
+    "python_full_version < '3.14' and sys_platform == 'emscripten'",
+    "python_full_version < '3.14' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a1/ac/cf525e7164f412e18defece9552112f4e7217f4c1af1296a4ab0d0560243/smoldyn-2.76-py3-none-any.whl", hash = "sha256:0a2960187c0c089414e956a85afd0942db4ee9785cdab7295e6f675498d3dc88", size = 1762508, upload-time = "2026-10-22T02:56:45.25Z" },
     { url = "https://files.pythonhosted.org/packages/7a/76/311f70d5b01b2c70ebf9924f188c666fb6343b885c5107c329c6650afb60/smoldyn-2.76-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:c268584a3a01909e700c44a1b3567a6aa7616cc1488be071856f1326a11302ec", size = 2106156, upload-time = "2026-10-22T02:54:30.941Z" },
+]
+
+[[package]]
+name = "smoldyn"
+version = "2.77.dev202610282210"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'darwin'",
+    "python_full_version < '3.14' and sys_platform == 'darwin'",
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/eb/50/44b12bca430fe2d9636d4f72d8107c3982a1b99b74323d53244fc70e3378/smoldyn-2.77.dev202610282210-py3-none-any.whl", hash = "sha256:2dc517db9157c533699e5b2eb4db1bf1d167d596ccb5e013891c69d0845a16a6", size = 1780848, upload-time = "2026-10-28T22:16:25.611Z" },
 ]
 
 [[package]]

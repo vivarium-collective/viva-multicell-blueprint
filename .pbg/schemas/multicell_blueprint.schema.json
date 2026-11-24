@@ -131,6 +131,45 @@
                   "additionalProperties": false
                 }
               }
+            },
+            {
+              "required": [
+                "cells"
+              ],
+              "properties": {
+                "cells": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "type",
+                      "centroid"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": [
+                          "integer",
+                          "string"
+                        ]
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "centroid": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2
+                      },
+                      "size": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
             }
           ]
         },
@@ -345,6 +384,45 @@
                         }
                       },
                       "additionalProperties": false
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "cells"
+                  ],
+                  "properties": {
+                    "cells": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "centroid"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": [
+                              "integer",
+                              "string"
+                            ]
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "centroid": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            },
+                            "minItems": 2,
+                            "maxItems": 2
+                          },
+                          "size": {
+                            "type": "number"
+                          }
+                        }
+                      }
                     }
                   }
                 }
