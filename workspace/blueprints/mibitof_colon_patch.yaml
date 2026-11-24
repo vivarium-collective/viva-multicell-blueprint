@@ -1,0 +1,183 @@
+# mibitof_colon_patch: a multicell blueprint initialized from REAL MIBI-TOF spatial-omics imaging.
+# Densest 64x64 crop of the FOV (origin [80,152]).
+# Provenance: squidpy.datasets.mibitof() — MIBI-TOF human colon-carcinoma FOV (scverse example; same modality as HuBMAP CODEX)
+#   viva-cpm demos/run_hra_mibitof.py: 1024^2 segmentation mask downsampled 4x -> 256x256 lattice, cells >= 4px kept, per-cell named Cluster type (FOV point16).
+# Units: 1 grid unit = 1 lattice site (after 4x downsample of the 0.8um/px mask); `*_um` keys are in lattice sites.
+# Composition (120 cells): Endothelial 5, Epithelial 58, Imm_other 9, Myeloid_CD11c 4, Myeloid_CD68 1, Tcell_CD4 12, Tcell_CD8 31
+blueprint_version: "1.0"
+domain:
+  extent_um: [64, 64]
+  grid_resolution_um: 1
+  boundary: noflux
+
+cell_types:
+  - {name: Endothelial, target_size: 19}
+  - {name: Epithelial, target_size: 19}
+  - {name: Imm_other, target_size: 19}
+  - {name: Myeloid_CD11c, target_size: 19}
+  - {name: Myeloid_CD68, target_size: 19}
+  - {name: Tcell_CD4, target_size: 19}
+  - {name: Tcell_CD8, target_size: 19}
+
+# Structure-preserving contact energies (medium costly -> cells stay packed as
+# imaged; uniform cell-cell), after viva-cpm run_hra_mibitof.py.
+adhesion:
+  - {a: Endothelial, b: medium, strength: 16}
+  - {a: Epithelial, b: medium, strength: 16}
+  - {a: Imm_other, b: medium, strength: 16}
+  - {a: Myeloid_CD11c, b: medium, strength: 16}
+  - {a: Myeloid_CD68, b: medium, strength: 16}
+  - {a: Tcell_CD4, b: medium, strength: 16}
+  - {a: Tcell_CD8, b: medium, strength: 16}
+  - {a: Endothelial, b: Endothelial, strength: 6}
+  - {a: Endothelial, b: Epithelial, strength: 6}
+  - {a: Endothelial, b: Imm_other, strength: 6}
+  - {a: Endothelial, b: Myeloid_CD11c, strength: 6}
+  - {a: Endothelial, b: Myeloid_CD68, strength: 6}
+  - {a: Endothelial, b: Tcell_CD4, strength: 6}
+  - {a: Endothelial, b: Tcell_CD8, strength: 6}
+  - {a: Epithelial, b: Epithelial, strength: 6}
+  - {a: Epithelial, b: Imm_other, strength: 6}
+  - {a: Epithelial, b: Myeloid_CD11c, strength: 6}
+  - {a: Epithelial, b: Myeloid_CD68, strength: 6}
+  - {a: Epithelial, b: Tcell_CD4, strength: 6}
+  - {a: Epithelial, b: Tcell_CD8, strength: 6}
+  - {a: Imm_other, b: Imm_other, strength: 6}
+  - {a: Imm_other, b: Myeloid_CD11c, strength: 6}
+  - {a: Imm_other, b: Myeloid_CD68, strength: 6}
+  - {a: Imm_other, b: Tcell_CD4, strength: 6}
+  - {a: Imm_other, b: Tcell_CD8, strength: 6}
+  - {a: Myeloid_CD11c, b: Myeloid_CD11c, strength: 6}
+  - {a: Myeloid_CD11c, b: Myeloid_CD68, strength: 6}
+  - {a: Myeloid_CD11c, b: Tcell_CD4, strength: 6}
+  - {a: Myeloid_CD11c, b: Tcell_CD8, strength: 6}
+  - {a: Myeloid_CD68, b: Myeloid_CD68, strength: 6}
+  - {a: Myeloid_CD68, b: Tcell_CD4, strength: 6}
+  - {a: Myeloid_CD68, b: Tcell_CD8, strength: 6}
+  - {a: Tcell_CD4, b: Tcell_CD4, strength: 6}
+  - {a: Tcell_CD4, b: Tcell_CD8, strength: 6}
+  - {a: Tcell_CD8, b: Tcell_CD8, strength: 6}
+
+initial_state:
+  # Seeded at each cell's real imaged centroid + segmented size (no synthetic layout).
+  cells:
+    - {id: 524, type: Tcell_CD8, centroid: [45.85, 0.65], size: 26}
+    - {id: 525, type: Tcell_CD8, centroid: [53.15, 0.75], size: 20}
+    - {id: 531, type: Tcell_CD8, centroid: [5.82, 0.91], size: 11}
+    - {id: 532, type: Tcell_CD8, centroid: [29.91, 0.36], size: 11}
+    - {id: 533, type: Tcell_CD4, centroid: [61.0, 0.61], size: 28}
+    - {id: 536, type: Tcell_CD8, centroid: [26.6, 1.6], size: 15}
+    - {id: 544, type: Tcell_CD8, centroid: [9.75, 3.55], size: 20}
+    - {id: 547, type: Tcell_CD8, centroid: [4.07, 5.0], size: 29}
+    - {id: 548, type: Tcell_CD8, centroid: [50.58, 6.19], size: 36}
+    - {id: 549, type: Tcell_CD8, centroid: [56.13, 5.7], size: 23}
+    - {id: 555, type: Tcell_CD8, centroid: [13.28, 8.0], size: 39}
+    - {id: 556, type: Tcell_CD8, centroid: [29.79, 7.21], size: 24}
+    - {id: 557, type: Tcell_CD8, centroid: [44.36, 5.14], size: 14}
+    - {id: 562, type: Tcell_CD4, centroid: [25.71, 7.29], size: 17}
+    - {id: 563, type: Tcell_CD8, centroid: [61.59, 7.12], size: 17}
+    - {id: 568, type: Tcell_CD4, centroid: [19.0, 9.0], size: 13}
+    - {id: 570, type: Tcell_CD8, centroid: [4.37, 11.39], size: 38}
+    - {id: 574, type: Tcell_CD8, centroid: [34.0, 11.0], size: 21}
+    - {id: 575, type: Tcell_CD8, centroid: [43.19, 10.69], size: 16}
+    - {id: 576, type: Tcell_CD8, centroid: [55.45, 10.18], size: 11}
+    - {id: 583, type: Tcell_CD4, centroid: [26.19, 10.94], size: 16}
+    - {id: 584, type: Tcell_CD8, centroid: [47.07, 11.86], size: 14}
+    - {id: 585, type: Tcell_CD8, centroid: [61.31, 11.08], size: 13}
+    - {id: 587, type: Tcell_CD8, centroid: [9.47, 14.42], size: 36}
+    - {id: 588, type: Tcell_CD8, centroid: [29.0, 13.83], size: 23}
+    - {id: 589, type: Tcell_CD4, centroid: [51.0, 12.37], size: 19}
+    - {id: 596, type: Tcell_CD8, centroid: [19.86, 14.45], size: 29}
+    - {id: 599, type: Tcell_CD8, centroid: [14.81, 15.58], size: 26}
+    - {id: 600, type: Tcell_CD8, centroid: [24.71, 16.04], size: 28}
+    - {id: 601, type: Tcell_CD8, centroid: [37.5, 15.5], size: 24}
+    - {id: 602, type: Tcell_CD8, centroid: [60.81, 14.33], size: 21}
+    - {id: 607, type: Tcell_CD8, centroid: [32.33, 16.73], size: 30}
+    - {id: 608, type: Tcell_CD4, centroid: [53.06, 15.88], size: 16}
+    - {id: 611, type: Myeloid_CD11c, centroid: [0.82, 16.47], size: 17}
+    - {id: 612, type: Endothelial, centroid: [49.0, 15.5], size: 6}
+    - {id: 623, type: Tcell_CD4, centroid: [4.74, 20.65], size: 31}
+    - {id: 624, type: Tcell_CD8, centroid: [12.76, 20.68], size: 25}
+    - {id: 625, type: Endothelial, centroid: [45.62, 19.19], size: 16}
+    - {id: 626, type: Endothelial, centroid: [49.36, 18.71], size: 14}
+    - {id: 628, type: Tcell_CD8, centroid: [21.33, 20.19], size: 21}
+    - {id: 629, type: Tcell_CD4, centroid: [28.47, 20.33], size: 15}
+    - {id: 634, type: Tcell_CD8, centroid: [8.91, 20.36], size: 11}
+    - {id: 635, type: Tcell_CD8, centroid: [17.5, 21.22], size: 18}
+    - {id: 636, type: Tcell_CD4, centroid: [36.24, 20.82], size: 17}
+    - {id: 637, type: Myeloid_CD11c, centroid: [61.0, 20.67], size: 18}
+    - {id: 642, type: Myeloid_CD68, centroid: [32.4, 21.6], size: 15}
+    - {id: 648, type: Tcell_CD4, centroid: [49.22, 22.39], size: 18}
+    - {id: 651, type: Tcell_CD4, centroid: [28.97, 24.97], size: 31}
+    - {id: 652, type: Myeloid_CD11c, centroid: [44.75, 23.85], size: 20}
+    - {id: 657, type: Tcell_CD4, centroid: [39.5, 25.0], size: 16}
+    - {id: 658, type: Imm_other, centroid: [59.22, 26.16], size: 37}
+    - {id: 663, type: Epithelial, centroid: [14.77, 26.18], size: 57}
+    - {id: 664, type: Endothelial, centroid: [35.12, 26.6], size: 25}
+    - {id: 667, type: Epithelial, centroid: [24.14, 28.52], size: 44}
+    - {id: 676, type: Epithelial, centroid: [29.8, 29.53], size: 15}
+    - {id: 677, type: Myeloid_CD11c, centroid: [61.91, 30.32], size: 22}
+    - {id: 684, type: Epithelial, centroid: [6.39, 32.0], size: 38}
+    - {id: 685, type: Imm_other, centroid: [12.22, 32.07], size: 27}
+    - {id: 686, type: Imm_other, centroid: [17.63, 31.7], size: 27}
+    - {id: 687, type: Epithelial, centroid: [48.0, 30.0], size: 9}
+    - {id: 690, type: Epithelial, centroid: [37.84, 32.88], size: 51}
+    - {id: 694, type: Epithelial, centroid: [29.18, 34.2], size: 49}
+    - {id: 701, type: Epithelial, centroid: [46.77, 34.46], size: 39}
+    - {id: 702, type: Epithelial, centroid: [63.93, 34.86], size: 29}
+    - {id: 707, type: Epithelial, centroid: [52.43, 35.86], size: 21}
+    - {id: 708, type: Epithelial, centroid: [57.41, 35.07], size: 27}
+    - {id: 715, type: Epithelial, centroid: [9.27, 36.6], size: 15}
+    - {id: 716, type: Imm_other, centroid: [16.0, 35.8], size: 15}
+    - {id: 717, type: Epithelial, centroid: [35.55, 40.0], size: 38}
+    - {id: 721, type: Epithelial, centroid: [2.26, 37.22], size: 23}
+    - {id: 722, type: Epithelial, centroid: [20.07, 37.8], size: 15}
+    - {id: 723, type: Epithelial, centroid: [40.5, 38.0], size: 18}
+    - {id: 730, type: Imm_other, centroid: [13.23, 40.55], size: 22}
+    - {id: 731, type: Epithelial, centroid: [30.51, 41.6], size: 45}
+    - {id: 737, type: Epithelial, centroid: [8.57, 41.11], size: 35}
+    - {id: 738, type: Imm_other, centroid: [16.5, 39.5], size: 8}
+    - {id: 739, type: Imm_other, centroid: [25.57, 40.38], size: 21}
+    - {id: 740, type: Epithelial, centroid: [44.4, 40.52], size: 25}
+    - {id: 741, type: Epithelial, centroid: [48.35, 40.25], size: 20}
+    - {id: 742, type: Epithelial, centroid: [62.29, 39.68], size: 31}
+    - {id: 749, type: Epithelial, centroid: [3.4, 41.4], size: 15}
+    - {id: 750, type: Epithelial, centroid: [53.46, 41.83], size: 24}
+    - {id: 757, type: Imm_other, centroid: [21.5, 44.0], size: 18}
+    - {id: 758, type: Epithelial, centroid: [60.75, 44.47], size: 36}
+    - {id: 763, type: Epithelial, centroid: [50.52, 45.39], size: 23}
+    - {id: 764, type: Epithelial, centroid: [37.69, 45.08], size: 13}
+    - {id: 765, type: Epithelial, centroid: [44.91, 45.82], size: 22}
+    - {id: 769, type: Epithelial, centroid: [17.87, 47.53], size: 30}
+    - {id: 770, type: Epithelial, centroid: [24.58, 46.79], size: 19}
+    - {id: 771, type: Epithelial, centroid: [55.93, 47.59], size: 29}
+    - {id: 774, type: Epithelial, centroid: [5.65, 48.42], size: 31}
+    - {id: 775, type: Epithelial, centroid: [11.76, 48.89], size: 37}
+    - {id: 776, type: Epithelial, centroid: [33.51, 48.92], size: 39}
+    - {id: 777, type: Epithelial, centroid: [39.75, 47.75], size: 12}
+    - {id: 780, type: Epithelial, centroid: [27.0, 49.89], size: 28}
+    - {id: 784, type: Epithelial, centroid: [44.11, 49.22], size: 9}
+    - {id: 785, type: Epithelial, centroid: [49.79, 50.07], size: 29}
+    - {id: 786, type: Epithelial, centroid: [61.12, 50.36], size: 25}
+    - {id: 796, type: Epithelial, centroid: [22.61, 52.56], size: 18}
+    - {id: 797, type: Epithelial, centroid: [38.94, 52.61], size: 31}
+    - {id: 802, type: Epithelial, centroid: [17.19, 55.19], size: 72}
+    - {id: 803, type: Epithelial, centroid: [52.53, 53.53], size: 15}
+    - {id: 804, type: Epithelial, centroid: [56.36, 51.91], size: 11}
+    - {id: 807, type: Epithelial, centroid: [45.78, 52.56], size: 9}
+    - {id: 810, type: Endothelial, centroid: [8.29, 54.36], size: 14}
+    - {id: 811, type: Epithelial, centroid: [31.24, 57.73], size: 96}
+    - {id: 815, type: Epithelial, centroid: [2.05, 56.55], size: 42}
+    - {id: 816, type: Epithelial, centroid: [44.42, 56.17], size: 24}
+    - {id: 817, type: Epithelial, centroid: [49.0, 55.0], size: 9}
+    - {id: 818, type: Epithelial, centroid: [57.76, 56.59], size: 29}
+    - {id: 819, type: Epithelial, centroid: [63.23, 56.42], size: 31}
+    - {id: 828, type: Epithelial, centroid: [12.11, 59.94], size: 35}
+    - {id: 834, type: Epithelial, centroid: [54.0, 60.77], size: 22}
+    - {id: 840, type: Epithelial, centroid: [42.91, 61.36], size: 11}
+    - {id: 841, type: Epithelial, centroid: [49.33, 63.48], size: 27}
+    - {id: 842, type: Epithelial, centroid: [59.63, 61.84], size: 19}
+    - {id: 843, type: Epithelial, centroid: [63.8, 61.33], size: 15}
+    - {id: 849, type: Imm_other, centroid: [16.64, 63.14], size: 22}
+    - {id: 850, type: Epithelial, centroid: [23.88, 63.64], size: 33}
+    - {id: 860, type: Epithelial, centroid: [54.77, 63.85], size: 13}
