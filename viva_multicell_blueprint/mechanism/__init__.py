@@ -13,6 +13,7 @@ from viva_multicell_blueprint.mechanism.bounded_particles import BoundedParticle
 from viva_multicell_blueprint.mechanism.counts import CellCountStep
 from viva_multicell_blueprint.mechanism.fateful_tissue import FatefulTissueProcess
 from viva_multicell_blueprint.mechanism.tri_coupled import TriCoupledProcess
+from viva_multicell_blueprint.mechanism.divergence_compare import DivergenceCompareProcess
 from viva_multicell_blueprint.mechanism.fateful_consensus import FatefulConsensusProcess
 from viva_multicell_blueprint.mechanism.particle_consensus import ParticleConsensusProcess
 from viva_multicell_blueprint.mechanism.heterotypic_regions import HeterotypicRegionsProcess
@@ -27,6 +28,7 @@ __all__ = [
     "BoundedParticlesProcess",
     "FatefulTissueProcess",
     "TriCoupledProcess",
+    "DivergenceCompareProcess",
     "FatefulConsensusProcess",
     "ParticleConsensusProcess",
     "HeterotypicRegionsProcess",

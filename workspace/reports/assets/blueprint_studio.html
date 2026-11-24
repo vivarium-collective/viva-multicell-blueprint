@@ -37,6 +37,7 @@
   .engine.sel[data-e=vertex]{border-color:var(--vertex);background:color-mix(in srgb,var(--vertex) 10%,transparent)}
   .engine.sel[data-e=munk]{border-color:var(--munk);background:color-mix(in srgb,var(--munk) 10%,transparent)}
   .engine.sel[data-e=tri]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  .engine.sel[data-e=divergence]{border-color:#6d4bb6;background:color-mix(in srgb,#6d4bb6 12%,transparent)}
   .btn-mini{display:inline-block;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;text-decoration:none}
   .btn-mini:hover{border-color:var(--muted)}
   .result{margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--code);font-size:13px}
@@ -192,6 +193,7 @@
       <div class="engine" data-e="vertex" id="eng-vertex">Vertex<small>tyssue (polygon)</small></div>
       <div class="engine" data-e="munk" id="eng-munk">Center-based<small>pymunk (disc)</small></div>
       <div class="engine sel" data-e="tri" id="eng-tri">Tri-coupled<small>one coupled composite: shape·position·area</small></div>
+      <div class="engine" data-e="divergence" id="eng-divergence">Divergence<small>3×2 gif: each paradigm alone vs coupled</small></div>
     </div>
     <p class="hint">Select one or more — each runs on the same blueprint. Stand-alone modules are independent; Tri-coupled runs all three coupled, and Tri-coupled + the Particle subcellular layer runs Smoldyn confined inside the consensus tissue.</p>
 
@@ -222,6 +224,7 @@
 <script>
 const COMPOSITE = "viva_multicell_blueprint.composites.pipeline.blueprint_pipeline";
 const TRI_COMPOSITE = "viva_multicell_blueprint.composites.tri_coupled.tri_coupled";
+const DIV_COMPOSITE = "viva_multicell_blueprint.composites.divergence_compare.divergence_compare";
 const PCONS_COMPOSITE = "viva_multicell_blueprint.composites.particle_consensus.particle_consensus";
 const API = location.pathname.replace(/\/assets\/blueprint_studio\.html$/, "") + "/api";
 const SPA = API.replace(/\/api$/, "");
@@ -851,6 +854,12 @@ function jobFor(eng, overridesBase){
   // Tri-coupled + Smoldyn subcellular IS the particle_consensus composite: Smoldyn
   // molecules confined inside each cell of the consensus tissue. Reached via the two
   // tile selections, not a separate mechanics tile.
+  if(eng==="divergence"){
+    const out = `studio_divergence_${Date.now()}`;
+    return {composite: DIV_COMPOSITE, emit_paths:["cpm_vs_coupled_drift"],
+      overrides:{...overridesBase, overlay_out: out, munk_squish: 0.8},
+      art:{href:`${out}.html`, label:"▶ View divergence (3×2) ↗", dlname:"divergence-compare.html"}};
+  }
   if(eng==="tri" && sub==="particle"){
     const out = `studio_pcons_${Date.now()}`;
     return {composite: PCONS_COMPOSITE, emit_paths:["confined_fraction","n_particles"],
@@ -999,7 +1008,7 @@ async function renderSavedRuns(){
   const head=`<label style="margin-top:22px;display:flex;align-items:baseline;gap:8px"><span>Saved runs <span class="muted" style="font-weight:400">— every Studio run, from the Simulations DB</span></span>`
     + `<button type="button" class="btn-mini" style="margin-left:auto;font-weight:400" onclick="renderSavedRuns()">↻ Refresh</button></label>`;
   if(!stud.length){ host.innerHTML=head+`<p class="hint">No Studio runs recorded yet — they appear here (and in the Simulations DB) as you Run.</p>`; return; }
-  const ENGNAME={cpm:"CPM",vertex:"Vertex",munk:"Center-based",tri:"Tri-coupled"};
+  const ENGNAME={cpm:"CPM",vertex:"Vertex",munk:"Center-based",tri:"Tri-coupled",divergence:"Divergence (3×2)"};
   const SUBNAME={tellurium:"ODE (tellurium)",maboss:"Boolean (MaBoSS)",smoldyn:"Particle (Smoldyn)"};
   const MODELNAME={default:"Sego flu-lung",large:"Sego flu-lung (large)",simple:"Minimal sheet",mixed:"Mixed population",infection:"Infection field"};
   const rows=stud.map(s=>{
