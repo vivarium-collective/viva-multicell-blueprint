@@ -45,7 +45,9 @@
   .saved-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
   .saved-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:13px}
   .saved-when{font-size:11.5px}
-  .saved-links{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .saved-links{margin-left:auto;display:flex;gap:5px;flex-wrap:wrap}
+  .saved-links .btn-mini{padding:4px 8px;font-size:12px;border-radius:6px;white-space:nowrap}
+  .saved-links .btn-mini.danger:hover{border-color:var(--err);color:var(--err)}
   .result.ok{background:var(--accentbg);border-color:var(--accent)}
   .result.err{background:color-mix(in srgb,var(--err) 10%,transparent);border-color:var(--err)}
   .engine small{display:block;color:var(--muted);font-weight:400;margin-top:3px}
@@ -1021,14 +1023,16 @@ async function renderSavedRuns(){
     if(cfg.overlay_out) artHref=`${esc(String(cfg.overlay_out))}.html`;
     else if(cfg.video_out) artHref=`_studio_runs/${esc(String(cfg.video_out))}.html`;
     const dl=`${API}/simulation-run-download?run_id=${encodeURIComponent(rid)}`;
+    const gifName = artHref ? artHref.split("/").pop().replace(/\.html$/,"")+".gif" : "render.gif";
     return `<div class="saved-row">`
       + `<div style="min-width:0;flex:1"><b>${esc(mech)}</b> ${badge}`
       + `<div class="muted saved-when">Subcellular: ${esc(sub)} · Model: ${esc(model)} · ${esc(when)}${durStr?` · ⏱ ${esc(durStr)}`:""}</div></div>`
       + `<span class="saved-links">`
-      + (done&&artHref?`<a class="btn-mini" href="${artHref}" target="_blank" rel="noopener">▶ View ↗</a>`:"")
-      + (done?`<a class="btn-mini" href="${dl}" download>Download ⬇</a>`:"")
-      + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">Results DB ↗</a>`
-      + `<button type="button" class="btn-mini" data-rid="${esc(rid)}" title="Delete this run from the Simulations DB" onclick="_deleteSavedRun(this)">🗑 Delete</button>`
+      + (done&&artHref?`<a class="btn-mini" href="${artHref}" target="_blank" rel="noopener" title="Open the rendered view">▶ View</a>`:"")
+      + (done&&artHref?`<button type="button" class="btn-mini" data-href="${artHref}" data-name="${esc(gifName)}" title="Download the animation (GIF)" onclick="_downloadGif(this)">⬇ GIF</button>`:"")
+      + (done?`<a class="btn-mini" href="${dl}" download title="Download the results data (.db bundle)">⬇ .db</a>`:"")
+      + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener" title="Open this run in the Simulations DB">Sims ↗</a>`
+      + `<button type="button" class="btn-mini danger" data-rid="${esc(rid)}" title="Delete this run from the Simulations DB" onclick="_deleteSavedRun(this)">🗑</button>`
       + `</span></div>`;
   }).join("");
   host.innerHTML=head+`<div class="saved-list">${rows}</div>`;
@@ -1049,6 +1053,23 @@ async function _deleteSavedRun(btn){
   renderSavedRuns();   // re-read the DB — the row is gone
 }
 window._deleteSavedRun = _deleteSavedRun;
+
+// Download the run's animation. The GIF lives as a data: URI inside the rendered
+// artifact HTML (its own "⬇ GIF" link), so fetch that page and extract it.
+async function _downloadGif(btn){
+  const href = btn.dataset.href || ""; if(!href) return;
+  const name = btn.dataset.name || "render.gif";
+  btn.disabled = true; const prev = btn.textContent; btn.textContent = "…";
+  try{
+    const html = await (await fetch(href)).text();
+    const m = html.match(/data:image\/gif;base64,[A-Za-z0-9+/=]+/);
+    if(!m){ alert("This run's render has no GIF."); return; }
+    const a = document.createElement("a"); a.href = m[0]; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }catch(e){ alert("Could not fetch the GIF: " + e); }
+  finally{ btn.disabled = false; btn.textContent = prev; }
+}
+window._downloadGif = _downloadGif;
 
 async function startRun(eng, steps, overridesBase, tpl){
   const el = document.createElement("div"); el.className="result";
