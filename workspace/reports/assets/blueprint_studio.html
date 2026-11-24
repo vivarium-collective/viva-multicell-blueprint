@@ -78,21 +78,21 @@
   .ic-svg{flex:0 0 auto}
   .ic-side{flex:1;min-width:200px}
   .ic-legend{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+  /* editable initial-state canvas */
+  #ic-canvas .ic-cell{cursor:grab}
+  #ic-canvas .ic-cell:hover{stroke:var(--fg);stroke-width:1.3}
+  .ic-tools{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:6px}
+  .ic-tools-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-right:2px}
+  .ic-sw{display:inline-flex;align-items:center;gap:5px;font-size:12px;border:1px solid var(--line);border-radius:7px;
+    padding:3px 8px;background:var(--bg);color:var(--fg);cursor:pointer}
+  .ic-sw .dot{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+  .ic-sw.sel{border-color:var(--accent);background:var(--accentbg);font-weight:600}
+  .ic-sw.ic-erase.sel{border-color:var(--err);background:color-mix(in srgb,var(--err) 10%,transparent)}
+  .ic-edithint{font-size:11.5px;margin-bottom:8px;line-height:1.4}
   .info{font-size:12px;color:var(--muted);background:var(--code);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px}
   .about-prov{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:120px;overflow:auto;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
   .parse-err{color:var(--err);font-size:13px;padding:10px 12px;border:1px solid var(--err);border-radius:8px;background:color-mix(in srgb,var(--err) 8%,transparent)}
   .eq{font-family:ui-monospace,monospace;font-size:12px;background:var(--code);padding:2px 6px;border-radius:4px}
-  /* How-a-step-works flow strip */
-  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:4px 0 16px}
-  .flow-step{display:flex;align-items:center;gap:8px}
-  .flow-node{border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:7px 11px;background:var(--bg);min-width:0}
-  .flow-node b{display:block;font-size:12.5px}
-  .flow-node small{color:var(--muted);font-size:11px}
-  .flow-node[data-k=init]{border-left-color:var(--accent)} .flow-node[data-k=fields]{border-left-color:var(--fieldc)}
-  .flow-node[data-k=rules]{border-left-color:var(--rulec)} .flow-node[data-k=fates]{border-left-color:var(--immunec)}
-  .flow-node[data-k=immune]{border-left-color:var(--immunec)} .flow-node[data-k=ode]{border-left-color:var(--odec)}
-  .flow-node[data-k=mech]{border-left-color:var(--mechc)}
-  .flow-arr{color:var(--muted);padding:0 8px;font-size:16px;align-self:center}
   /* inline editable value inputs */
   .ein{padding:3px 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);
        font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px}
@@ -143,6 +143,7 @@
       <div class="ic-wrap">
         <div class="ic-svg" id="ic-svg"></div>
         <div class="ic-side">
+          <div class="ic-edit" id="ic-edit"></div>
           <div class="ic-legend" id="ic-legend"></div>
           <div id="ic-desc" class="comp-what" style="padding:0"></div>
           <div class="info" id="ic-info"></div>
@@ -152,8 +153,6 @@
 
     <div class="card">
       <label>Model components <span class="muted" style="font-weight:400">— what the blueprint computes each step</span></label>
-      <p class="hint" style="margin-top:0">A blueprint compiles the same mechanism onto any mechanics engine. These are its moving parts; open one to see its parameters. <b>Values in boxes are editable</b> — a change writes straight back into the YAML (the file's comments are preserved).</p>
-      <div id="flow" class="flow"></div>
       <div id="components"></div>
     </div>
   </div>
@@ -380,13 +379,17 @@ function render(text){
   $("#parse-err").style.display="none";
   if(!bp || typeof bp!=="object"){ return; }
   renderInitial(bp);
-  renderFlow(bp);
   renderComponents(bp);
 }
 
 // ---- initial conditions: SVG preview computed from the blueprint ------------
 function cellsFromInitial(bp){
   const is = bp.initial_state||{}; const cells=[];
+  // Explicit per-cell list takes precedence (matches the backend resolver), so an
+  // edited layout round-trips. Each cell is {id,type,centroid:[x,y],size}.
+  if(is.cells && is.cells.length){
+    return is.cells.map(c=>{ const ct=c.centroid||[c.x,c.y]; return {x:+(ct[0]||0), y:+(ct[1]||0), type:c.type, size:(c.size!=null?+c.size:1.0)}; });
+  }
   const emit = (blk, type)=>{
     if(!blk) return;
     const [ox,oy]=blk.origin||[0,0]; const [nx,ny]=blk.shape||[1,1];
@@ -404,58 +407,155 @@ function cellsFromInitial(bp){
   }
   return cells;
 }
+// The live editable initial-state model + the blueprint's original parametric
+// block text (so Reset can revert after edits materialize to an explicit list).
+let ICSTATE = null;
+let TEMPLATE_IS_BLOCK = null;
+
 function renderInitial(bp){
   const d = bp.domain||{}; const ext = d.extent_um||[50,50];
-  const W=ext[0], H=ext[1];
-  const cells = cellsFromInitial(bp);
-  const types = (bp.cell_types||[]).map(t=>t.name);
-  const colors = typeColors(types.concat(cells.map(c=>c.type)).filter((v,i,a)=>a.indexOf(v)===i));
+  const W=+ext[0], H=+ext[1];
+  const cells = cellsFromInitial(bp).map(c=>({x:+c.x, y:+c.y, type:c.type, size:(c.size!=null?+c.size:1.0)}));
+  const declared = (bp.cell_types||[]).map(t=>t.name);
+  const allTypes = declared.concat(cells.map(c=>c.type)).filter((v,i,a)=>a.indexOf(v)===i);
+  const colors = typeColors(allTypes);
   const S=320, pad=8, sc=(S-2*pad)/Math.max(W,H);
-  const r = Math.max(3, Math.min(10, (cells.length>1 ? (sc* (minSpacing(cells)||5) *0.42) : 8)));
-  let svg = `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" role="img" aria-label="initial cell layout">`;
-  svg += `<rect x="${pad}" y="${pad}" width="${S-2*pad}" height="${S-2*pad}" fill="var(--bg)" stroke="var(--line)"/>`;
+  const r = Math.max(3, Math.min(10, (cells.length>1 ? (sc*(minSpacing(cells)||5)*0.42) : 8)));
+  const isExplicit = !!(bp.initial_state && bp.initial_state.cells && bp.initial_state.cells.length);
+  // Stash the parametric original while it is still parametric, so Reset works.
+  if(!isExplicit){ const blk = extractTopBlock($("#bp").value, "initial_state"); if(blk) TEMPLATE_IS_BLOCK = blk; }
+  const prevActive = ICSTATE && ICSTATE.active, prevTool = ICSTATE && ICSTATE.tool;
+  ICSTATE = {cells, types:allTypes, colors, W, H, S, pad, sc, r, isExplicit,
+             active:(prevActive && allTypes.includes(prevActive))?prevActive:(allTypes[0]||"H"),
+             tool:(prevTool==="erase")?"erase":"paint"};
+  icDraw(); icPalette(); icMeta();
+}
+
+function icDraw(){
+  const {cells,colors,S,pad,sc,r}=ICSTATE;
+  let svg = `<svg id="ic-canvas" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" style="touch-action:none;cursor:crosshair" role="img" aria-label="editable initial cell layout">`;
+  svg += `<rect id="ic-bg" x="${pad}" y="${pad}" width="${S-2*pad}" height="${S-2*pad}" fill="var(--bg)" stroke="var(--line)"/>`;
   // y flips so origin is bottom-left (matches the sim's coordinate sense)
-  for(const c of cells){
+  cells.forEach((c,i)=>{
     const cx = pad + c.x*sc, cy = S - pad - c.y*sc;
-    svg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${colors[c.type]||"#999"}" fill-opacity="0.85" stroke="rgba(0,0,0,.25)" stroke-width="0.5"/>`;
-  }
+    svg += `<circle class="ic-cell" data-i="${i}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${colors[c.type]||"#999"}" fill-opacity="0.9" stroke="rgba(0,0,0,.3)" stroke-width="0.6"/>`;
+  });
   svg += `</svg>`;
-  $("#ic-svg").innerHTML = cells.length ? svg : `<div class="muted" style="width:320px;text-align:center;padding:40px 0">No <code>initial_state</code> blocks to preview.</div>`;
-  // legend
+  $("#ic-svg").innerHTML = svg;
+  icWire();
+}
+
+function icWire(){
+  const svg = $("#ic-canvas"); if(!svg) return;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const toDomain=(ev)=>{
+    const rect=svg.getBoundingClientRect();
+    const sx=(ev.clientX-rect.left)*(ICSTATE.S/rect.width);
+    const sy=(ev.clientY-rect.top)*(ICSTATE.S/rect.height);
+    return {x:clamp((sx-ICSTATE.pad)/ICSTATE.sc,0,ICSTATE.W), y:clamp((ICSTATE.S-ICSTATE.pad-sy)/ICSTATE.sc,0,ICSTATE.H)};
+  };
+  let drag=null;
+  svg.addEventListener("pointerdown",(ev)=>{
+    const t=ev.target;
+    if(t.classList && t.classList.contains("ic-cell")){
+      const i=+t.dataset.i;
+      if(ICSTATE.tool==="erase"){ ICSTATE.cells.splice(i,1); icCommit(); return; }
+      drag={i, moved:false, x0:ev.clientX, y0:ev.clientY};
+      try{ svg.setPointerCapture(ev.pointerId); }catch(e){}
+    } else if(ICSTATE.tool!=="erase"){      // click empty → add a cell of the active type
+      const p=toDomain(ev);
+      ICSTATE.cells.push({x:p.x, y:p.y, type:ICSTATE.active, size:1.0});
+      icCommit();
+    }
+  });
+  svg.addEventListener("pointermove",(ev)=>{
+    if(!drag) return;
+    if(Math.abs(ev.clientX-drag.x0)+Math.abs(ev.clientY-drag.y0)>2) drag.moved=true;
+    const p=toDomain(ev), c=ICSTATE.cells[drag.i]; if(!c) return;
+    c.x=p.x; c.y=p.y;
+    const circ=svg.querySelector('.ic-cell[data-i="'+drag.i+'"]');
+    if(circ){ circ.setAttribute("cx",(ICSTATE.pad+c.x*ICSTATE.sc).toFixed(1)); circ.setAttribute("cy",(ICSTATE.S-ICSTATE.pad-c.y*ICSTATE.sc).toFixed(1)); }
+  });
+  const end=()=>{ if(!drag) return; const d=drag; drag=null;
+    if(!d.moved && ICSTATE.tool==="paint"){ const c=ICSTATE.cells[d.i]; if(c) c.type=ICSTATE.active; }
+    icCommit();
+  };
+  svg.addEventListener("pointerup",end);
+  svg.addEventListener("pointercancel",end);
+}
+
+function icPalette(){
+  const {types,colors,active,tool}=ICSTATE;
+  let h=`<div class="ic-tools"><span class="ic-tools-lbl">Add / paint:</span>`;
+  h+=types.map(t=>`<button type="button" class="ic-sw${(t===active&&tool==='paint')?' sel':''}" data-type="${esc(t)}" title="Click the canvas to add a ${esc(t)} cell; click a cell to repaint it ${esc(t)}"><span class="dot" style="background:${colors[t]||'#999'}"></span>${esc(t)}</button>`).join("");
+  h+=`<button type="button" class="ic-sw ic-erase${tool==='erase'?' sel':''}" data-tool="erase" title="Click a cell to remove it">🗑 Erase</button>`;
+  h+=`<button type="button" class="ic-sw" data-tool="reset" title="Revert the layout to the blueprint's original initial_state">↺ Reset</button>`;
+  h+=`</div><div class="ic-edithint muted">Click empty space to <b>add</b> a cell · <b>drag</b> a cell to move it · click a cell to <b>repaint</b> it the active type · <b>Erase</b>, then click, to remove.</div>`;
+  const host=$("#ic-edit"); host.innerHTML=h;
+  host.querySelectorAll('.ic-sw[data-type]').forEach(b=> b.addEventListener("click", ()=>{ ICSTATE.active=b.dataset.type; ICSTATE.tool="paint"; icPalette(); }));
+  const eb=host.querySelector('[data-tool="erase"]'); if(eb) eb.addEventListener("click", ()=>{ ICSTATE.tool = ICSTATE.tool==="erase"?"paint":"erase"; icPalette(); });
+  const rb=host.querySelector('[data-tool="reset"]'); if(rb) rb.addEventListener("click", icReset);
+}
+
+function icMeta(){
+  const {cells,colors,W,H,isExplicit}=ICSTATE;
   const counts={}; cells.forEach(c=>counts[c.type]=(counts[c.type]||0)+1);
   $("#ic-legend").innerHTML = Object.keys(counts).map(t=>
     `<span class="chip"><span class="dot" style="background:${colors[t]||"#999"}"></span>${esc(t)} <span class="muted">· ${counts[t]}</span></span>`).join("");
-  // description
-  const is = bp.initial_state||{};
-  const desc=[];
-  desc.push(`<b>${cells.length}</b> cells placed on a ${esc(W+"×"+H)} µm patch.`);
-  if(is.block) desc.push(`Main block: <code>${esc(is.block.type)}</code> ${esc((is.block.shape||[]).join("×"))} at origin ${esc(JSON.stringify(is.block.origin||[]))}, spacing ${esc(String(is.block.spacing))}.`);
-  if((is.extra_blocks||[]).length) desc.push(`${is.extra_blocks.length} extra block(s).`);
-  if(is.infected_seed) desc.push(`Seeded: <b>${Math.round((is.infected_seed.fraction||0)*100)}%</b> flipped to <code>${esc(is.infected_seed.type)}</code> (seed ${esc(String(is.infected_seed.seed??0))}).`);
-  $("#ic-desc").innerHTML = desc.join(" ");
-  $("#ic-info").innerHTML = "This preview is computed from <code>domain</code> + <code>initial_state</code> directly in your browser — it is the same starting state every engine is handed, before any dynamics run.";
+  $("#ic-desc").innerHTML = `<b>${cells.length}</b> cell${cells.length===1?"":"s"} on a ${esc(W+"×"+H)} µm patch — edit directly on the canvas.`;
+  $("#ic-info").innerHTML = isExplicit
+    ? "Edited layout — written to <code>initial_state.cells</code> in the YAML; the exact starting state every engine is handed when you Run."
+    : "Computed from <code>domain</code> + <code>initial_state</code> in your browser. Edit it (add / move / remove cells) and it is written to <code>initial_state.cells</code> — the same start state every engine runs.";
+}
+
+function icCommit(){
+  ICSTATE.isExplicit = true;
+  icWriteYaml();                 // persist to the #bp YAML (what Run posts) — setting .value doesn't re-fire input
+  icDraw(); icPalette(); icMeta();
+}
+
+function icSerializeCells(cells){
+  const rnd=(v)=>{ const n=Math.round(v*100)/100; return String(n); };
+  const rows = cells.map((c,i)=>`    - {id: ${i+1}, type: ${c.type}, centroid: [${rnd(c.x)}, ${rnd(c.y)}], size: ${c.size!=null?c.size:1.0}}`);
+  return "initial_state:\n  cells:\n" + rows.join("\n") + "\n";
+}
+function icWriteYaml(){ $("#bp").value = replaceTopBlock($("#bp").value, "initial_state", icSerializeCells(ICSTATE.cells)); }
+function icReset(){
+  if(!TEMPLATE_IS_BLOCK) return;
+  $("#bp").value = replaceTopBlock($("#bp").value, "initial_state", TEMPLATE_IS_BLOCK);
+  render($("#bp").value);
+}
+
+// Replace / extract a top-level YAML block (``key:`` + its indented body), leaving
+// everything else — and its comments — untouched.
+function extractTopBlock(text, key){
+  const lines=text.split("\n"); const re=new RegExp("^"+key+":"); const out=[];
+  for(let i=0;i<lines.length;i++){
+    if(re.test(lines[i])){
+      out.push(lines[i]); i++;
+      while(i<lines.length && (lines[i]==="" || /^\s/.test(lines[i]))){ out.push(lines[i]); i++; }
+      while(out.length && out[out.length-1]==="") out.pop();
+      return out.join("\n")+"\n";
+    }
+  }
+  return null;
+}
+function replaceTopBlock(text, key, newBlock){
+  const lines=text.split("\n"); const re=new RegExp("^"+key+":"); const out=[]; let i=0, done=false;
+  while(i<lines.length){
+    if(!done && re.test(lines[i])){
+      i++;                                               // skip the key line
+      while(i<lines.length && (lines[i]==="" || /^\s/.test(lines[i]))) i++;   // skip its body
+      out.push(...newBlock.replace(/\n+$/,"").split("\n"));
+      done=true;
+    } else { out.push(lines[i]); i++; }
+  }
+  if(!done){ if(out.length && out[out.length-1].trim()!=="") out.push(""); out.push(...newBlock.replace(/\n+$/,"").split("\n")); }
+  return out.join("\n");
 }
 function minSpacing(cells){ return cells.reduce((m,c)=>c.spacing?Math.min(m,c.spacing):m, 5); }
 
 // ---- model components --------------------------------------------------------
-// "How a step works" — a mechanism-flow strip derived from what the blueprint has.
-function renderFlow(bp){
-  const n=[];
-  const nCells = cellsFromInitial(bp).length;
-  n.push({k:"init", t:"Initial state", s:`${nCells} cells placed`});
-  if((bp.fields||[]).length) n.push({k:"fields", t:"Fields diffuse", s:bp.fields.map(f=>f.name).join(", ")});
-  if((bp.rules||[]).length){
-    n.push({k:"rules", t:"Rules fire", s:`${bp.rules.length} rate expr${bp.rules.length===1?"":"s"}`});
-    n.push({k:"fates", t:"Cell fates change", s:"transitions · death"});
-  }
-  if(bp.systemic_ode) n.push({k:"ode", t:"Systemic ODE", s:"well-mixed compartment"});
-  if(bp.immune) n.push({k:"immune", t:"Immune recruited", s:"onto the patch"});
-  n.push({k:"mech", t:"Mechanics moves cells", s:"CPM · vertex · center-based"});
-  const strip = n.map((x,i)=>`<div class="flow-step">${i>0?'<span class="flow-arr">→</span>':''}`
-    + `<div class="flow-node" data-k="${x.k}"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div></div>`).join("");
-  $("#flow").innerHTML = `<div style="width:100%;color:var(--muted);font-size:12px;margin-bottom:8px">How one coupled step runs — the same mechanism on every engine:</div>` + strip;
-}
-
 function comp(k, tag, title, what, countTxt, bodyHtml, open){
   return `<details class="comp" data-k="${k}"${open?" open":""}>`
     + `<summary><span class="comp-title">${esc(title)}</span><span class="comp-tag">${esc(tag)}</span>`
