@@ -49,7 +49,8 @@ variants:
   description: the published reference configuration (single baseline run)
 readouts:
 - name: consensus_spread
-  description: mean per-cell max distance between the three backends' centroids (lower = tighter consensus)
+  description: mean per-cell max distance between the three backends' centroids (lower = tighter 
+    consensus)
   store_path: consensus_spread
   units: um
   status: measured
@@ -139,7 +140,8 @@ runs:
       detail: 1.698 <= 6.0
       axis:
         id: three-backends-stay-coupled
-        label: "The three backends track one cell set: the max consensus spread stays within 6um, so CPM/vertex/munk never diverge into separate tissues.\n"
+        label: "The three backends track one cell set: the max consensus spread stays within 6um, so CPM/vertex/munk
+          never diverge into separate tissues.\n"
         verdict: within_tol
         value: 1.698095
         meter: 0.8584920833333334
@@ -198,3 +200,5 @@ pipeline_gate:
     blocked_by: []
     evaluated_by: code
     diverges_from_authored: false
+claim: |
+  Three mechanics paradigms — Cellular Potts (voxel), vertex (polygon) and center-based (disc) — can simulate ONE shared cell set at once, coupled into a single consensus in which vertex owns each cell's shape, munk owns its position and CPM owns its area, so the three backends stay within a few micrometres of each other rather than diverging into separate tissues.

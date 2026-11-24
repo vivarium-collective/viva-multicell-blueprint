@@ -10,7 +10,8 @@ gate_status: pending
 execution_status: planned
 verdict:
 design_status: drafted
-title: 'Particles in a consensus tissue: Smoldyn molecules bounded by a boundary three tissue simulators agree on'
+title: 'Particles in a consensus tissue: Smoldyn molecules bounded by a boundary three tissue simulators
+  agree on'
 kind: confirmatory
 confidence: Accepted
 investigation: composition-atlas
@@ -129,7 +130,8 @@ visualizations:
 - name: particles-in-consensus — consensus flipbook
   address: html:particles-in-consensus.html
   config:
-    title: 'Particles in a consensus tissue: Smoldyn molecules bounded by a boundary three tissue simulators agree on'
+    title: 'Particles in a consensus tissue: Smoldyn molecules bounded by a boundary three tissue simulators
+      agree on'
 runs:
 - name: baseline
   status: completed
@@ -208,3 +210,5 @@ pipeline_gate:
     blocked_by: []
     evaluated_by: code
     diverges_from_authored: false
+claim: |
+  A Smoldyn particle sim (A+B<->C) can be confined inside each cell of a tri-coupled consensus tissue, bounded by a boundary three tissue simulators agree on — vertex SHAPE at the munk-consensus POSITION, sized by the CPM AREA — so spatially-resolved intracellular chemistry runs inside a multi-paradigm tissue with the molecules staying confined to their cell.

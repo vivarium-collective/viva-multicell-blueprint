@@ -150,7 +150,8 @@ runs:
       detail: 16 >= 16.0
       axis:
         id: both-tissues-coexist
-        label: "Both compartments persist together (>=16 cells: the vertex epithelium and the munk mesenchyme coexist in one domain).\n"
+        label: "Both compartments persist together (>=16 cells: the vertex epithelium and the munk mesenchyme
+          coexist in one domain).\n"
         verdict: within_tol
         value: 16.0
         meter: 0.5
@@ -178,7 +179,8 @@ runs:
       detail: 3 <= 4.0
       axis:
         id: interface-holds
-        label: "The interface functions as a boundary: at most a few mesenchyme cells breach it per step before being reflected, so the mesenchyme does not flood through the epithelium.\n"
+        label: "The interface functions as a boundary: at most a few mesenchyme cells breach it per step
+          before being reflected, so the mesenchyme does not flood through the epithelium.\n"
         verdict: within_tol
         value: 3.0
         meter: 0.625
@@ -209,3 +211,5 @@ pipeline_gate:
     blocked_by: []
     evaluated_by: code
     diverges_from_authored: false
+claim: |
+  One tissue can be composed of two compartments simulated by DIFFERENT mechanics — a vertex epithelium sitting on a center-based munk mesenchyme — coupled at a reflective interface where the epithelium's basal edge is a floor the mesenchyme presses up against but cannot cross, so two tissue types of different physics coexist in one composite the way organs layer epithelium on stroma.
