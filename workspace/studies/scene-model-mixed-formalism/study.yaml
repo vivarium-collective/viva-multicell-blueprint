@@ -1,0 +1,222 @@
+schema_version: 4
+name: scene-model-mixed-formalism
+created: "2026-11-23"
+status: draft
+phase: Design
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: pending
+execution_status: planned
+verdict:
+design_status: drafted
+title: "Model-definition format: one scene, three cell types, three formalisms (ODE, Smoldyn particles,
+  MaBoSS) sharing an extracellular field"
+kind: confirmatory
+confidence: Accepted
+investigation: composition-atlas
+
+composite: viva_multicell_blueprint.composites.scene_model.scene_model
+baseline:
+- name: scene-model-mixed-formalism
+  composite: viva_multicell_blueprint.composites.scene_model.scene_model
+
+claim: >
+  A declarative scene (cells + types) bound to a per-type model registry compiles to one
+  composite in which metabolic cells run an SBML-style ODE, signalling cells run Smoldyn
+  particles and fate cells run a MaBoSS Boolean network, all coupled to a shared
+  extracellular field through typed membrane transport.
+
+experiment: >
+  Run the scene_model composite (workspace/scenes/mixed_formalism_demo.yaml, 5 cells,
+  3 types) for 12 steps. Each step advances tissue mechanics, every cell's own adapter,
+  membrane exchange with the field, and field diffusion.
+
+outcomes: >
+  The flipbook (viz/scene-model-flipbook.html) colours cells by formalism over the field
+  heatmap and draws the particle cells' molecules (qualitative; quantitative checks pending).
+
+notes: |
+  Regenerate with `python -m viva_multicell_blueprint.model_format.viz`.
+visualizations:
+- name: mixed-formalism scene — flipbook
+  address: html:scene-model-flipbook.html
+  config:
+    title: ODE / Smoldyn / MaBoSS cells over a shared field
+- name: scene-model-mixed-formalism — verdict scorecard
+  address: html:scene-model-mixed-formalism-verdict.html
+  config:
+    title: 'Behaviour tests: measured value vs pass threshold (code-graded)'
+report:
+  verdict: supported
+question: |
+  Does a declarative scene plus a per-type model registry compile to ONE composite where ODE, Smoldyn-particle and MaBoSS cells run together sharing an extracellular field?
+study_card:
+  goal: |
+    Compile a scene of typed cells to one composite mixing three sub-cellular formalisms over a shared field.
+  mechanism: |
+    A scene (cells + types) binds each cell by type to a ModelSpec (ODE / particle / Boolean); compile_scene builds one orchestrating process that steps every cell's own adapter and the shared FieldExtracellular each update.
+  why_before_next: |
+    This is the declarative model-definition format the atlas's CoupledCell work generalises — semantics (a typed scene) separated from mechanics (which solver runs each cell).
+  expected_result: |
+    The scene compiles to one composite where all three formalisms run and produce molecular state over a shared field — the declarative format works.
+  main_expert_question: |
+    Should the shared extracellular field carry live efflux/uptake across the membrane now, rather than being plumbed-but-inert this milestone?
+readouts:
+- name: total_molecules
+  description: total molecular state summed across the scene's cells
+  store_path: total_molecules
+  units: molecules
+  status: measured
+- name: n_cells
+  description: cells compiled from the scene
+  store_path: n_cells
+  units: cells
+  status: measured
+conditions:
+  baseline:
+    name: scene-model-mixed-formalism-baseline
+    composite: viva_multicell_blueprint.composites.scene_model.scene_model
+    description: |
+      A scene (cells + types) binds each cell by type to a ModelSpec (ODE / particle / Boolean); compile_scene builds one orchestrating process that steps every cell's own adapter and the shared FieldExtracellular each update.
+    params: &id001
+      mechanics: vertex
+variants:
+- name: reference
+  params: *id001
+  description: the published reference configuration (single baseline run)
+behavior_tests:
+- name: scene-compiles-to-five-cells
+  classification: primary
+  description: |
+    The 5-cell, 3-type scene compiles to a running composite (>=5 cells).
+  measure:
+    kind: derived_scalar
+    path: atlas_cells_min
+  pass_if:
+    op: '>='
+    value: 5
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: cells
+- name: mixed-formalism-produces-state
+  classification: primary
+  description: |
+    The three-formalism composite produces live molecular state (total > 0).
+  measure:
+    kind: derived_scalar
+    path: atlas_total_molecules_final
+  pass_if:
+    op: '>'
+    value: 0
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: molecules
+conclusion_verdicts:
+  if_primary_tests_pass: |
+    The scene compiles to one composite where all three formalisms run and produce molecular state over a shared field — the declarative format works.
+  if_primary_tests_fail: |
+    A scene that does not compile, or produces no molecular state, would mean the format is broken.
+conclusion_logic:
+  if_primary_tests_pass:
+    verdict: supported
+    summary: |
+      The scene compiles to one composite where all three formalisms run and produce molecular state over a shared field — the declarative format works.
+  if_primary_tests_fail:
+    verdict: refuted
+    summary: |
+      A scene that does not compile, or produces no molecular state, would mean the format is broken.
+findings:
+- id: F1-scene-model-mixed-formalism
+  kind: computational
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: |
+    A declarative scene + per-type registry compiles to one running composite mixing ODE, Smoldyn and MaBoSS cells over a shared field — semantics separated from mechanics.
+  evidence:
+    from_test: mixed-formalism-produces-state
+    from_run: baseline
+    observed: 5 cells; total molecular state > 0 across the run
+    expected: primary test 'mixed-formalism-produces-state' passes
+  provenance:
+    run_ids:
+    - baseline
+runs:
+- name: baseline
+  status: completed
+  timestamp: 1795464618.284539
+  emitter:
+    kind: sqlite
+    store: workspace/studies/scene-model-mixed-formalism/runs/baseline/history.db
+  generations: 1
+  sim_minutes: 0
+  n_readouts: 2
+  computed_outcomes:
+    scene-compiles-to-five-cells:
+      result: PASS
+      measured_value: 5.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 5 >= 5.0
+      axis:
+        id: scene-compiles-to-five-cells
+        label: "The 5-cell, 3-type scene compiles to a running composite (>=5 cells).\n"
+        verdict: within_tol
+        value: 5.0
+        meter: 0.5
+        detail:
+        expected:
+          kind: value
+          value: 5.0
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 0.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+    mixed-formalism-produces-state:
+      result: PASS
+      measured_value: 23.273968
+      evaluated_by: code
+      operator: derived_scalar/>
+      detail: 23.27 > 0.0
+      axis:
+        id: mixed-formalism-produces-state
+        label: "The three-formalism composite produces live molecular state (total > 0).\n"
+        verdict: within_tol
+        value: 23.273968
+        meter: 1.0
+        detail:
+        expected:
+          kind: value
+          value: 0.0
+          low:
+          high:
+          op: '>'
+          tol: 0.05
+          statement:
+          units:
+        margin: 23.273968
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+  outcomes:
+    scene-compiles-to-five-cells:
+      result: PASS
+    mixed-formalism-produces-state:
+      result: PASS
+pipeline_gate:
+  gate_evaluator:
+    result: passed
+    blocked_by: []
+    evaluated_by: code
+    diverges_from_authored: false

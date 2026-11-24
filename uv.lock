@@ -1835,6 +1835,9 @@ cli = [
 dev = [
     { name = "pytest" },
 ]
+particles = [
+    { name = "smoldyn" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -1855,6 +1858,7 @@ requires-dist = [
     { name = "rich", marker = "extra == 'cli'" },
     { name = "scikit-image" },
     { name = "scipy" },
+    { name = "smoldyn", marker = "extra == 'particles'" },
     { name = "typer", marker = "extra == 'cli'" },
     { name = "tyssue", git = "https://github.com/vivarium-collective/vivatyssue.git" },
     { name = "viva-cpm", git = "https://github.com/vivarium-collective/viva-cpm.git?branch=main" },
@@ -1864,7 +1868,7 @@ requires-dist = [
     { name = "vivarium-workbench", git = "https://github.com/vivarium-collective/vivarium-workbench.git?branch=main" },
     { name = "zarrs", specifier = ">=0.2" },
 ]
-provides-extras = ["dev", "cli"]
+provides-extras = ["dev", "cli", "particles"]
 
 [[package]]
 name = "narwhals"
@@ -3554,6 +3558,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "smoldyn"
+version = "2.76"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a1/ac/cf525e7164f412e18defece9552112f4e7217f4c1af1296a4ab0d0560243/smoldyn-2.76-py3-none-any.whl", hash = "sha256:0a2960187c0c089414e956a85afd0942db4ee9785cdab7295e6f675498d3dc88", size = 1762508, upload-time = "2026-10-22T02:56:45.25Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/76/311f70d5b01b2c70ebf9924f188c666fb6343b885c5107c329c6650afb60/smoldyn-2.76-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:c268584a3a01909e700c44a1b3567a6aa7616cc1488be071856f1326a11302ec", size = 2106156, upload-time = "2026-10-22T02:54:30.941Z" },
 ]
 
 [[package]]

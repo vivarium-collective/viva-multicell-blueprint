@@ -7,7 +7,7 @@
 # and workspace CI flags it (scripts/check-workflow-freshness.py). Refresh by
 # re-scaffolding, or by copying the current source from
 #   vivarium-collective/viva-template/template/.github/workflows/<template>
-# template: workspace-ci.yml.j2
+# template: workspace-ci.yml
 # sha256: fe8c8f03b54507d76509e9c29e8d6e98ff5d35458278b85bb275df437162ede6
 # <<< viva-template-provenance <<<
 

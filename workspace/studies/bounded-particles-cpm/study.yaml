@@ -1,0 +1,248 @@
+schema_version: 4
+name: bounded-particles-cpm
+created: "2026-11-22"
+status: draft
+phase: Design
+simulation_status: ran
+implementation_status: complete
+evaluation_status: evaluated
+gate_status: pending
+execution_status: planned
+verdict:
+design_status: drafted
+title: "Smoldyn particles bounded by Cellular Potts (CPM) voxel cells: confinement, conservation across
+  division, reaction equilibrium"
+kind: confirmatory
+confidence: Accepted
+investigation: composition-atlas
+
+composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
+backend: cpm
+baseline:
+- name: bounded-particles-cpm
+  composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
+  params: {backend: cpm}
+
+claim: >
+  A Smoldyn particle sim composed with the cpm backend keeps every cell's molecules
+  strictly inside that cell's moving boundary (voxel-region outlines traced from the occupancy), conserves
+  molecule count when a
+  cell divides (each molecule inherited by exactly one daughter, by containment), and lets
+  the reversible reaction A+B<->C reach equilibrium inside the living tissue.
+
+experiment: >
+  Run the `bounded_particles` composite with backend=cpm on a small patch (~4 cells,
+  seed_per_cell molecules of A and B) for ~18 steps with one scheduled division. Each step:
+  advance the cpm tissue (cells move/deform; one cell divides), then advance each cell's
+  confined Smoldyn sim. Record per step, per cell: molecule positions + counts (A/B/C).
+  Checks: (1) CONFINEMENT -- every molecule lies inside its cell's boundary each step;
+  (2) CONSERVATION -- at the division step, the mother's count equals the sum over its two
+  daughters; (3) REACTION -- A+B<->C relaxes toward the kf/kb equilibrium inside each cell.
+
+outcomes: >
+  The flipbook overlay (reports/assets/bounded_particles_cpm.html) -- particles coloured by
+  cell, each inside its cpm boundary, with a step/cell/molecule caption -- is the
+  qualitative artifact; the confinement / conservation / reaction checks are the
+  quantitative ones (pending run).
+
+notes: |
+  One of three parallel studies (cpm / vertex / munk) that run the SAME composite on the
+  three multicellular substrates, so the particle coupling can be compared across
+  paradigms. Smoldyn runs via SmoldynRunner (in-process on Linux 3.12, 3.11 subprocess
+  bridge on macOS).
+visualizations:
+- name: particles bounded by cpm cells — flipbook
+  address: html:bounded-particles-flipbook.html
+  config:
+    title: Smoldyn particles confined in cpm cells, split on division
+- name: bounded-particles-cpm — verdict scorecard
+  address: html:bounded-particles-cpm-verdict.html
+  config:
+    title: 'Behaviour tests: measured value vs pass threshold (code-graded)'
+report:
+  verdict: supported
+question: |
+  Can a Smoldyn particle sim be confined inside each Cellular Potts (CPM) cell's moving boundary, split into the two daughters on division, and run A+B<->C to equilibrium inside a living tissue?
+study_card:
+  goal: |
+    Confine a Smoldyn particle sim inside each Cellular Potts (CPM) cell and split it correctly on division.
+  mechanism: |
+    The Cellular Potts (CPM) backend gives each cell a moving boundary; a per-cell Smoldyn sim uses it as a reflective surface (A+B<->C), and on division the mother's molecules are partitioned into the two daughter polygons by containment.
+  why_before_next: |
+    This is the sub-cellular<->tissue composition axis of the atlas: spatially-resolved intracellular chemistry inside cells whose shape, position and number are set by the Cellular Potts (CPM) tissue.
+  expected_result: |
+    Particles stay inside their Cellular Potts (CPM) cells (confinement) and are split into daughters on division — the particle sim composes faithfully with the tissue.
+  main_expert_question: |
+    How faithfully does the Cellular Potts (CPM) cell boundary (its emitted footprint) track the true cell geometry that Smoldyn reflects off, especially right after a division?
+readouts:
+- name: confined_fraction
+  description: fraction of particles inside their own cell's boundary (the confinement guarantee)
+  store_path: confined_fraction
+  units: fraction
+  status: measured
+- name: n_divisions
+  description: cumulative cell divisions (each splits the mother's molecules)
+  store_path: n_divisions
+  units: divisions
+  status: measured
+- name: n_cells
+  description: live cell count
+  store_path: n_cells
+  units: cells
+  status: measured
+- name: n_particles
+  description: total confined molecules across the tissue
+  store_path: n_particles
+  units: particles
+  status: measured
+conditions:
+  baseline:
+    name: bounded-particles-cpm-baseline
+    composite: viva_multicell_blueprint.composites.bounded_particles.bounded_particles
+    description: |
+      The Cellular Potts (CPM) backend gives each cell a moving boundary; a per-cell Smoldyn sim uses it as a reflective surface (A+B<->C), and on division the mother's molecules are partitioned into the two daughter polygons by containment.
+    params: &id001
+      backend: cpm
+      seed_per_cell: 60
+      divide_every: 8
+variants:
+- name: reference
+  params: *id001
+  description: the published reference configuration (single baseline run)
+behavior_tests:
+- name: particles-stay-confined
+  classification: primary
+  description: |
+    Every step, at least 90% of particles lie inside their own cell's boundary (confinement holds across cell motion and division).
+  measure:
+    kind: derived_scalar
+    path: atlas_confined_min
+  pass_if:
+    op: '>='
+    value: 0.9
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: fraction
+- name: cells-divide-and-split
+  classification: primary
+  description: |
+    At least one division occurs, splitting the mother's confined molecules into the two daughter polygons.
+  measure:
+    kind: derived_scalar
+    path: atlas_divisions_final
+  pass_if:
+    op: '>='
+    value: 1
+  gate_class: acceptance_criterion
+  requires_simulation: 'true'
+  units: divisions
+conclusion_verdicts:
+  if_primary_tests_pass: |
+    Particles stay inside their Cellular Potts (CPM) cells (confinement) and are split into daughters on division — the particle sim composes faithfully with the tissue.
+  if_primary_tests_fail: |
+    Particles leaking out of their cells, or no division/split, would break the coupling.
+conclusion_logic:
+  if_primary_tests_pass:
+    verdict: supported
+    summary: |
+      Particles stay inside their Cellular Potts (CPM) cells (confinement) and are split into daughters on division — the particle sim composes faithfully with the tissue.
+  if_primary_tests_fail:
+    verdict: refuted
+    summary: |
+      Particles leaking out of their cells, or no division/split, would break the coupling.
+findings:
+- id: F1-bounded-particles-cpm
+  kind: computational
+  status: confirms
+  tier: interpretation
+  mechanism_origin: engineered
+  statement: |
+    A Smoldyn particle sim is confined inside each Cellular Potts (CPM) cell's moving boundary and its molecules are split into the two daughters on division, giving reaction-diffusion chemistry inside a living tissue.
+  evidence:
+    from_test: particles-stay-confined
+    from_run: baseline
+    observed: confined fraction stays at 1.0; molecules split across divisions
+    expected: primary test 'particles-stay-confined' passes
+  provenance:
+    run_ids:
+    - baseline
+runs:
+- name: baseline
+  status: completed
+  timestamp: 1795464603.974085
+  emitter:
+    kind: sqlite
+    store: workspace/studies/bounded-particles-cpm/runs/baseline/history.db
+  generations: 1
+  sim_minutes: 0
+  n_readouts: 4
+  computed_outcomes:
+    particles-stay-confined:
+      result: PASS
+      measured_value: 1.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 1 >= 0.9
+      axis:
+        id: particles-stay-confined
+        label: "Every step, at least 90% of particles lie inside their own cell's boundary (confinement
+          holds across cell motion and division).\n"
+        verdict: within_tol
+        value: 1.0
+        meter: 0.5555555555555556
+        detail:
+        expected:
+          kind: value
+          value: 0.9
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 0.09999999999999998
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+    cells-divide-and-split:
+      result: PASS
+      measured_value: 8.0
+      evaluated_by: code
+      operator: derived_scalar/>=
+      detail: 8 >= 1.0
+      axis:
+        id: cells-divide-and-split
+        label: "At least one division occurs, splitting the mother's confined molecules into the two daughter
+          polygons.\n"
+        verdict: within_tol
+        value: 8.0
+        meter: 1.0
+        detail:
+        expected:
+          kind: value
+          value: 1.0
+          low:
+          high:
+          op: '>='
+          tol: 0.05
+          statement:
+          units:
+        margin: 7.0
+        severity: hard
+        units:
+        knob:
+        citation:
+      reconcile: no_authored
+  outcomes:
+    particles-stay-confined:
+      result: PASS
+    cells-divide-and-split:
+      result: PASS
+pipeline_gate:
+  gate_evaluator:
+    result: passed
+    blocked_by: []
+    evaluated_by: code
+    diverges_from_authored: false

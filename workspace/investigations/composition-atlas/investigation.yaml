@@ -1,0 +1,198 @@
+schema_version: 2
+name: composition-atlas
+title: "A composition atlas: building cell and tissue models by coupling simulators in every direction"
+created: "2026-11-23"
+status: running
+lead: eran
+
+question: >
+  This workspace has three tissue-scale simulators (Cellular Potts, vertex, center-based)
+  and three sub-cellular simulators (SBML-ODE, Smoldyn particles, MaBoSS Boolean). How many
+  genuinely different models can we build by COMPOSING them — coupling sub-cellular
+  simulators to each other inside one cell, coupling sub-cellular to tissue, and coupling
+  all scales at once — and what does each composition let us model that no single simulator
+  can alone?
+
+hypothesis: >
+  A model's SEMANTICS (what chemistry/logic it computes) are separable from its MECHANICS
+  (which solver runs it), at every scale. If that is true, the same few simulators compose
+  in many directions through small, explicit coupling contracts: a sub-cellular model is an
+  adapter with a uniform interface, so several can run inside one cell coupled by typed
+  rules (a product threshold pins a Boolean input; a particle count sets an ODE rate; a
+  Boolean output gates a reaction); a cell is itself a coupled composite of such sub-models;
+  and a tissue of these cells couples the sub-cellular scale back to mechanics — a cell's own
+  metabolism→fate chain can even decide when the tissue divides. The atlas is the worked
+  catalogue of those compositions, each a runnable composite with a visualization.
+
+description: |
+  This investigation is a curated SHOWCASE of composition across modelling paradigms. The
+  unifying idea is the **semantics⊥mechanics split**: a model is written as semantics (a
+  reaction network, a Boolean logic, a scene of typed cells) and compiled onto mechanics
+  (an ODE integrator, a particle engine, a Boolean simulator, a tissue backend). Because the
+  split recurs at every scale, the same simulators compose in many creative directions.
+
+  **The CoupledCell foundation.** A new adapter,
+  `viva_multicell_blueprint.model_format.adapters.coupled.CoupledCell`, makes a cell whose
+  intracellular model is *itself a coupled composite* of several sub-models — each its own
+  formalism — wired by explicit coupling rules:
+    * **mode A** — a source species crossing a threshold pins a target Boolean input;
+    * **mode B** — a source species count sets a target ODE rate constant (live roadrunner);
+    * **mode C** — a source Boolean node, when high, resets a target sub-model.
+  `CoupledCell` is itself an `IntracellularAdapter`, so it drops transparently into the
+  per-cell slot of the scene compiler — the tissue-scale composition, recursing one scale down.
+
+  **The atlas (studies).**
+    1. `coupled-fate-oscillator` — ODE metabolism ↔ MaBoSS fate (modes A+C): C builds → pins
+       the fate input → `divide` fires → division resets the metabolism → repeat. Two
+       formalisms, one cell, a metabolism↔fate feedback oscillator.
+    2. `coupled-particle-catalysis` — a Smoldyn particle population catalyses an ODE (mode B):
+       the live particle C count sets the ODE's rate constant, so the ODE product accelerates
+       as the particle population builds.
+    3. `coupled-triple-cell` — all three formalisms AND all three modes in one cell: particles
+       catalyse the metabolism, the metabolite pins the fate input, the fate output resets the
+       metabolism. Particles → metabolism → fate → division, in a single cell.
+    4. `fateful-tissue` — the full-stack crown: a dividing tyssue where each cell runs confined
+       Smoldyn particles (split on division) AND an ODE→MaBoSS fate chain, and the fate output
+       DRIVES the tissue division. Cells grow as they metabolise, divide when their own fate
+       fires, and daughters reset and regrow — biology decides when the tissue divides.
+
+  **Companion axes (cross-links).** Two more composition axes are developed in sibling
+  investigations and complete the atlas:
+    * sub-cellular ⟷ tissue (particles bounded by living cells, split on division) is the
+      `particle-multicell-composition` investigation (the `bounded-particles-{cpm,vertex,munk}`
+      studies) and the `scene-model-mixed-formalism` study;
+    * tissue ⟷ tissue (CPM, vertex and center-based coupled into one consensus — vertex owns
+      shape, munk owns position, CPM owns area) is the `tri_coupled` composite and its
+      investigation.
+
+at_a_glance:
+- study: coupled-fate-oscillator
+  role: >
+    Two formalisms, one cell. An ODE metabolism and a MaBoSS fate network coupled both
+    ways (A+C) form a metabolism↔fate feedback oscillator.
+- study: coupled-particle-catalysis
+  role: >
+    A Smoldyn particle population catalyses an ODE (mode B) — the live particle count sets
+    the ODE rate, so the product accelerates as the population builds.
+- study: coupled-triple-cell
+  role: >
+    All three sub-cellular formalisms and all three coupling modes in one cell: particles
+    catalyse the metabolism, the metabolite pins the fate, the fate resets the metabolism.
+- study: fateful-tissue
+  role: >
+    The crown — a dividing tyssue whose divisions are decided by each cell's own
+    metabolism→fate chain, with confined particles that split on division.
+
+- study: bounded-particles-vertex
+  role: |
+    Sub-cellular <-> tissue: a Smoldyn particle sim confined inside each moving tyssue cell (reflective boundary, A+B<->C), split into the daughters on division.
+- study: scene-model-mixed-formalism
+  role: |
+    The declarative model-definition format: an imaging-style scene of typed cells compiles to one composite where ODE, Smoldyn-particle and MaBoSS cells share an extracellular field.
+- study: tri-coupled-consensus
+  role: |
+    Tissue <-> tissue: Cellular Potts, vertex and center-based mechanics run ONE shared cell set coupled into a consensus (vertex shape, munk position, CPM area).
+- study: fateful-consensus
+  role: |
+    The grand unification: the tri-coupled consensus tissue where each cell's CPM area drives an ODE metabolism -> MaBoSS fate -- three tissue + two sub-cellular simulators, one composite.
+- study: particles-in-consensus
+  role: |
+    Particle <-> multi-tissue: a Smoldyn sim confined inside each cell of the tri-coupled consensus tissue -- molecules bounded by a boundary three tissue simulators agree on (vertex shape, munk position, CPM area).
+- study: heterotypic-regions
+  role: |
+    Tissue type <-> tissue type: a vertex epithelium sitting on a munk mesenchyme, coupled at a reflective interface -- two tissue types, two physics, the way organs layer epithelium on stroma.
+executive:
+  what_is_this: >
+    A curated showcase of composition across modelling paradigms, built on the
+    semantics⊥mechanics split (a model's chemistry/logic is separable from the solver that
+    runs it, and the split recurs at every scale). The CoupledCell adapter makes a cell whose
+    intracellular model is itself a coupled composite of sub-models — ODE, particle and
+    Boolean — wired by explicit coupling rules (mode A: a product threshold pins a Boolean
+    input; mode B: a particle count sets an ODE rate; mode C: a Boolean output resets a
+    reaction). Four composites exercise these: a metabolism↔fate oscillator, a particle→ODE
+    catalysis, an all-three-formalisms cell, and the full-stack fateful tissue where fate
+    drives division.
+  verdict: >
+    All four compositions run end-to-end against the real engines (tellurium, MaBoSS,
+    Smoldyn) and each shows the claimed behaviour: the oscillator holds a stable period-3
+    metabolism↔fate cycle; the catalysis product accelerates as the particle population
+    builds; the triple cell runs all three formalisms and all three modes at once; and the
+    fateful tissue grows sustainably (4→~26 cells) with every division decided by a cell's own
+    fate network and particle counts conserved across each split. Each claim is backed by a
+    committed behaviour test that is machine-graded against a registered run, so every study
+    carries an EARNED 'supported' verdict (not a narrated one); the remaining rigor step is
+    pre-registered acceptance bands and holdouts, noted in the limitations.
+  verdict_detail: >
+    Each composition's claim is pinned by a committed behaviour test graded by code against a
+    persisted run (SQLiteEmitter store under the study's runs/, scored by a workspace
+    derived-scalar computer), so the verdicts are run-earned: coupled-fate-oscillator —
+    26 fate 'divide' threshold-crossings over the run (≥2 required); coupled-particle-catalysis
+    — ODE product P reaches 285 (>0) while the driving particle count grows by 43 (>0);
+    coupled-triple-cell — 22 crossings of the full particle→metabolism→fate chain (≥2);
+    fateful-tissue — 20 fate-driven divisions (≥1) with the cell count never dropping below the
+    initial 4 (non-collapse). What is NOT yet done, the honest ceiling: the pass thresholds are
+    directional existence/sign checks, not pre-registered quantitative acceptance BANDS with
+    holdouts, so the verdict is 'supported', not a calibrated 'accepted-to-tolerance'; the
+    quantitative shapes (period, acceleration magnitude, exact mother=Σdaughters conservation)
+    are shown in the visualizations but not yet gated to a band.
+
+limitations:
+- >
+  These are DEMONSTRATIONS with run-earned verdicts, not calibrated hypothesis tests: each
+  claim is machine-graded against a registered run, but the pass thresholds are directional
+  existence/sign checks (oscillation present, product accumulates, division occurs,
+  non-collapse), not pre-registered quantitative acceptance bands with holdouts — so the
+  earned verdict is 'supported', short of a tolerance-calibrated 'accepted'.
+- >
+  The MaBoSS fate uses a mean-field istate (independent per-node probabilities, ~5% noise);
+  the 0.5 cutoff on 'divide' has a one-step lag that sets the oscillator period.
+- >
+  The particle→ODE rate coupling is an empirical calibration (effective volume ~0.65×area);
+  it is faithful near the calibrated regime and drifts outside it.
+- >
+  The fateful tissue needs growth to sustain (target area tracks the metabolite): without it
+  the vertex backend halves cells on each division and the tissue collapses — so the
+  sustained growth is a tuned regime, not an emergent one.
+
+members:
+- coupled-fate-oscillator
+- coupled-particle-catalysis
+- coupled-triple-cell
+- fateful-tissue
+- bounded-particles-cpm
+- bounded-particles-vertex
+- bounded-particles-munk
+- scene-model-mixed-formalism
+- tri-coupled-consensus
+- fateful-consensus
+- particles-in-consensus
+- heterotypic-regions
+studies:
+- coupled-fate-oscillator
+- coupled-particle-catalysis
+- coupled-triple-cell
+- fateful-tissue
+- bounded-particles-cpm
+- bounded-particles-vertex
+- bounded-particles-munk
+- scene-model-mixed-formalism
+- tri-coupled-consensus
+- fateful-consensus
+- particles-in-consensus
+- heterotypic-regions
+scientific_argument:
+  main_claim: |
+    A model's SEMANTICS (its chemistry/logic) are separable from its MECHANICS (the solver that runs it) at every scale, so the same few simulators compose in many directions through small, typed coupling contracts: several sub-cellular simulators couple inside one cell (a product threshold pins a Boolean input; a particle count sets an ODE rate; a Boolean output gates a reaction), a cell is itself a coupled composite, and a tissue of such cells couples the sub-cellular scale back to mechanics — a cell's own metabolism->fate chain decides when the tissue divides.
+  supporting_points:
+  - 'coupled-fate-oscillator: an ODE metabolism and a MaBoSS fate network oscillate when coupled both
+    ways (modes A+C) — code-graded, 26 fate transitions.'
+  - 'coupled-particle-catalysis: a Smoldyn particle count sets an ODE rate (mode B), so the product accumulates
+    (P=285) — code-graded.'
+  - 'coupled-triple-cell: all three formalisms + all three modes cycle in one cell (22 fate transitions)
+    — code-graded.'
+  - "fateful-tissue: a dividing tyssue's divisions are driven by each cell's fate chain (20 divisions,
+    non-collapse, particles conserved) — code-graded."
+  counterargument: |
+    The pass thresholds are directional existence/sign checks, not pre-registered quantitative acceptance bands with holdouts; the quantitative shapes are shown in the visualizations but not yet gated to a tolerance. So the claim is demonstrated as feasible and self-consistent, not calibrated against external data.
+biological_story: |
+  The compositions are small cartoons of real cell biology, assembled from interchangeable solvers rather than one monolithic model. Metabolism builds an internal pool (A+B->C); when the pool is replete a fate network commits the cell to divide; division consumes the pool and resets the metabolism — a metabolism<->fate feedback loop that paces the cell cycle. A particle population standing in for a signalling species can accelerate that metabolism by mass action (more molecules, faster conversion), coupling stochastic spatial chemistry to a continuous ODE. In the tissue, each cell carries this whole chain and grows as it metabolises; when its own fate network fires, the tissue divides it and partitions its confined molecules into the two daughters, which reset and regrow. The point is not quantitative fidelity to a specific organism but the MECHANISM of composition: the same metabolism->fate->division logic, and the same reaction-diffusion-in-a-moving-boundary coupling, recur at every scale and can be built from whichever solver fits each piece.
