@@ -969,6 +969,9 @@ async function renderSavedRuns(){
   const head=`<label style="margin-top:22px;display:flex;align-items:baseline;gap:8px"><span>Saved runs <span class="muted" style="font-weight:400">— every Studio run, from the Simulations DB</span></span>`
     + `<button type="button" class="btn-mini" style="margin-left:auto;font-weight:400" onclick="renderSavedRuns()">↻ Refresh</button></label>`;
   if(!stud.length){ host.innerHTML=head+`<p class="hint">No Studio runs recorded yet — they appear here (and in the Simulations DB) as you Run.</p>`; return; }
+  const ENGNAME={cpm:"CPM",vertex:"Vertex",munk:"Center-based",tri:"Tri-coupled"};
+  const SUBNAME={tellurium:"ODE (tellurium)",maboss:"Boolean (MaBoSS)",smoldyn:"Particle (Smoldyn)"};
+  const MODELNAME={default:"Sego flu-lung",large:"Sego flu-lung (large)",simple:"Minimal sheet",mixed:"Mixed population",infection:"Infection field"};
   const rows=stud.map(s=>{
     const rid=String(s.run_id||""); const parts=String(s.label||"").split(/\s+/);
     const eng=parts[1]||"run"; const tpl=parts.slice(2).join(" ");
@@ -979,16 +982,29 @@ async function renderSavedRuns(){
       :st?`<span class="muted">${esc(st)}…</span>`:'<span class="muted">recorded</span>';
     const when=s.started_at?new Date(s.started_at*1000).toLocaleString():"";
     const cfg=s.config||{};
-    let artHref="", artLabel="";
-    if(cfg.overlay_out){ artHref=`${esc(String(cfg.overlay_out))}.html`;
-      artLabel=String(s.spec_id||"").includes("particle_consensus")?"▶ Particles ↗":"▶ Overlay ↗"; }
-    else if(cfg.video_out){ artHref=`_studio_runs/${esc(String(cfg.video_out))}.html`; artLabel="▶ Video ↗"; }
+    // Describe what ran: mechanics engine, subcellular layer, and the model (template
+    // + its parsed shape, so an edited/custom blueprint reads differently).
+    let mech = ENGNAME[eng]||eng;
+    if(String(s.spec_id||"").includes("particle_consensus")) mech="Tri-coupled + Smoldyn (consensus)";
+    let sub="None", model=MODELNAME[tpl]||tpl||"custom";
+    try{ const bp = (window.jsyaml && cfg.blueprint) ? window.jsyaml.load(cfg.blueprint) : null;
+      if(bp){
+        const mods=Object.values(bp.subcellular||{}).map(v=>v&&v.module).filter(Boolean);
+        if(mods.length) sub = SUBNAME[mods[0]]||mods[0];
+        const nt=(bp.cell_types||[]).length, nf=(bp.fields||[]).length;
+        const bits=[]; if(nt)bits.push(nt+" cell type"+(nt>1?"s":"")); if(nf)bits.push(nf+" field"+(nf>1?"s":""));
+        if(bits.length) model += " · "+bits.join(", ");
+      }
+    }catch(e){}
+    let artHref="";
+    if(cfg.overlay_out) artHref=`${esc(String(cfg.overlay_out))}.html`;
+    else if(cfg.video_out) artHref=`_studio_runs/${esc(String(cfg.video_out))}.html`;
     const dl=`${API}/simulation-run-download?run_id=${encodeURIComponent(rid)}`;
     return `<div class="saved-row">`
-      + `<span><b>${esc(eng)}</b>${tpl?` <span class="muted saved-when">· ${esc(tpl)}</span>`:""}</span> ${badge}`
-      + ` <span class="muted saved-when">${esc(when)}</span>`
+      + `<div style="min-width:0;flex:1"><b>${esc(mech)}</b> ${badge}`
+      + `<div class="muted saved-when">Subcellular: ${esc(sub)} · Model: ${esc(model)} · ${esc(when)}</div></div>`
       + `<span class="saved-links">`
-      + (done&&artHref?`<a class="btn-mini" href="${artHref}" target="_blank" rel="noopener">${artLabel}</a>`:"")
+      + (done&&artHref?`<a class="btn-mini" href="${artHref}" target="_blank" rel="noopener">▶ View ↗</a>`:"")
       + (done?`<a class="btn-mini" href="${dl}" download>Download ⬇</a>`:"")
       + `<a class="btn-mini" href="${SPA}/#simulations" target="_blank" rel="noopener">Results DB ↗</a>`
       + `</span></div>`;
