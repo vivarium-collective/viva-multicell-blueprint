@@ -101,7 +101,12 @@ class ParticleConsensusProcess(TriCoupledProcess):
                 "#e377c2", "#17becf", "#bcbd22", "#7f7f7f"]
         cache = self._pimgs
         base = len(cache)
-        out = self._out.parent / "particle_consensus.html"
+        # Write to the studio-linked overlay (<overlay_out>.html) so the Studio's
+        # "View" shows the Smoldyn molecules, not the inherited tri-coupled cell
+        # shading. super().update() writes the tri render to self._out first; this
+        # runs after it in update(), so the particle render overwrites it (and the
+        # tri render remains as a fallback if particle rendering ever raises).
+        out = self._out
         for j, snap in enumerate(self._pframes[base:]):
             fig, ax = plt.subplots(figsize=(6.6, 6.6), dpi=140)
             ax.set_xlim(0, self.W); ax.set_ylim(0, self.H); ax.set_aspect("equal")
