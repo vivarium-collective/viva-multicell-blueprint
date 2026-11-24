@@ -284,15 +284,23 @@ initial_state:
 };
 const $ = s => document.querySelector(s);
 
-// ---- cell-type colours (stable per blueprint, with sensible defaults) -------
-const KNOWN_COLORS = {H:"#2b6cb0", I:"#c7761b", D:"#333333", M:"#CC79A7",
-  NK:"#5aa9e6", CD8:"#b3306e", A:"#2e7d32", B:"#D55E00", medium:"#cccccc"};
-const PALETTE = ["#2b6cb0","#c7761b","#2e7d32","#CC79A7","#5aa9e6","#b3306e","#D55E00","#1f9e89","#8d58d6","#777777"];
+// ---- cell-type colours ------------------------------------------------------
+// Mirror viva_multicell_blueprint.viz._common.state_color EXACTLY, so the colours
+// the editor paints cells with correspond to the final GIF renderings (the
+// tri_coupled / particle_consensus panels build their colours the same way):
+// semantic colour for H/I/D/immune, else the colourblind-safe fallback indexed by
+// the type's position in the SORTED list of all types — the same enumerate(sorted)
+// the panels use (_type_colors).
+const STATE_COLORS = {H:"#0072B2", I:"#E69F00", D:"#444444", immune:"#009E73"};
+const FALLBACK = ["#CC6677","#DDCC77","#AA4499","#44AA99","#882255","#88CCEE",
+  "#999933","#332288","#661100","#6699CC","#117733","#999999"];
 function typeColors(types){
-  const out={}; let i=0;
+  const sorted = Array.from(new Set((types||[]).map(String))).sort();
+  const idx = {}; sorted.forEach((t,i)=>{ idx[t]=i; });
+  const out={};
   (types||[]).forEach(t=>{
-    const base=String(t).split("_")[0];
-    out[t] = KNOWN_COLORS[t] || KNOWN_COLORS[base] || PALETTE[i%PALETTE.length]; i++;
+    const name=String(t);
+    out[name] = STATE_COLORS[name] || FALLBACK[idx[name] % FALLBACK.length];
   });
   return out;
 }
