@@ -189,6 +189,14 @@
         <label for="steps">Steps</label>
         <input type="number" id="steps" value="60" min="1" max="2000" step="1">
         <p class="hint">Coupled steps (MCS). Keep modest for an interactive run.</p>
+        <label for="subcell" style="margin-top:12px">Subcellular layer</label>
+        <select id="subcell">
+          <option value="">None — mechanics + fields + rules only</option>
+          <option value="ode">ODE — per-cell metabolism (tellurium)</option>
+          <option value="boolean" disabled>Boolean — per-cell gene network (MaBoSS) · coming</option>
+          <option value="particle" disabled>Particle — per-cell stochastic reactions (Smoldyn) · coming</option>
+        </select>
+        <p class="hint" id="subcell-hint">A per-cell intracellular model runs inside every <span id="subcell-type">epithelial</span> cell on the same blueprint, coupled to a field and feeding back on the cell (growth / division).</p>
       </div>
     </div>
     <div style="margin-top:16px">
@@ -380,6 +388,7 @@ function render(text){
   if(!bp || typeof bp!=="object"){ return; }
   renderInitial(bp);
   renderComponents(bp);
+  const stn=$("#subcell-type"); if(stn) stn.textContent = subcellTargetType(bp);
 }
 
 // ---- initial conditions: SVG preview computed from the blueprint ------------
@@ -850,6 +859,41 @@ async function pollRun(runId, el, eng, art){
   return false;
 }
 
+// ---- subcellular layer ------------------------------------------------------
+// The per-cell intracellular model attaches to one epithelial cell type (prefer H)
+// and couples to a diffusing field (prefer virus). The pipeline composite auto-wires
+// a `subcellular:` section when present, so we inject it into the posted blueprint
+// at run time without touching the editor's YAML.
+function subcellTargetType(bp){
+  const types=(bp.cell_types||[]).map(t=>t.name);
+  return types.includes("H")?"H":(types[0]||"H");
+}
+function subcellDriveField(bp){
+  const f=(bp.fields||[]).map(x=>x.name);
+  return f.includes("virus")?"virus":(f[0]||null);
+}
+function subcellSection(kind, type, fld){
+  if(kind==="ode"){
+    // per-cell growth ODE (tellurium): S grows, faster where the field is high; the
+    // cell divides when S crosses a threshold. Autonomous if the blueprint has no field.
+    const src = "model g\n  species S;\n  S = 25;\n" + (fld?"  v = 0;\n":"")
+      + "  mu := 0.05;\n  J0: -> S; " + (fld?"mu*(1+5*v)*S":"mu*S") + ";\nend\n";
+    const coupling = {const:{divide_at:80.0},
+      inputs: fld?{v:`field.${fld}@centroid`}:{},
+      outputs:{divide_when:{var:"S", gt:"const.divide_at"}}};
+    return {[type]:{module:"tellurium", division:"split", model:{source:src}, params:{}, coupling}};
+  }
+  return null;   // boolean (MaBoSS) / particle (Smoldyn) land with their modules
+}
+function withSubcellular(text, kind){
+  if(!kind || !window.jsyaml) return text;
+  let bp; try{ bp=parseBlueprint(text); }catch(e){ return text; }
+  const sec=subcellSection(kind, subcellTargetType(bp), subcellDriveField(bp));
+  if(!sec) return text;
+  const block="subcellular:\n" + window.jsyaml.dump(sec, {lineWidth:-1}).replace(/^(?=.)/gm,"  ");
+  return replaceTopBlock(text, "subcellular", block);
+}
+
 async function startRun(eng, steps, overridesBase, tpl){
   const el = document.createElement("div"); el.className="result";
   el.innerHTML = `⏳ <b>${eng}</b> — starting (${steps} steps)…`;
@@ -876,7 +920,7 @@ $("#run").addEventListener("click", async () => {
   if(!engines.length){ setStatus("Select at least one engine to run.", "err"); return; }
   const overridesBase = {};
   const bp = $("#bp").value.trim();
-  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = $("#bp").value;
+  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = withSubcellular($("#bp").value, $("#subcell").value);
   $("#run").disabled = true;
   $("#status").className = "show"; $("#status").innerHTML = "";
   const started = [];
