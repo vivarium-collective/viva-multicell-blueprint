@@ -30,7 +30,9 @@
   .row{display:flex;gap:16px;flex-wrap:wrap}
   .row>div{flex:1;min-width:160px}
   .engines{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px}
-  .engine{min-width:0;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
+  .engine,.subtile{min-width:0;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:var(--bg)}
+  .engine small,.subtile small{display:block;color:var(--muted);font-weight:400;margin-top:3px;font-size:12px}
+  .subtile.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
   .engine.sel[data-e=cpm]{border-color:var(--cpm);background:color-mix(in srgb,var(--cpm) 10%,transparent)}
   .engine.sel[data-e=vertex]{border-color:var(--vertex);background:color-mix(in srgb,var(--vertex) 10%,transparent)}
   .engine.sel[data-e=munk]{border-color:var(--munk);background:color-mix(in srgb,var(--munk) 10%,transparent)}
@@ -193,13 +195,13 @@
         <label for="steps">Steps</label>
         <input type="number" id="steps" value="60" min="1" max="2000" step="1">
         <p class="hint">Coupled steps (MCS). Keep modest for an interactive run.</p>
-        <label for="subcell" style="margin-top:12px">Subcellular layer</label>
-        <select id="subcell">
-          <option value="">None — mechanics + fields + rules only</option>
-          <option value="ode">ODE — per-cell metabolism (tellurium)</option>
-          <option value="boolean">Boolean — per-cell gene network (MaBoSS)</option>
-          <option value="particle">Particle — per-cell stochastic reactions (Smoldyn)</option>
-        </select>
+        <label style="margin-top:12px">Subcellular layer</label>
+        <div class="engines" id="subcells">
+          <div class="subtile sel" data-s="">None<small>mechanics + fields + rules only</small></div>
+          <div class="subtile" data-s="ode">ODE<small>per-cell metabolism · tellurium</small></div>
+          <div class="subtile" data-s="boolean">Boolean<small>gene network · MaBoSS</small></div>
+          <div class="subtile" data-s="particle">Particle<small>stochastic reactions · Smoldyn</small></div>
+        </div>
         <p class="hint" id="subcell-hint">A per-cell intracellular model runs inside every <span id="subcell-type">epithelial</span> cell on the same blueprint, coupled to a field and feeding back on the cell (growth / division).</p>
       </div>
     </div>
@@ -802,6 +804,12 @@ applyTemplate();
 document.querySelectorAll(".engine").forEach(el => el.addEventListener("click", () => {
   el.classList.toggle("sel");
 }));
+// subcellular layer: single-select tiles (one intracellular model at a time), same look as the engine tiles
+document.querySelectorAll("#subcells .subtile").forEach(el => el.addEventListener("click", () => {
+  document.querySelectorAll("#subcells .subtile").forEach(x => x.classList.remove("sel"));
+  el.classList.add("sel");
+}));
+function currentSubcell(){ const s = document.querySelector("#subcells .subtile.sel"); return s ? (s.dataset.s || "") : ""; }
 
 function setStatus(msg, cls){ const s=$("#status"); s.className="show "+(cls||""); s.innerHTML=msg; }
 
@@ -967,18 +975,14 @@ $("#run").addEventListener("click", async () => {
   if(!engines.length){ setStatus("Select at least one engine to run.", "err"); return; }
   const overridesBase = {};
   const bp = $("#bp").value.trim();
-  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = withSubcellular($("#bp").value, $("#subcell").value);
-  $("#run").disabled = true;
-  $("#status").className = "show"; $("#status").innerHTML = "";
-  const started = [];
-  for(const eng of engines){ const r = await startRun(eng, steps, overridesBase, tpl); if(r) started.push(r); }
-  await Promise.all(started.map(r => pollRun(r.runId, r.el, r.eng, r.art)));
-  const foot = document.createElement("div"); foot.className="result"; foot.style.marginTop="12px";
-  foot.innerHTML = `📊 Artifacts are linked above per engine — a spatial playback <b>video</b> for the `
-    + `stand-alone modules, the 3-paradigm <b>overlay</b> for tri-coupled; scalar/population `
-    + `charts are in the <a href="${SPA}/#simulations" target="_blank">Simulations DB</a>.`;
-  $("#status").appendChild(foot);
-  $("#run").disabled = false;
+  if(bp && !/^#\s*(loading|could not load)/i.test(bp)) overridesBase.blueprint = withSubcellular($("#bp").value, currentSubcell());
+  $("#status").className = "show";   // non-blocking: don't clear — the queue accumulates; dismiss cards with ✕
+  // Launch each selected run WITHOUT blocking Run: the pollers update their own cards in the
+  // background, so you can tweak the blueprint / pick another engine and launch again while the
+  // queue below keeps growing. Each card's ✕ cancels + removes it.
+  for(const eng of engines){
+    startRun(eng, steps, overridesBase, tpl).then(r => { if(r) pollRun(r.runId, r.el, r.eng, r.art); });
+  }
 });
 </script>
 </body>
