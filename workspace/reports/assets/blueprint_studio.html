@@ -411,6 +411,55 @@ function cellsFromInitial(bp){
 // block text (so Reset can revert after edits materialize to an explicit list).
 let ICSTATE = null;
 let TEMPLATE_IS_BLOCK = null;
+let NOMINAL_SPACING = null;   // characteristic spacing of the pristine layout (drives the min-gap guard)
+
+// Median nearest-neighbour distance — the layout's natural cell spacing.
+function _medianNN(cells){
+  if(!cells || cells.length<2) return null;
+  const d=[];
+  for(let i=0;i<cells.length;i++){
+    let m=Infinity;
+    for(let j=0;j<cells.length;j++){ if(i===j) continue;
+      const r=Math.hypot(cells[i].x-cells[j].x, cells[i].y-cells[j].y); if(r<m) m=r; }
+    if(isFinite(m)) d.push(m);
+  }
+  d.sort((a,b)=>a-b);
+  return d.length ? d[Math.floor(d.length/2)] : null;
+}
+// Push (x,y) out until it clears every cell (except `except`) by the min gap — so a
+// new/moved cell never crowds the vertex (tyssue) mesh into slivers.
+function _resolve(x, y, except){
+  const g=ICSTATE.minGap, cells=ICSTATE.cells;
+  for(let it=0; it<10; it++){
+    let near=-1, nd=Infinity;
+    for(let i=0;i<cells.length;i++){ if(i===except) continue;
+      const r=Math.hypot(cells[i].x-x, cells[i].y-y); if(r<nd){ nd=r; near=i; } }
+    if(near<0 || nd>=g) break;
+    let dx=x-cells[near].x, dy=y-cells[near].y, r=Math.hypot(dx,dy);
+    if(r<1e-6){ dx=Math.cos(it); dy=Math.sin(it); r=1; }     // coincident → pick a direction
+    x=cells[near].x + dx/r*g; y=cells[near].y + dy/r*g;
+    x=Math.max(0,Math.min(ICSTATE.W,x)); y=Math.max(0,Math.min(ICSTATE.H,y));
+  }
+  return [x,y];
+}
+// Relax a crowded layout: iterative pairwise repulsion up to the min gap.
+function icTidy(){
+  const g=ICSTATE.minGap, cells=ICSTATE.cells;
+  for(let it=0; it<80; it++){
+    let moved=false;
+    for(let i=0;i<cells.length;i++) for(let j=i+1;j<cells.length;j++){
+      let dx=cells[j].x-cells[i].x, dy=cells[j].y-cells[i].y, r=Math.hypot(dx,dy);
+      if(r<g){
+        if(r<1e-6){ dx=Math.cos(i+j); dy=Math.sin(i+j); r=1; }
+        const push=(g-r)/2+1e-3, ux=dx/r, uy=dy/r;
+        cells[i].x-=ux*push; cells[i].y-=uy*push; cells[j].x+=ux*push; cells[j].y+=uy*push; moved=true;
+      }
+    }
+    cells.forEach(c=>{ c.x=Math.max(0,Math.min(ICSTATE.W,c.x)); c.y=Math.max(0,Math.min(ICSTATE.H,c.y)); });
+    if(!moved) break;
+  }
+  icCommit();
+}
 
 function renderInitial(bp){
   const d = bp.domain||{}; const ext = d.extent_um||[50,50];
@@ -422,10 +471,17 @@ function renderInitial(bp){
   const S=320, pad=8, sc=(S-2*pad)/Math.max(W,H);
   const r = Math.max(3, Math.min(10, (cells.length>1 ? (sc*(minSpacing(cells)||5)*0.42) : 8)));
   const isExplicit = !!(bp.initial_state && bp.initial_state.cells && bp.initial_state.cells.length);
-  // Stash the parametric original while it is still parametric, so Reset works.
-  if(!isExplicit){ const blk = extractTopBlock($("#bp").value, "initial_state"); if(blk) TEMPLATE_IS_BLOCK = blk; }
+  // Stash the parametric original (for Reset) + its natural spacing (for the guard),
+  // captured while the layout is still pristine so crowding can't shrink the gap.
+  if(!isExplicit){
+    const blk = extractTopBlock($("#bp").value, "initial_state"); if(blk) TEMPLATE_IS_BLOCK = blk;
+    const nn = _medianNN(cells); if(nn) NOMINAL_SPACING = nn;
+  }
+  // Keep new/moved cells at ~0.8× the layout's native spacing so the vertex mesh
+  // stays well-conditioned (crowded centroids → sliver polygons).
+  const minGap = (NOMINAL_SPACING || _medianNN(cells) || Math.max(3, Math.min(W,H)/12)) * 0.8;
   const prevActive = ICSTATE && ICSTATE.active, prevTool = ICSTATE && ICSTATE.tool;
-  ICSTATE = {cells, types:allTypes, colors, W, H, S, pad, sc, r, isExplicit,
+  ICSTATE = {cells, types:allTypes, colors, W, H, S, pad, sc, r, isExplicit, minGap,
              active:(prevActive && allTypes.includes(prevActive))?prevActive:(allTypes[0]||"H"),
              tool:(prevTool==="erase")?"erase":"paint"};
   icDraw(); icPalette(); icMeta();
@@ -464,7 +520,8 @@ function icWire(){
       try{ svg.setPointerCapture(ev.pointerId); }catch(e){}
     } else if(ICSTATE.tool!=="erase"){      // click empty → add a cell of the active type
       const p=toDomain(ev);
-      ICSTATE.cells.push({x:p.x, y:p.y, type:ICSTATE.active, size:1.0});
+      const [ax,ay]=_resolve(p.x, p.y, -1);   // keep it off its neighbours (vertex-safe)
+      ICSTATE.cells.push({x:ax, y:ay, type:ICSTATE.active, size:1.0});
       icCommit();
     }
   });
@@ -477,7 +534,9 @@ function icWire(){
     if(circ){ circ.setAttribute("cx",(ICSTATE.pad+c.x*ICSTATE.sc).toFixed(1)); circ.setAttribute("cy",(ICSTATE.S-ICSTATE.pad-c.y*ICSTATE.sc).toFixed(1)); }
   });
   const end=()=>{ if(!drag) return; const d=drag; drag=null;
-    if(!d.moved && ICSTATE.tool==="paint"){ const c=ICSTATE.cells[d.i]; if(c) c.type=ICSTATE.active; }
+    const c=ICSTATE.cells[d.i];
+    if(!d.moved && ICSTATE.tool==="paint"){ if(c) c.type=ICSTATE.active; }
+    else if(d.moved && c){ const [nx,ny]=_resolve(c.x, c.y, d.i); c.x=nx; c.y=ny; }  // settle clear of neighbours
     icCommit();
   };
   svg.addEventListener("pointerup",end);
@@ -489,11 +548,13 @@ function icPalette(){
   let h=`<div class="ic-tools"><span class="ic-tools-lbl">Add / paint:</span>`;
   h+=types.map(t=>`<button type="button" class="ic-sw${(t===active&&tool==='paint')?' sel':''}" data-type="${esc(t)}" title="Click the canvas to add a ${esc(t)} cell; click a cell to repaint it ${esc(t)}"><span class="dot" style="background:${colors[t]||'#999'}"></span>${esc(t)}</button>`).join("");
   h+=`<button type="button" class="ic-sw ic-erase${tool==='erase'?' sel':''}" data-tool="erase" title="Click a cell to remove it">🗑 Erase</button>`;
+  h+=`<button type="button" class="ic-sw" data-tool="tidy" title="Relax crowded cells to a vertex-safe spacing">✦ Tidy</button>`;
   h+=`<button type="button" class="ic-sw" data-tool="reset" title="Revert the layout to the blueprint's original initial_state">↺ Reset</button>`;
-  h+=`</div><div class="ic-edithint muted">Click empty space to <b>add</b> a cell · <b>drag</b> a cell to move it · click a cell to <b>repaint</b> it the active type · <b>Erase</b>, then click, to remove.</div>`;
+  h+=`</div><div class="ic-edithint muted">Click empty to <b>add</b> · <b>drag</b> to move · click a cell to <b>repaint</b> · <b>Erase</b> then click to remove. New/moved cells keep a minimum spacing so the vertex mesh stays valid; <b>Tidy</b> relaxes a crowded layout.</div>`;
   const host=$("#ic-edit"); host.innerHTML=h;
   host.querySelectorAll('.ic-sw[data-type]').forEach(b=> b.addEventListener("click", ()=>{ ICSTATE.active=b.dataset.type; ICSTATE.tool="paint"; icPalette(); }));
   const eb=host.querySelector('[data-tool="erase"]'); if(eb) eb.addEventListener("click", ()=>{ ICSTATE.tool = ICSTATE.tool==="erase"?"paint":"erase"; icPalette(); });
+  const tb=host.querySelector('[data-tool="tidy"]'); if(tb) tb.addEventListener("click", icTidy);
   const rb=host.querySelector('[data-tool="reset"]'); if(rb) rb.addEventListener("click", icReset);
 }
 
