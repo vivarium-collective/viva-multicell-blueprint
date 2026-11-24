@@ -937,6 +937,8 @@ _save_viz('scene-model-mixed-formalism', 'scene-model-mixed-formalism_verdict_sc
 # ## Study: Tri-coupled consensus: CPM, vertex and center-based mechanics on one shared cell set (`tri-coupled-consensus`)
 #
 # **Question.** Can three mechanics paradigms — Cellular Potts (voxel), vertex (polygon) and center-based (disc) — run ONE shared cell set, coupled into a consensus where vertex owns shape, munk owns position and CPM owns area?
+#
+# **Claim.** Three mechanics paradigms — Cellular Potts (voxel), vertex (polygon) and center-based (disc) — can simulate ONE shared cell set at once, coupled into a single consensus in which vertex owns each cell's shape, munk owns its position and CPM owns its area, so the three backends stay within a few micrometres of each other rather than diverging into separate tissues.
 
 # ### Parameters
 #
@@ -1015,6 +1017,8 @@ _save_viz('tri-coupled-consensus', 'tri-coupled-consensus_consensus_flipbook', _
 # ## Study: Fateful consensus: a tri-coupled tissue where cell area drives each cell's metabolism→fate (`fateful-consensus`)
 #
 # **Question.** Can a tri-coupled consensus tissue drive each cell's sub-cellular fate — the CPM-owned AREA setting the metabolic rate, the metabolite pinning a MaBoSS fate input, the fate committing the cell — so three tissue + two sub-cellular simulators run as one composite?
+#
+# **Claim.** A tri-coupled consensus tissue can drive each cell's sub-cellular fate top-down: the CPM-owned cell AREA sets the cell's metabolic rate, the SBML-ODE metabolite builds and pins a MaBoSS fate input, and the fate commits the cell — so three tissue simulators and two sub-cellular simulators run as one composite with a live mechanics -> metabolism -> fate information flow across scales.
 
 # ### Parameters
 #
@@ -1091,6 +1095,8 @@ _save_viz('fateful-consensus', 'fateful-consensus_consensus_flipbook', _render_o
 # ## Study: Particles in a consensus tissue: Smoldyn molecules bounded by a boundary three tissue simulators agree on (`particles-in-consensus`)
 #
 # **Question.** Can a Smoldyn particle sim be confined inside each cell of a tri-coupled consensus tissue, bounded by a boundary whose shape is vertex, position is the munk consensus and area is CPM?
+#
+# **Claim.** A Smoldyn particle sim (A+B<->C) can be confined inside each cell of a tri-coupled consensus tissue, bounded by a boundary three tissue simulators agree on — vertex SHAPE at the munk-consensus POSITION, sized by the CPM AREA — so spatially-resolved intracellular chemistry runs inside a multi-paradigm tissue with the molecules staying confined to their cell.
 
 # ### Parameters
 #
@@ -1168,6 +1174,8 @@ _save_viz('particles-in-consensus', 'particles-in-consensus_consensus_flipbook',
 # ## Study: Heterotypic tissue regions: a vertex epithelium on a munk mesenchyme, coupled at an interface (`heterotypic-regions`)
 #
 # **Question.** Can one tissue be composed of two compartments simulated by DIFFERENT mechanics -- a vertex epithelium sitting on a center-based munk mesenchyme -- coupled at their interface?
+#
+# **Claim.** One tissue can be composed of two compartments simulated by DIFFERENT mechanics — a vertex epithelium sitting on a center-based munk mesenchyme — coupled at a reflective interface where the epithelium's basal edge is a floor the mesenchyme presses up against but cannot cross, so two tissue types of different physics coexist in one composite the way organs layer epithelium on stroma.
 
 # ### Parameters
 #
