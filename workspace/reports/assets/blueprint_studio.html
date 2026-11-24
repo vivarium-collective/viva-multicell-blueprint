@@ -578,7 +578,7 @@ function renderComponents(bp){
     }
     out.push(comp("cells","cell types","Cell types & adhesion",
       "The agents on the sheet and how strongly each pair sticks. Adhesion drives sorting and tissue shape — identical on every engine.",
-      `${types.length} type${types.length===1?"":"s"}`, chips+adh, true));
+      `${types.length} type${types.length===1?"":"s"}`, chips+adh));
   }
   // Fields
   if((bp.fields||[]).length){
@@ -609,7 +609,7 @@ function renderComponents(bp){
     const body = rows + `<button class="addbtn" data-add="rule">+ add rule</button>`;
     out.push(comp("rules","cell-state rules","Rules",
       "Per-cell state changes — transitions (H→I), killing, recovery — each fired at a rate given by an <b>expression</b> over fields and neighbours. These rate expressions ARE the cell-state equations — edit, add, or delete them.",
-      `${bp.rules.length} rule${bp.rules.length===1?"":"s"}`, body, true));
+      `${bp.rules.length} rule${bp.rules.length===1?"":"s"}`, body));
   }
   // Systemic ODE
   if(bp.systemic_ode){
