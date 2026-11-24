@@ -193,8 +193,8 @@
         <select id="subcell">
           <option value="">None — mechanics + fields + rules only</option>
           <option value="ode">ODE — per-cell metabolism (tellurium)</option>
-          <option value="boolean" disabled>Boolean — per-cell gene network (MaBoSS) · coming</option>
-          <option value="particle" disabled>Particle — per-cell stochastic reactions (Smoldyn) · coming</option>
+          <option value="boolean">Boolean — per-cell gene network (MaBoSS)</option>
+          <option value="particle" disabled>Particle — per-cell stochastic reactions (Smoldyn) · needs install</option>
         </select>
         <p class="hint" id="subcell-hint">A per-cell intracellular model runs inside every <span id="subcell-type">epithelial</span> cell on the same blueprint, coupled to a field and feeding back on the cell (growth / division).</p>
       </div>
@@ -883,7 +883,22 @@ function subcellSection(kind, type, fld){
       outputs:{divide_when:{var:"S", gt:"const.divide_at"}}};
     return {[type]:{module:"tellurium", division:"split", model:{source:src}, params:{}, coupling}};
   }
-  return null;   // boolean (MaBoSS) / particle (Smoldyn) land with their modules
+  if(kind==="boolean"){
+    // per-cell MaBoSS network: a field-driven Signal → Stress → Apoptosis; the cell
+    // dies when Apoptosis turns on. Autonomous (quiescent) if there is no field.
+    const inputs = fld?{Signal:`field.${fld}@centroid`}:{};
+    return {[type]:{module:"maboss", division:"split",
+      model:{source:"Signal, Signal\nStress, Signal\nApoptosis, Stress\n"}, params:{seed:1},
+      coupling:{const:{die_at:0.5}, inputs, outputs:{die_when:{var:"Apoptosis", gt:"const.die_at"}}}}};
+  }
+  if(kind==="particle"){
+    // per-cell Smoldyn stochastic reactions (A -> B); needs the smoldyn engine installed.
+    const inputs = fld?{A:`field.${fld}@centroid`}:{};
+    return {[type]:{module:"smoldyn", division:"split",
+      model:{source:{species:["A","B"], reactions:[{name:"conv", reactants:["A"], products:["B"], rate:0.1}]}},
+      params:{}, coupling:{inputs, outputs:{}}}};
+  }
+  return null;
 }
 function withSubcellular(text, kind){
   if(!kind || !window.jsyaml) return text;

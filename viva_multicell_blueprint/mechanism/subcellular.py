@@ -84,9 +84,14 @@ class TestLinearModule:
 
 from viva_multicell_blueprint.mechanism.subcellular_modules.tellurium_module import (  # noqa: E402
     TelluriumModule)
+from viva_multicell_blueprint.mechanism.subcellular_modules.adapter_module import (  # noqa: E402
+    BooleanModule, ParticleModule)
 
 # NOTE: "test_linear" is a dependency-free reference module (the default; used by tests).
-MODULES = {"test_linear": TestLinearModule, "tellurium": TelluriumModule}
+# "maboss" (boolean) and "smoldyn" (particle) bridge the composition-atlas's
+# IntracellularAdapters, so the blueprint pipeline runs the same real simulators.
+MODULES = {"test_linear": TestLinearModule, "tellurium": TelluriumModule,
+           "maboss": BooleanModule, "smoldyn": ParticleModule}
 
 
 def resolve_inputs(coupling_inputs, cell_id, port_maps, const=None) -> dict:
