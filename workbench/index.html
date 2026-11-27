@@ -1949,6 +1949,12 @@ a.viv-bs-commit:hover { text-decoration: underline; }
             </div>
           </div>
         </div>
+      </div><div class="gh-row" id="viv-compose-row" style="display:none">
+        <div class="gh-label">compose-api</div>
+        <div class="gh-value">
+          <button id="viv-compose-chip" class="btn-mini" type="button" data-state="loading">…</button>
+          <div class="gh-value-hint" id="viv-compose-hint"></div>
+        </div>
       </div>
     </div>
 
@@ -2855,7 +2861,7 @@ Nothing on <code id="pr-base-display-2">main</code> changes until someone presse
      DataSource global that renderers call to fetch narrative data.
      local-server mode (default) fetches from the same-origin /api/* endpoints.
      Hosted mode (sub-projects #2/#3) will set a different config here. -->
-<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main/workspace", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "bec9934e66252d626aaf7e7be7ec198df3565fa1", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/bec9934e66252d626aaf7e7be7ec198df3565fa1", "branch": "main", "lockfile": "uv.lock@d2b49301a4ed", "generated_at": "2026-11-24 22:14 UTC"} };</script>
+<script>window.__DASH_CONFIG__ = { mode: "snapshot", interactiveUrl: "https://github.com/vivarium-collective/viva-multicell-blueprint", basePath: "/viva-multicell-blueprint/workbench", inputsDownloadBase: "https://github.com/vivarium-collective/viva-multicell-blueprint/raw/main/workspace", provenance: {"repo_slug": "vivarium-collective/viva-multicell-blueprint", "repo_url": "https://github.com/vivarium-collective/viva-multicell-blueprint", "commit": "bd396d99ff4748b167fead0fb446ad39a3b8fdfe", "commit_url": "https://github.com/vivarium-collective/viva-multicell-blueprint/commit/bd396d99ff4748b167fead0fb446ad39a3b8fdfe", "branch": "main", "lockfile": "uv.lock@9e65255dcd52", "generated_at": "2026-11-27 13:42 UTC"} };</script>
 <!-- Derive the global URL prefix from the (possibly publish-injected) config.
      Many renderers prefix workspace-root-absolute links (/studies/, /api/)
      with window.__BASE_PATH__ so they resolve when the read-only bundle is
@@ -2915,7 +2921,11 @@ Nothing on <code id="pr-base-display-2">main</code> changes until someone presse
      panels (Studies/Chat/Code/Graph). Loads AFTER the panels it drives. -->
 <script src="/viva-multicell-blueprint/workbench/assets/mobile-panels.js" onerror="/* mobile panel switcher unavailable */"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/search-palette.js" onerror="/* global search unavailable */"></script>
-<script src="/viva-multicell-blueprint/workbench/assets/github-login.js" onerror="/* github-login unavailable */"></script>
+<script src="/viva-multicell-blueprint/workbench/assets/github-login.js" onerror="/* github-login unavailable */"></script><div id="viv-compose-flow" role="status" aria-live="polite"
+     style="display:none;position:fixed;left:16px;right:16px;bottom:16px;margin-left:auto;z-index:2000;max-width:420px;padding:10px 14px;cursor:pointer;
+            border-radius:8px;background:var(--panel,#fff);color:var(--text,#1a1a1a);border:1px solid var(--border,#d0d0d4);
+            box-shadow:0 6px 24px rgba(0,0,0,0.16);white-space:pre-wrap;font-size:0.85em"></div>
+<script src="/viva-multicell-blueprint/workbench/assets/compose-signin.js" onerror="/* compose-api sign-in unavailable */"></script>
 <!-- chat-core.js already loaded above (shared by panel-dock.js + process-code.js). -->
 <script src="/viva-multicell-blueprint/workbench/assets/ai-models.js" onerror="/* chat unavailable */"></script>
 <script src="/viva-multicell-blueprint/workbench/assets/chat.js" onerror="/* chat unavailable */"></script>
