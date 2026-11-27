@@ -1,5 +1,9 @@
 schema_version: 3
 name: paradigm-divergence-mibitof
+simulator:
+  package: viva-multicell-blueprint-sim
+  ref: "0.1.0"
+  registry: git
 created: '2026-11-24'
 status: ran
 investigation: influenza-crossparadigm
