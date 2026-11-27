@@ -4,6 +4,12 @@ version = "0.0.0"
 description = "Process-bigraph research workspace"
 requires-python = ">=3.12"
 dependencies = [
+    # The simulator for this workspace, extracted into its own distribution and
+    # pinned by git tag (tag == version == the per-study `simulator.ref`). It
+    # provides the `viva_multicell_blueprint` package (import name unchanged) plus
+    # the mechanical/subcellular engine stack, so the composite/process dotted
+    # paths the studies cite resolve from it.
+    "viva-multicell-blueprint-sim",
     # Floor: 1.8.5 ships the composite `core_extensions` mechanism (1.8.0) the
     # dashboard relies on AND the emitter fix (#217) + `requests`/`fire` server
     # deps. Below this, composite type-registration and agent-embedded emits
@@ -81,12 +87,13 @@ build-backend = "hatchling.build"
 [tool.hatch.metadata]
 allow-direct-references = true
 
-# Declare the workspace Python package explicitly so this workspace is
-# pip-installable (e.g. `pip install git+<repo>@<sha>`).  sms-api injects it
-# as an extra_pip_dep so the container runner can import the workspace's
-# processes from a committed + pushed git ref.
+# This repo is now an INVESTIGATION WORKSPACE, not a package: the simulator
+# (`viva_multicell_blueprint`) was extracted into its own distribution
+# `viva-multicell-blueprint-sim`, pinned by git tag below and in each study's
+# `simulator:` field. There is no package tree to build here, so the wheel
+# target selects nothing (a metadata-only wheel).
 [tool.hatch.build.targets.wheel]
-packages = ["viva_multicell_blueprint"]
+bypass-selection = true
 
 [tool.uv]
 # vivarium-tyssue still pins the workbench by its pre-rename URL
@@ -114,6 +121,9 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
+# The extracted simulator, pinned by git tag (plain-version: tag == version ==
+# each study's `simulator.ref`).
+viva-multicell-blueprint-sim = { git = "https://github.com/vivarium-collective/viva-multicell-blueprint-sim.git", tag = "0.1.0" }
 vivarium-workbench = { git = "https://github.com/vivarium-collective/vivarium-workbench.git", branch = "main" }
 # vivarium-workbench main depends on viva-superpowers by a bare git URL while
 # other deps pin it @main → uv sees conflicting URLs for the same package.

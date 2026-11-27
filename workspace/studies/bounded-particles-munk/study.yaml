@@ -1,5 +1,9 @@
 schema_version: 4
 name: bounded-particles-munk
+simulator:
+  package: viva-multicell-blueprint-sim
+  ref: "0.1.0"
+  registry: git
 created: "2026-11-22"
 status: draft
 phase: Design

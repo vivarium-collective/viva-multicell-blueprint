@@ -1,5 +1,9 @@
 schema_version: 3
 name: mibitof-tricoupled-consensus
+simulator:
+  package: viva-multicell-blueprint-sim
+  ref: "0.1.0"
+  registry: git
 created: '2026-11-24'
 status: ran
 objective: Do three mechanics paradigms (CPM, vertex, center-based) stay coupled into one consensus when

@@ -1,5 +1,9 @@
 schema_version: 4
 name: scene-model-mixed-formalism
+simulator:
+  package: viva-multicell-blueprint-sim
+  ref: "0.1.0"
+  registry: git
 created: "2026-11-23"
 status: draft
 phase: Design

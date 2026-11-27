@@ -1,5 +1,9 @@
 schema_version: 4
 name: dose-response-crossparadigm
+simulator:
+  package: viva-multicell-blueprint-sim
+  ref: "0.1.0"
+  registry: git
 created: "2026-10-27"
 status: completed
 phase: Evaluate
